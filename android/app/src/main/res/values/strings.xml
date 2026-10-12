@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Calcetto</string>
+    <string name="title_activity_main">Calcetto</string>
+    <string name="package_name">com.matteobitasi.calcetto</string>
+    <string name="custom_url_scheme">com.matteobitasi.calcetto</string>
+</resources>
