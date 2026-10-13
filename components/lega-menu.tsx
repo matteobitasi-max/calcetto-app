@@ -50,7 +50,6 @@ export function LegaMenu({ corrente, altre, organizzatore }: { corrente: LegaVoc
         aria-haspopup="menu"
         aria-expanded={open}
       >
-        <Stemma lega={corrente} />
         <span className="truncate font-semibold">{pending ? 'Cambio lega…' : corrente.nome}</span>
         <span className="text-xs text-zinc-500" aria-hidden>
           ▾
