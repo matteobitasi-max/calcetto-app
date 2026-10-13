@@ -48,8 +48,8 @@ export function MiaQuota({ match, me }: { match: Match; me: Membro }) {
           <PagaSatispay link={me.lega.satispayLink} quota={match.quota} segnaPagato={dichiaraPagamento.bind(null, match._id)} variante="pulsante" />
           <p className="text-xs text-zinc-500">
             {me.lega.satispayLink
-              ? `Si apre Satispay: inserisci ${euro(match.quota)} e conferma, poi torna qui e tocca "Sì, ho pagato".`
-              : "L'organizzatore non ha ancora impostato Satispay: paga come d'accordo, poi tocca \"Ho pagato\"."}
+              ? `Si apre Satispay: inserisci ${euro(match.quota)} e conferma il pagamento.`
+              : "Paga come d'accordo con l'organizzatore e tocca \"Paga\"."}
           </p>
           {qr && (
             <details className="text-sm">
