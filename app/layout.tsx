@@ -18,6 +18,8 @@ const geistMono = Geist_Mono({
 // e le zone sicure vengono rispettate con env(safe-area-inset-*).
 export const viewport: Viewport = {
   viewportFit: "cover",
+  // Niente zoom automatico quando si tocca un campo (Safari permette comunque lo zoom con due dita).
+  maximumScale: 1,
   themeColor: "#ffffff",
 };
 
