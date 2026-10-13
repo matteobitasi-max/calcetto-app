@@ -37,7 +37,10 @@ export type Match = {
   autogolA?: number
   autogolB?: number
   mvpId?: string
+  pagamenti: Pagamento[]
 }
+
+export type Pagamento = { giocatoreId: string; stato: 'dichiarato' | 'confermato'; metodo?: 'satispay' | 'contanti'; il?: string }
 
 const matchFields = `
   _id, _rev, "legaId": lega._ref, data, luogo, postiDisponibili, quota, note, aperturaConvocazioni, chiusuraConvocazioni, "serieId": serie._ref, notificaInviataIl,
@@ -48,7 +51,8 @@ const matchFields = `
   risultato, autogolA, autogolB,
   "durataMinuti": coalesce(durataMinuti, 60),
   "marcatori": coalesce(marcatori[]{"giocatoreId": giocatore._ref, gol}, []),
-  "mvpId": mvp._ref
+  "mvpId": mvp._ref,
+  "pagamenti": coalesce(pagamenti[]{"giocatoreId": giocatore._ref, stato, metodo, il}, [])
 `
 
 export function getUpcomingMatches(legaId: string) {

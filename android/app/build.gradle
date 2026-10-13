@@ -4,7 +4,7 @@ android {
     namespace = "com.matteobitasi.calcetto"
     compileSdk = rootProject.ext.compileSdkVersion
     defaultConfig {
-        applicationId "com.matteobitasi.calcetto"
+        applicationId "com.matteobitasi.thecap"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1

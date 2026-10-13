@@ -9,7 +9,8 @@
     "lint": "eslint",
     "app:sync": "cap sync",
     "app:android": "CAP_SERVER_URL=http://10.0.2.2:3000 cap sync android && cap open android",
-    "app:ios": "cap sync ios && cap open ios"
+    "app:ios": "cap sync ios && cap open ios",
+    "app:online": "CAP_SERVER_URL=https://calcetto-app-brown.vercel.app cap sync"
   },
   "dependencies": {
     "@capacitor/android": "^8.5.3",
@@ -20,6 +21,7 @@
     "@clerk/nextjs": "^7.9.14",
     "@sanity/client": "^8.9.0",
     "@sanity/image-url": "^2.1.1",
+    "jsqr": "^1.4.0",
     "next": "16.4.0",
     "next-sanity": "^13.3.4",
     "react": "19.3.0",

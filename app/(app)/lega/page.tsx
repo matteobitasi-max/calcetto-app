@@ -1,11 +1,12 @@
 import { Suspense } from 'react'
-import { rigeneraInvito, salvaLega } from '@/app/actions'
+import { rigeneraInvito, salvaLega, salvaPagamentiLega } from '@/app/actions'
 import { requireAdmin } from '@/lib/player'
-import { avatarUrl } from '@/lib/image'
+import { avatarUrl, immagineUrl } from '@/lib/image'
 import { baseUrl } from '@/lib/url'
 import { ActionForm } from '@/components/action-form'
 import { InvitoLink } from '@/components/invito-link'
 import { PhotoInput } from '@/components/photo-input'
+import { SatispaySetup } from '@/components/satispay-setup'
 import { SubmitButton } from '@/components/submit-button'
 import { Card, Field, Loading, PageTitle, buttonClass, inputClass } from '@/components/ui'
 
@@ -42,6 +43,19 @@ async function Impostazioni() {
             Cambia codice (invalida i vecchi link)
           </SubmitButton>
         </form>
+      </Card>
+
+      <Card>
+        <ActionForm action={salvaPagamentiLega.bind(null, lega._id)} className="space-y-4">
+          <div>
+            <h2 className="font-semibold">💶 Pagamenti con Satispay</h2>
+            <p className="text-sm text-zinc-500">Le quote delle partite arrivano a chi riceve su questo Satispay.</p>
+          </div>
+          <SatispaySetup link={lega.satispayLink} qrUrl={immagineUrl(lega.satispayQr, 400)} />
+          <SubmitButton className={buttonClass('primary')} pendingText="Salvo…">
+            Salva pagamenti
+          </SubmitButton>
+        </ActionForm>
       </Card>
 
       <Card>

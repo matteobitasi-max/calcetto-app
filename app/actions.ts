@@ -9,7 +9,7 @@ import { COOKIE_LEGA, PIEDI, RUOLI, SKILLS, getUtente, membroDi, requireAdmin, r
 import { assegnaPosti, finestra, getMatch, presenti, risultatoDa, type Match, type Risposta, type Stato } from '@/lib/matches'
 import { MAX_GIOCATORI } from '@/lib/limiti'
 import { daysBetween, formatData, isoToRomeLocal, romeLocalToISO } from '@/lib/dates'
-import { inviaATutti, rimuoviIscrizione, salvaIscrizione, type PushSub } from '@/lib/push'
+import { inviaAGiocatori, inviaATutti, rimuoviIscrizione, salvaIscrizione, type PushSub } from '@/lib/push'
 import { assicuraRicorrenze, getSeries, occurrenceId, rimuoviFutureVuote, type Series } from '@/lib/series'
 
 export type FormState = { error?: string } | undefined
@@ -597,4 +597,99 @@ export async function rigeneraInvito(legaId: string) {
   await requireIn(legaId, 'organizzatore')
   await sanity.patch(legaId).set({ codiceInvito: await nuovoCodice() }).commit()
   refresh()
+}
+
+// ---------- Quote e Satispay ----------
+
+// Link (letto anche dal QR) e QR Satispay dell'organizzatore che riceve le quote.
+export async function salvaPagamentiLega(legaId: string, _prev: FormState, formData: FormData): Promise<FormState> {
+  await requireIn(legaId, 'organizzatore')
+  const link = str(formData, 'satispayLink')
+  if (link) {
+    try {
+      if (new URL(link).protocol !== 'https:') throw new Error()
+    } catch {
+      return { error: 'Il link deve iniziare con https://' }
+    }
+  }
+  const qr = await uploadFoto(formData.get('satispayQr'))
+  if (qr && 'error' in qr) return qr
+
+  const patch = sanity.patch(legaId)
+  if (link) patch.set({ satispayLink: link })
+  else patch.unset(['satispayLink'])
+  if (qr) patch.set({ satispayQr: qr.foto })
+  else if (formData.get('rimuoviQr') === 'on') patch.unset(['satispayQr'])
+  await patch.commit()
+  refresh()
+  return {}
+}
+
+type StatoPagamento = 'dichiarato' | 'confermato'
+
+// Scrive (o toglie) il pagamento di un giocatore: una voce per giocatore, con chiave il suo ID.
+async function segnaPagamento(matchId: string, playerId: string, voce: { stato: StatoPagamento; metodo: 'satispay' | 'contanti' } | null) {
+  const tx = sanity.transaction().patch(matchId, (p) => p.setIfMissing({ pagamenti: [] }).unset([`pagamenti[_key=="${playerId}"]`]))
+  if (voce) {
+    tx.patch(matchId, (p) =>
+      p.append('pagamenti', [
+        { _key: playerId, _type: 'pagamento', giocatore: { _type: 'reference', _ref: playerId }, ...voce, il: new Date().toISOString() },
+      ]),
+    )
+  }
+  await tx.commit()
+  refresh()
+}
+
+async function partitaConQuota(matchId: string) {
+  const match = await getMatch(matchId)
+  if (!match) throw new Error('Partita non trovata')
+  if (match.quota == null) throw new Error('Questa partita non ha una quota')
+  return match
+}
+
+const inLista = (match: Match, playerId: string) => presenti(match).some((c) => c.giocatore._id === playerId)
+
+// Il giocatore dice di aver pagato: resta "da confermare" finché l'organizzatore non controlla.
+export async function dichiaraPagamento(matchId: string) {
+  const me = await requireForDoc(matchId)
+  const match = await partitaConQuota(matchId)
+  if (!inLista(match, me._id)) throw new Error('Non sei in lista per questa partita')
+  if (match.pagamenti.some((p) => p.giocatoreId === me._id && p.stato === 'confermato')) return
+  await segnaPagamento(matchId, me._id, { stato: 'dichiarato', metodo: 'satispay' })
+}
+
+export async function annullaDichiarazione(matchId: string) {
+  const me = await requireForDoc(matchId)
+  const match = await partitaConQuota(matchId)
+  if (match.pagamenti.some((p) => p.giocatoreId === me._id && p.stato === 'dichiarato')) await segnaPagamento(matchId, me._id, null)
+}
+
+export async function confermaPagamento(matchId: string, playerId: string, metodo: 'satispay' | 'contanti') {
+  await requireForDoc(matchId, 'organizzatore')
+  const match = await partitaConQuota(matchId)
+  if (!inLista(match, playerId)) throw new Error('Il giocatore non è in lista')
+  await segnaPagamento(matchId, playerId, { stato: 'confermato', metodo: metodo === 'contanti' ? 'contanti' : 'satispay' })
+}
+
+export async function annullaPagamento(matchId: string, playerId: string) {
+  await requireForDoc(matchId, 'organizzatore')
+  await segnaPagamento(matchId, playerId, null)
+}
+
+// Notifica a chi è in lista e non ha ancora pagato (né dichiarato).
+export async function sollecitaPagamenti(matchId: string): Promise<AvvisoState> {
+  const { lega } = await requireForDoc(matchId, 'organizzatore')
+  const match = await partitaConQuota(matchId)
+  const pagato = new Set(match.pagamenti.map((p) => p.giocatoreId))
+  const daSollecitare = presenti(match)
+    .map((c) => c.giocatore._id)
+    .filter((id) => !pagato.has(id))
+  if (daSollecitare.length === 0) return { inviate: 0, totali: 0 }
+  return inviaAGiocatori(daSollecitare, {
+    title: `💶 ${lega.nome}: quota da pagare`,
+    body: `${match.quota} € per la partita di ${formatData(match.data, { weekday: 'long', day: 'numeric', month: 'long' })}. Paga con Satispay dall'app.`,
+    url: `/partite/${matchId}`,
+    tag: `quota-${matchId}`,
+  })
 }

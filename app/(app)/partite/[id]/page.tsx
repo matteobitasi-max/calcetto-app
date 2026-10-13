@@ -13,6 +13,7 @@ import { SubmitButton } from '@/components/submit-button'
 import { ButtonLink, Card, Loading, PlayerRow, StatoBadge, buttonClass } from '@/components/ui'
 import { FinestraInfo } from '../finestra-info'
 import { RispostaButtons } from '../risposta-buttons'
+import { Cassa, MiaQuota } from './cassa'
 
 export default function MatchPage({ params }: PageProps<'/partite/[id]'>) {
   return (
@@ -80,7 +81,10 @@ async function MatchDetail({ params }: { params: Promise<{ id: string }> }) {
         </div>
       </Card>
 
+      <MiaQuota match={match} me={player} />
+
       {player.isAdmin && <AdminPanel match={match} whatsappUrl={await whatsappUrl(match, player.lega.nome)} />}
+      {player.isAdmin && <Cassa match={match} />}
 
       {match.squadraA.length + match.squadraB.length > 0 && (
         <Squadre match={match} />

@@ -170,6 +170,36 @@ export const match = defineType({
     defineField({ name: 'autogolA', title: 'Autogol / altri gol squadra A', type: 'number', initialValue: 0, validation: (r) => r.min(0).integer() }),
     defineField({ name: 'autogolB', title: 'Autogol / altri gol squadra B', type: 'number', initialValue: 0, validation: (r) => r.min(0).integer() }),
     defineField({ name: 'mvp', title: 'MVP', type: 'reference', to: [{ type: 'player' }] }),
+    defineField({
+      name: 'pagamenti',
+      title: 'Pagamenti quota',
+      type: 'array',
+      of: [
+        defineArrayMember({
+          type: 'object',
+          name: 'pagamento',
+          fields: [
+            defineField({ name: 'giocatore', type: 'reference', to: [{ type: 'player' }], validation: (r) => r.required() }),
+            defineField({
+              name: 'stato',
+              type: 'string',
+              options: {
+                list: [
+                  { title: 'Dichiarato dal giocatore', value: 'dichiarato' },
+                  { title: "Confermato dall'organizzatore", value: 'confermato' },
+                ],
+              },
+            }),
+            defineField({ name: 'metodo', type: 'string', options: { list: ['satispay', 'contanti'] } }),
+            defineField({ name: 'il', title: 'Data', type: 'datetime' }),
+          ],
+          preview: {
+            select: { nome: 'giocatore.nome', stato: 'stato', metodo: 'metodo' },
+            prepare: ({ nome, stato, metodo }) => ({ title: nome, subtitle: [stato, metodo].filter(Boolean).join(' · ') }),
+          },
+        }),
+      ],
+    }),
   ],
   orderings: [{ title: 'Data', name: 'dataDesc', by: [{ field: 'data', direction: 'desc' }] }],
   preview: {

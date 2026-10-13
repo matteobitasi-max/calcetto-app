@@ -15,6 +15,14 @@ export const league = defineType({
       type: 'string',
       validation: (r) => r.required().regex(/^[A-Z0-9]{6}$/, { name: 'codice di 6 caratteri' }),
     }),
+    defineField({
+      name: 'satispayLink',
+      title: 'Link Satispay',
+      description: "Dove i giocatori pagano la quota (letto anche dal QR dell'organizzatore)",
+      type: 'url',
+      validation: (r) => r.uri({ scheme: ['https'] }),
+    }),
+    defineField({ name: 'satispayQr', title: 'QR Satispay', description: 'Da mostrare al campo', type: 'image' }),
     defineField({ name: 'creataDa', title: 'Creata da (Clerk user ID)', type: 'string', readOnly: true }),
   ],
   preview: {

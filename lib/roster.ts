@@ -25,7 +25,7 @@ export const PIEDI = ['destro', 'sinistro', 'ambidestro'] as const
 
 export type SanityImage = { asset?: { _ref: string }; hotspot?: unknown; crop?: unknown }
 
-export type Lega = { _id: string; nome: string; logo?: SanityImage; codiceInvito?: string }
+export type Lega = { _id: string; nome: string; logo?: SanityImage; codiceInvito?: string; satispayLink?: string; satispayQr?: SanityImage }
 
 export type Player = {
   _id: string

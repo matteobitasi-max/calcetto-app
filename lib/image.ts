@@ -9,3 +9,9 @@ export function avatarUrl(image: SanityImage | undefined, size: number) {
   if (!image?.asset) return null
   return builder.image(image).width(size).height(size).fit('crop').auto('format').url()
 }
+
+// URL dell'immagine intera (senza ritaglio), es. un QR code.
+export function immagineUrl(image: SanityImage | undefined, width: number) {
+  if (!image?.asset) return null
+  return builder.image(image).width(width).auto('format').url()
+}

@@ -35,16 +35,10 @@ export async function rimuoviIscrizione(clerkUserId: string, endpoint: string) {
   if (owner === clerkUserId) await sanity.delete(id)
 }
 
-// Invia a tutti i dispositivi dei giocatori attivi della lega. I dispositivi che non
-// esistono più (notifiche disattivate, app disinstallata) vengono rimossi.
+// Invia ai dispositivi indicati. I dispositivi che non esistono più (notifiche
+// disattivate, app disinstallata) vengono rimossi.
 // Per ora solo notifiche web: le app native (APNs/FCM) si aggiungeranno qui.
-export async function inviaATutti(legaId: string, payload: PushPayload) {
-  const subs = await sanity.fetch<(PushSub & { _id: string })[]>(
-    `*[_type == "pushSubscription" && coalesce(tipo, "web") == "web"
-      && coalesce(clerkUserId, giocatore->clerkUserId) in *[_type == "player" && lega._ref == $legaId && attivo != false].clerkUserId
-    ]{_id, endpoint, keys}`,
-    { legaId },
-  )
+async function invia(subs: (PushSub & { _id: string })[], payload: PushPayload) {
   const results = await Promise.allSettled(
     subs.map((s) => webpush.sendNotification({ endpoint: s.endpoint, keys: s.keys }, JSON.stringify(payload), { TTL: 60 * 60 * 24 })),
   )
@@ -60,4 +54,29 @@ export async function inviaATutti(legaId: string, payload: PushPayload) {
   }
 
   return { inviate: results.filter((r) => r.status === 'fulfilled').length, totali: subs.length }
+}
+
+const subFields = `{_id, endpoint, keys}`
+
+// A tutti i giocatori attivi della lega.
+export async function inviaATutti(legaId: string, payload: PushPayload) {
+  const subs = await sanity.fetch<(PushSub & { _id: string })[]>(
+    `*[_type == "pushSubscription" && coalesce(tipo, "web") == "web"
+      && coalesce(clerkUserId, giocatore->clerkUserId) in *[_type == "player" && lega._ref == $legaId && attivo != false].clerkUserId
+    ]${subFields}`,
+    { legaId },
+  )
+  return invia(subs, payload)
+}
+
+// Solo ad alcuni giocatori (per ID della loro scheda).
+export async function inviaAGiocatori(playerIds: string[], payload: PushPayload) {
+  if (playerIds.length === 0) return { inviate: 0, totali: 0 }
+  const subs = await sanity.fetch<(PushSub & { _id: string })[]>(
+    `*[_type == "pushSubscription" && coalesce(tipo, "web") == "web"
+      && coalesce(clerkUserId, giocatore->clerkUserId) in *[_type == "player" && _id in $ids].clerkUserId
+    ]${subFields}`,
+    { ids: playerIds },
+  )
+  return invia(subs, payload)
 }

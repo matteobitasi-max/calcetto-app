@@ -91,6 +91,8 @@ async function Partite() {
 function MatchCard({ match, player }: { match: Match; player: Player }) {
   const count = presenti(match).length
   const inAttesa = ordinati(match, 'riserva').length
+  const quotaDaPagare =
+    match.quota != null && presenti(match).some((c) => c.giocatore._id === player._id) && !match.pagamenti.some((p) => p.giocatoreId === player._id)
   return (
     <Card className="space-y-3">
       <Link href={`/partite/${match._id}`} className="block space-y-1">
@@ -108,6 +110,7 @@ function MatchCard({ match, player }: { match: Match; player: Player }) {
           </span>
         </div>
         {inAttesa > 0 && <p className="text-xs text-amber-700 dark:text-amber-400">Lista piena · {inAttesa} in lista d&apos;attesa</p>}
+        {quotaDaPagare && <p className="text-xs font-medium text-red-600">💶 Quota da pagare: {match.quota} € · tocca per pagare</p>}
         <FinestraInfo match={match} />
       </Link>
       <RispostaButtons match={match} playerId={player._id} />
