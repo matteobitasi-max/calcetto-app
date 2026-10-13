@@ -39,3 +39,8 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# chiavi Apple (notifiche APNs) e Firebase: mai su git
+*.p8
+google-services.json
+GoogleService-Info.plist

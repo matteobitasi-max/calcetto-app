@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { attivaNotifiche, disattivaNotifiche } from '@/app/actions'
 import { buttonClass } from './ui-classes'
 
-type Stato = 'caricamento' | 'non_supportate' | 'serve_home' | 'bloccate' | 'attive' | 'spente'
+type Stato = 'caricamento' | 'non_supportate' | 'serve_home' | 'app_nativa' | 'bloccate' | 'attive' | 'spente'
 
 function urlBase64ToUint8Array(base64: string) {
   const padded = (base64 + '='.repeat((4 - (base64.length % 4)) % 4)).replace(/-/g, '+').replace(/_/g, '/')
@@ -13,6 +13,8 @@ function urlBase64ToUint8Array(base64: string) {
 
 const isIOS = () => /iPad|iPhone|iPod/.test(navigator.userAgent)
 const isStandalone = () => window.matchMedia('(display-mode: standalone)').matches
+// Dentro l'app iPhone/Android (Capacitor) le notifiche del sito non esistono: serviranno quelle native.
+const isAppNativa = () => !!(window as { Capacitor?: { isNativePlatform?: () => boolean } }).Capacitor?.isNativePlatform?.()
 
 // "banner": compare solo se le notifiche non sono attive. "impostazione": sempre, con interruttore.
 export function NotificheToggle({ variant }: { variant: 'banner' | 'impostazione' }) {
@@ -21,6 +23,7 @@ export function NotificheToggle({ variant }: { variant: 'banner' | 'impostazione
 
   useEffect(() => {
     ;(async () => {
+      if (isAppNativa()) return setStato('app_nativa')
       if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
         // Su iPhone le notifiche web esistono solo per l'app aggiunta alla schermata Home.
         return setStato(isIOS() && !isStandalone() ? 'serve_home' : 'non_supportate')
@@ -83,6 +86,12 @@ export function NotificheToggle({ variant }: { variant: 'banner' | 'impostazione
           <button onClick={disattiva} disabled={busy} className={buttonClass('secondary')}>
             {busy ? '…' : 'Disattiva'}
           </button>
+        </div>
+      )
+    case 'app_nativa':
+      return (
+        <div className={`${box} border-zinc-200 text-zinc-500 dark:border-zinc-800`}>
+          🔔 Le notifiche nell&apos;app arrivano con il prossimo aggiornamento.
         </div>
       )
     case 'serve_home':
