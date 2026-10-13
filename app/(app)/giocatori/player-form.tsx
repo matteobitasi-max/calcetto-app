@@ -46,9 +46,17 @@ export function PlayerForm({
             <Field label="Soprannome">
               <input name="soprannome" defaultValue={player?.soprannome} className={inputClass} />
             </Field>
-            <Field label="Email (quella con cui farà l'accesso)">
-              <input name="email" type="email" required defaultValue={player?.email} className={inputClass} />
-            </Field>
+            <div className="space-y-1">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Field label="Email">
+                  <input name="email" type="email" defaultValue={player?.email} placeholder="mario@gmail.com" className={inputClass} />
+                </Field>
+                <Field label="oppure Telefono">
+                  <input name="telefono" type="tel" inputMode="tel" defaultValue={player?.telefono} placeholder="333 1234567" className={inputClass} />
+                </Field>
+              </div>
+              <p className="text-xs text-zinc-500">Basta uno dei due: quando fa l&apos;accesso con quell&apos;email o quel numero, la scheda si collega da sola.</p>
+            </div>
             <div className="grid grid-cols-2 gap-4">
               <Field label="Ruolo">
                 <select name="ruolo" defaultValue={player?.ruolo ?? ''} className={`${inputClass} capitalize`}>

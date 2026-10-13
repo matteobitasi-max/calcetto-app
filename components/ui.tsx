@@ -124,7 +124,8 @@ export function PlayerBadge({ badge }: { badge?: Badge }) {
   )
 }
 
-export function PlayerRow({ player, right }: { player: Player; right?: ReactNode }) {
+// mostraAccesso: nella rosa segnala chi non ha ancora fatto l'accesso all'app.
+export function PlayerRow({ player, right, mostraAccesso = false }: { player: Player; right?: ReactNode; mostraAccesso?: boolean }) {
   return (
     <div className="flex items-center gap-3">
       <Avatar player={player} />
@@ -133,7 +134,13 @@ export function PlayerRow({ player, right }: { player: Player; right?: ReactNode
           <span className="truncate font-medium">{displayName(player)}</span>
           <PlayerBadge badge={player.badge} />
         </div>
-        {player.ruolo && <div className="text-xs capitalize text-zinc-500">{player.ruolo}</div>}
+        {(player.ruolo || (mostraAccesso && player.collegato === false)) && (
+          <div className="text-xs text-zinc-500">
+            {player.ruolo && <span className="capitalize">{player.ruolo}</span>}
+            {player.ruolo && mostraAccesso && player.collegato === false && ' · '}
+            {mostraAccesso && player.collegato === false && <span className="text-amber-700 dark:text-amber-400">⏳ non ha ancora fatto l&apos;accesso</span>}
+          </div>
+        )}
       </Link>
       <Overall player={player} />
       {right}

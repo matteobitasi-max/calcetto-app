@@ -5,9 +5,10 @@ import { cookies } from 'next/headers'
 import { refresh } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { sanity } from '@/lib/sanity'
-import { BADGE, CATEGORIE_NOTIFICHE, COOKIE_LEGA, PIEDI, RUOLI, SKILLS, displayName, requirePlayer, getUtente, membroDi, requireAdmin, requireForDoc, requireIn, type Skill } from '@/lib/player'
+import { BADGE, CATEGORIE_NOTIFICHE, COOKIE_LEGA, normalizzaTelefono, PIEDI, RUOLI, SKILLS, displayName, requirePlayer, getUtente, membroDi, requireAdmin, requireForDoc, requireIn, type Player, type Skill } from '@/lib/player'
 import { assegnaPosti, finestra, getMatch, presenti, risultatoDa, type Match, type Risposta, type Stato } from '@/lib/matches'
 import { MAX_GIOCATORI, MAX_ISCRITTI, formatoDaIscritti } from '@/lib/limiti'
+import { riscriviPartita, type MatchDaUnire } from '@/lib/unisci'
 import { daysBetween, formatData, romeLocalToISO } from '@/lib/dates'
 import { inviaAGiocatori, inviaATutti, rimuoviIscrizione, salvaIscrizione, salvaTokenNativo, type PushSub } from '@/lib/push'
 import { assicuraRicorrenze, getSeries, occurrenceId, rimuoviFutureVuote, type Series } from '@/lib/series'
@@ -478,13 +479,16 @@ export async function salvaGiocatore(playerId: string | null, _prev: FormState, 
 
   const nome = str(formData, 'nome')
   const email = str(formData, 'email').toLowerCase()
-  if (!nome || !email) return { error: 'Nome ed email sono obbligatori.' }
+  const telefono = normalizzaTelefono(str(formData, 'telefono'))
+  if (!nome) return { error: 'Il nome è obbligatorio.' }
+  if (!email && !telefono) return { error: 'Serve l\u2019email o il numero di telefono, per collegarlo quando fa l\u2019accesso.' }
+  if (telefono && !/^\+\d{8,15}$/.test(telefono)) return { error: 'Numero di telefono non valido (es. 333 1234567 o +39 333 1234567).' }
 
   const duplicate = await sanity.fetch<string | null>(
-    `*[_type == "player" && lega._ref == $lega && lower(email) == $email && _id != $id][0].nome`,
-    { email, id: playerId ?? '', lega: admin.lega._id },
+    `*[_type == "player" && lega._ref == $lega && _id != $id && ((defined(email) && lower(email) == $email) || (defined(telefono) && telefono == $telefono))][0].nome`,
+    { email: email || '-', telefono: telefono || '-', id: playerId ?? '', lega: admin.lega._id },
   )
-  if (duplicate) return { error: `L'email è già usata da ${duplicate}.` }
+  if (duplicate) return { error: `Email o telefono già usati da ${duplicate}.` }
 
   const upload = await uploadFoto(formData.get('foto'))
   if (upload && 'error' in upload) return upload
@@ -493,6 +497,8 @@ export async function salvaGiocatore(playerId: string | null, _prev: FormState, 
   const ruolo = str(formData, 'ruolo')
   const piede = str(formData, 'piede')
   const optional = {
+    email: email || undefined,
+    telefono: telefono || undefined,
     cognome: str(formData, 'cognome') || undefined,
     soprannome: str(formData, 'soprannome') || undefined,
     ruolo: (RUOLI as readonly string[]).includes(ruolo) ? ruolo : undefined,
@@ -502,7 +508,6 @@ export async function salvaGiocatore(playerId: string | null, _prev: FormState, 
   }
   const fields = {
     nome,
-    email,
     // Un organizzatore non può togliersi da solo i permessi e restare chiuso fuori.
     isAdmin: playerId === admin._id || formData.get('isAdmin') === 'on',
     puoModificareGiocatori: formData.get('puoModificareGiocatori') === 'on',
@@ -627,6 +632,7 @@ async function nuovaScheda(legaId: string, utente: NonNullable<Awaited<ReturnTyp
     nome: utente.nome || utente.emails[0]?.split('@')[0] || 'Giocatore',
     ...(utente.cognome && { cognome: utente.cognome }),
     ...(utente.emails[0] && { email: utente.emails[0] }),
+    ...(utente.telefoni[0] && { telefono: utente.telefoni[0] }),
     clerkUserId: utente.id,
     isAdmin,
     attivo: true,
@@ -804,4 +810,43 @@ export async function inviaComunicazione(_prev: AvvisoState, formData: FormData)
   if (testo.length < 2) return { error: 'Scrivi un messaggio.' }
   if (testo.length > 300) return { error: 'Massimo 300 caratteri.' }
   return inviaATutti(me.lega._id, { title: `📢 ${displayName(me)} · ${me.lega.nome}`, body: testo, url: '/', tag: `comunicazione-${Date.now()}` }, 'capitano')
+}
+
+// ---------- Unione di schede doppie ----------
+
+// L'organizzatore unisce un doppione ("togli") nella scheda giusta ("tieni"): account,
+// partite, gol, MVP e pagamenti passano a "tieni", i dati mancanti vengono completati,
+// poi il doppione viene eliminato.
+export async function unisciSchede(tieniId: string, togliId: string) {
+  if (tieniId === togliId) throw new Error('Scegli due schede diverse')
+  const admin = await requireForDoc(tieniId, 'organizzatore')
+  type Scheda = Player & { _id: string; legaId?: string; clerkUserId?: string; foto?: unknown }
+  const [tieni, togli] = await Promise.all(
+    [tieniId, togliId].map((id) =>
+      sanity.fetch<Scheda | null>(`*[_type == "player" && _id == $id][0]{..., "legaId": lega._ref}`, { id }),
+    ),
+  )
+  if (!tieni || !togli) throw new Error('Scheda non trovata')
+  if (togli.legaId !== admin.lega._id || tieni.legaId !== admin.lega._id) throw new Error('Le schede devono essere della stessa lega')
+  if (tieni.clerkUserId && togli.clerkUserId && tieni.clerkUserId !== togli.clerkUserId) {
+    throw new Error('Sono due account diversi: non si possono unire')
+  }
+
+  const partite = await sanity.fetch<MatchDaUnire[]>(
+    `*[_type == "match" && references($togli)]{_id, _rev, convocazioni, squadraA, squadraB, marcatori, mvp, pagamenti}`,
+    { togli: togliId },
+  )
+  const tx = sanity.transaction()
+  for (const m of partite) tx.patch(m._id, (p) => p.ifRevisionId(m._rev).set(riscriviPartita(m, tieniId, togliId)))
+
+  // Dati che mancano alla scheda giusta: si prendono dal doppione.
+  const completa = Object.fromEntries(
+    (['clerkUserId', 'cognome', 'soprannome', 'foto', 'ruolo', 'piede', 'badge', 'telefono'] as const)
+      .filter((k) => !(tieni as Record<string, unknown>)[k] && (togli as Record<string, unknown>)[k])
+      .map((k) => [k, (togli as Record<string, unknown>)[k]]),
+  )
+  if (Object.keys(completa).length) tx.patch(tieniId, (p) => p.set(completa))
+  tx.delete(togliId)
+  await tx.commit()
+  redirect(`/giocatori/${tieniId}`)
 }

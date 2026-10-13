@@ -38,7 +38,18 @@ export const player = defineType({
       description: "Serve per collegare il giocatore all'account con cui fa login",
       type: 'string',
       fieldset: 'accesso',
-      validation: (r) => r.required().email(),
+      validation: (r) =>
+        r.email().custom((email, ctx) =>
+          email || (ctx.document as { telefono?: string } | undefined)?.telefono ? true : 'Serve l\u2019email o il telefono',
+        ),
+    }),
+    defineField({
+      name: 'telefono',
+      title: 'Telefono',
+      description: "In alternativa all'email: collega il giocatore se fa login con questo numero (+39…)",
+      type: 'string',
+      fieldset: 'accesso',
+      validation: (r) => r.regex(/^\+\d{8,15}$/, { name: 'numero internazionale', invert: false }),
     }),
     defineField({ name: 'clerkUserId', title: 'Clerk user ID', type: 'string', fieldset: 'accesso', readOnly: true }),
     defineField({

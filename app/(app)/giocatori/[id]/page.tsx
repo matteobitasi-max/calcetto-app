@@ -58,11 +58,19 @@ async function Profilo({ params }: { params: Promise<{ id: string }> }) {
               .filter(Boolean)
               .join(' · ')}
           </p>
+          {player.collegato === false && <p className="text-xs text-amber-700 dark:text-amber-400">⏳ non ha ancora fatto l&apos;accesso</p>}
         </div>
         {canEdit && (
-          <ButtonLink href={`/giocatori/${player._id}/modifica`} variant="secondary">
-            Modifica
-          </ButtonLink>
+          <div className="flex shrink-0 flex-col items-end gap-1">
+            <ButtonLink href={`/giocatori/${player._id}/modifica`} variant="secondary">
+              Modifica
+            </ButtonLink>
+            {me.isAdmin && (
+              <Link href={`/giocatori/${player._id}/unisci`} className="text-xs text-zinc-500 hover:underline">
+                🔗 Unisci un doppione
+              </Link>
+            )}
+          </div>
         )}
       </Card>
 

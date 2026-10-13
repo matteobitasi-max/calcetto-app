@@ -52,6 +52,8 @@ export type Player = {
   cognome?: string
   soprannome?: string
   email?: string
+  /** Formato internazionale, es. +393331234567. */
+  telefono?: string
   foto?: SanityImage
   ruolo?: string
   piede?: string
@@ -61,16 +63,28 @@ export type Player = {
   puoModificareGiocatori?: boolean
   puoInserireRisultati?: boolean
   attivo?: boolean
+  /** Ha già fatto l'accesso (la scheda è collegata a un account). */
+  collegato?: boolean
   caratteristiche?: Partial<Record<Skill, number>>
 }
 
-export const playerFields = `_id, "legaId": lega._ref, nome, cognome, soprannome, email, foto, ruolo, piede, badge, notifiche, isAdmin, puoModificareGiocatori, puoInserireRisultati, attivo, caratteristiche`
+export const playerFields = `_id, "legaId": lega._ref, nome, cognome, soprannome, email, telefono, foto, ruolo, piede, badge, notifiche, isAdmin, puoModificareGiocatori, puoInserireRisultati, attivo, "collegato": defined(clerkUserId), caratteristiche`
 
 // Chi può cambiare caratteristiche e foto dei giocatori.
 export const canEditPlayers = (p: Pick<Player, 'isAdmin' | 'puoModificareGiocatori'>) => !!(p.isAdmin || p.puoModificareGiocatori)
 
 // Chi può segnare risultato, marcatori e MVP.
 export const canEnterResults = (p: Pick<Player, 'isAdmin' | 'puoInserireRisultati'>) => !!(p.isAdmin || p.puoInserireRisultati)
+
+// Numero di telefono in formato internazionale (+39…): così combacia con quello verificato da Clerk.
+export function normalizzaTelefono(input: string) {
+  const s = input.replace(/[\s.\-()/]/g, '')
+  if (!s) return ''
+  if (s.startsWith('+')) return s
+  if (s.startsWith('00')) return `+${s.slice(2)}`
+  if (/^3\d{8,9}$/.test(s)) return `+39${s}` // cellulare italiano senza prefisso
+  return s
+}
 
 export function displayName(p: Pick<Player, 'nome' | 'cognome' | 'soprannome'>) {
   return p.soprannome || [p.nome, p.cognome].filter(Boolean).join(' ')

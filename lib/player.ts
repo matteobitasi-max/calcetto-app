@@ -22,19 +22,21 @@ export const getUtente = cache(async () => {
   const emails = user.emailAddresses
     .filter((e) => e.verification?.status === 'verified')
     .map((e) => e.emailAddress.toLowerCase())
-  return { id: user.id, nome: user.firstName, cognome: user.lastName, emails }
+  const telefoni = user.phoneNumbers.filter((p) => p.verification?.status === 'verified').map((p) => p.phoneNumber)
+  return { id: user.id, nome: user.firstName, cognome: user.lastName, emails, telefoni }
 })
 
 // Tutte le leghe di cui faccio parte. Al primo accesso collega anche le schede
-// che un organizzatore ha creato con la mia email (in qualsiasi lega).
+// che un organizzatore ha creato con la mia email o il mio telefono (in qualsiasi lega).
 export const getMemberships = cache(async (): Promise<Membro[]> => {
   const utente = await getUtente()
   if (!utente) return []
 
-  if (utente.emails.length) {
+  if (utente.emails.length || utente.telefoni.length) {
+    // Schede create da un organizzatore con la mia email o il mio numero di telefono.
     const daCollegare = await sanity.fetch<string[]>(
-      `*[_type == "player" && attivo != false && lower(email) in $emails && !defined(clerkUserId)]._id`,
-      { emails: utente.emails },
+      `*[_type == "player" && attivo != false && !defined(clerkUserId) && (lower(email) in $emails || telefono in $telefoni)]._id`,
+      { emails: utente.emails, telefoni: utente.telefoni },
     )
     if (daCollegare.length) {
       const tx = sanity.transaction()

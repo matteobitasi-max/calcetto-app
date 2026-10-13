@@ -28,6 +28,7 @@ async function Rosa() {
             <li key={p._id}>
               <PlayerRow
                 player={p}
+                mostraAccesso
                 right={
                   p.isAdmin ? (
                     <span title="Organizzatore">👑</span>
@@ -50,7 +51,7 @@ async function Rosa() {
             <ul className="space-y-3">
               {inattivi.map((p) => (
                 <li key={p._id}>
-                  <PlayerRow player={p} />
+                  <PlayerRow player={p} mostraAccesso />
                 </li>
               ))}
             </ul>
