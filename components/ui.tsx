@@ -1,7 +1,7 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import type { ComponentProps, ReactNode } from 'react'
-import { BADGE, SKILLS, displayName, overall, type Badge, type Player, type Skill } from '@/lib/roster'
+import { BADGE, SKILLS, displayName, iniziali, overall, type Badge, type Player, type Skill } from '@/lib/roster'
 import type { Risposta, Stato } from '@/lib/matches'
 import { finestra } from '@/lib/finestra'
 import { avatarUrl } from '@/lib/image'
@@ -69,11 +69,11 @@ export const StatoBadge = ({ match }: { match: { stato: Stato; aperturaConvocazi
   return <Badge label={label} className={cls} />
 }
 
-export function Overall({ player }: { player: Player }) {
+export function Overall({ player, grande = false }: { player: Player; grande?: boolean }) {
   const value = overall(player)
   const color = value >= 7.5 ? 'bg-green-600' : value >= 5.5 ? 'bg-amber-500' : 'bg-zinc-500'
   return (
-    <span className={`inline-flex shrink-0 items-center justify-center rounded-lg font-bold tabular-nums text-white h-8 w-9 text-sm ${color}`}>
+    <span className={`inline-flex shrink-0 items-center justify-center rounded-lg font-bold tabular-nums text-white ${grande ? 'h-12 w-16 text-2xl' : 'h-8 w-9 text-sm'} ${color}`}>
       {value.toFixed(1)}
     </span>
   )
@@ -81,12 +81,7 @@ export function Overall({ player }: { player: Player }) {
 
 export function Avatar({ player, size = 40 }: { player: Player; size?: number }) {
   const url = avatarUrl(player.foto, size * 2)
-  const initials = displayName(player)
-    .split(/\s+/)
-    .map((w) => w[0])
-    .slice(0, 2)
-    .join('')
-    .toUpperCase()
+  const initials = iniziali(displayName(player))
   return url ? (
     <Image src={url} alt="" width={size} height={size} unoptimized className="shrink-0 rounded-full object-cover" style={{ width: size, height: size }} />
   ) : (

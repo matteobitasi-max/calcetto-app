@@ -3,14 +3,15 @@ import { notFound } from 'next/navigation'
 import { Suspense } from 'react'
 import { SignOutButton } from '@clerk/nextjs'
 import { displayName, membroDi } from '@/lib/player'
-import { getPlayer, getPlayerStats, getStorico, type PartitaGiocata, type PlayerStats } from '@/lib/matches'
+import { getPartitePunteggio, getPlayer, getPlayerStats, getStorico, type PartitaGiocata, type PlayerStats } from '@/lib/matches'
+import { classifica } from '@/lib/punteggio'
 import { formatData } from '@/lib/dates'
 import { caricaFoto } from '@/app/actions'
 import { AvatarUpload } from '@/components/avatar-upload'
 import { NotificheToggle } from '@/components/notifiche-toggle'
 import { PreferenzeNotifiche } from '@/components/preferenze-notifiche'
 import { EliminaAccount } from '@/components/elimina-account'
-import { Avatar, ButtonLink, Card, Loading, Overall, PlayerBadge, SkillBars, buttonClass } from '@/components/ui'
+import { Avatar, Card, Loading, Overall, PlayerBadge, SkillBars, buttonClass } from '@/components/ui'
 
 export default function GiocatorePage({ params }: PageProps<'/giocatori/[id]'>) {
   return (
@@ -26,7 +27,8 @@ async function Profilo({ params }: { params: Promise<{ id: string }> }) {
   // Le schede si vedono solo tra membri della stessa lega.
   const me = await membroDi(player?.legaId)
   if (!player || !me) notFound()
-  const [stats, storico] = await Promise.all([getPlayerStats(id, me.lega._id), getStorico(id)])
+  const [stats, storico, partite] = await Promise.all([getPlayerStats(id, me.lega._id), getStorico(id), getPartitePunteggio(me.lega._id)])
+  const inClassifica = classifica(partite).find((r) => r.id === player._id)
 
   const fullName = [player.nome, player.cognome].filter(Boolean).join(' ')
   // Modifica, foto e unione dei doppioni: solo per gli organizzatori.
@@ -40,39 +42,52 @@ async function Profilo({ params }: { params: Promise<{ id: string }> }) {
   return (
     <div className="space-y-4">
       {mio && <p className="text-sm font-medium text-green-700 dark:text-green-400">Il mio profilo</p>}
-      <Card className="flex items-center gap-4">
-        {canEdit ? (
-          <AvatarUpload action={caricaFoto.bind(null, player._id)} size={72}>
-            <Avatar player={player} size={72} />
-          </AvatarUpload>
-        ) : (
-          <Avatar player={player} size={72} />
-        )}
-        <div className="min-w-0 flex-1">
-          <h1 className="flex items-center gap-2 text-xl font-bold">
-            <span className="truncate">{displayName(player)}</span>
-            <Overall player={player} />
-            <PlayerBadge badge={player.badge} />
-          </h1>
-          {player.soprannome && <p className="text-sm text-zinc-500">{fullName}</p>}
-          <p className="text-sm capitalize text-zinc-500">
-            {[player.ruolo, player.piede && `piede ${player.piede}`, ...ruoli, player.attivo === false && 'non attivo']
-              .filter(Boolean)
-              .join(' · ')}
-          </p>
-          {player.collegato === false && <p className="text-xs text-amber-700 dark:text-amber-400">⏳ non ha ancora fatto l&apos;accesso</p>}
-        </div>
+      <Card className="relative">
         {canEdit && (
-          <div className="flex shrink-0 flex-col items-end gap-1">
-            <ButtonLink href={`/giocatori/${player._id}/modifica`} variant="secondary">
-              Modifica
-            </ButtonLink>
-            {me.isAdmin && (
-              <Link href={`/giocatori/${player._id}/unisci`} className="text-xs text-zinc-500 hover:underline">
-                🔗 Unisci un doppione
-              </Link>
+          <Link
+            href={`/giocatori/${player._id}/modifica`}
+            aria-label="Modifica giocatore"
+            className="absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-full text-lg hover:bg-zinc-100 dark:hover:bg-zinc-800"
+          >
+            ✏️
+          </Link>
+        )}
+        <div className="flex items-center gap-4 pr-8">
+          {canEdit ? (
+            <AvatarUpload action={caricaFoto.bind(null, player._id)} size={72}>
+              <Avatar player={player} size={72} />
+            </AvatarUpload>
+          ) : (
+            <Avatar player={player} size={72} />
+          )}
+          <div className="min-w-0 flex-1 space-y-1">
+            <h1 className="break-words text-xl font-bold leading-tight">{displayName(player)}</h1>
+            {player.soprannome && <p className="text-sm text-zinc-500">{fullName}</p>}
+            <PlayerBadge badge={player.badge} />
+            <p className="text-sm capitalize leading-snug text-zinc-500">
+              {[player.ruolo, player.piede && `piede ${player.piede}`, ...ruoli, player.attivo === false && 'non attivo']
+                .filter(Boolean)
+                .join(' · ')}
+            </p>
+            {player.collegato === false && <p className="text-xs text-amber-700 dark:text-amber-400">⏳ non ha ancora fatto l&apos;accesso</p>}
+          </div>
+          <div className="flex shrink-0 flex-col items-center gap-1 pt-6">
+            <Overall player={player} grande />
+            {inClassifica ? (
+              <p className="text-center text-xs leading-tight text-zinc-500">
+                <b className="text-zinc-700 dark:text-zinc-200">{inClassifica.posizione}°</b> in classifica
+                <br />
+                {new Intl.NumberFormat('it-IT', { maximumFractionDigits: 2 }).format(inClassifica.punti)} pt
+              </p>
+            ) : (
+              <p className="text-xs text-zinc-400">voto</p>
             )}
           </div>
+        </div>
+        {me.isAdmin && (
+          <Link href={`/giocatori/${player._id}/unisci`} className="mt-3 block text-right text-xs text-zinc-500 hover:underline">
+            🔗 Unisci un doppione
+          </Link>
         )}
       </Card>
 

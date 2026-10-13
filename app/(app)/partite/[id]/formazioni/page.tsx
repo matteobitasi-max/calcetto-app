@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { Suspense } from 'react'
 import { salvaFormazioni } from '@/app/actions'
-import { displayName, requireIn } from '@/lib/player'
+import { displayName, iniziali, requireIn } from '@/lib/player'
 import { getMatch, presenti } from '@/lib/matches'
 import { avatarUrl } from '@/lib/image'
 import { formatData } from '@/lib/dates'
@@ -47,12 +47,7 @@ async function Editor({ params }: { params: Promise<{ id: string }> }) {
     caratteristiche: p.caratteristiche,
     nome: displayName(p),
     foto: avatarUrl(p.foto, 64),
-    iniziali: displayName(p)
-      .split(/\s+/)
-      .map((w) => w[0])
-      .slice(0, 2)
-      .join('')
-      .toUpperCase(),
+    iniziali: iniziali(displayName(p)),
   }))
   if (giocatori.length < 2) {
     return (

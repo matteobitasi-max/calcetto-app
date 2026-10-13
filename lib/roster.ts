@@ -83,6 +83,17 @@ export function normalizzaTelefono(input: string) {
   return s
 }
 
+// Iniziali per l'avatar senza foto: solo le lettere (es. "Andrea (prova)" → "AP").
+export function iniziali(nome: string) {
+  return nome
+    .split(/\s+/)
+    .map((w) => w.match(/\p{L}/u)?.[0] ?? '')
+    .filter(Boolean)
+    .slice(0, 2)
+    .join('')
+    .toUpperCase()
+}
+
 export function displayName(p: Pick<Player, 'nome' | 'cognome' | 'soprannome'>) {
   return p.soprannome || [p.nome, p.cognome].filter(Boolean).join(' ')
 }
