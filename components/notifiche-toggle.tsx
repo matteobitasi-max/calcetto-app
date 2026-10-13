@@ -1,10 +1,12 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { FirebaseMessaging } from '@capacitor-firebase/messaging'
 import { attivaNotifiche, disattivaNotifiche } from '@/app/actions'
+import { isAppNativa, registraTelefono } from './notifiche-native'
 import { buttonClass } from './ui-classes'
 
-type Stato = 'caricamento' | 'non_supportate' | 'serve_home' | 'app_nativa' | 'bloccate' | 'attive' | 'spente'
+type Stato = 'caricamento' | 'non_supportate' | 'serve_home' | 'bloccate' | 'attive' | 'spente'
 
 function urlBase64ToUint8Array(base64: string) {
   const padded = (base64 + '='.repeat((4 - (base64.length % 4)) % 4)).replace(/-/g, '+').replace(/_/g, '/')
@@ -13,17 +15,21 @@ function urlBase64ToUint8Array(base64: string) {
 
 const isIOS = () => /iPad|iPhone|iPod/.test(navigator.userAgent)
 const isStandalone = () => window.matchMedia('(display-mode: standalone)').matches
-// Dentro l'app iPhone/Android (Capacitor) le notifiche del sito non esistono: serviranno quelle native.
-const isAppNativa = () => !!(window as { Capacitor?: { isNativePlatform?: () => boolean } }).Capacitor?.isNativePlatform?.()
 
 // "banner": compare solo se le notifiche non sono attive. "impostazione": sempre, con interruttore.
 export function NotificheToggle({ variant }: { variant: 'banner' | 'impostazione' }) {
   const [stato, setStato] = useState<Stato>('caricamento')
   const [busy, setBusy] = useState(false)
+  const [nativa, setNativa] = useState(false)
 
   useEffect(() => {
     ;(async () => {
-      if (isAppNativa()) return setStato('app_nativa')
+      // Nell'app iPhone/Android: notifiche native (Firebase) con il permesso del telefono.
+      if (isAppNativa()) {
+        setNativa(true)
+        const { receive } = await FirebaseMessaging.checkPermissions()
+        return setStato(receive === 'granted' ? 'attive' : receive === 'denied' ? 'bloccate' : 'spente')
+      }
       if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
         // Su iPhone le notifiche web esistono solo per l'app aggiunta alla schermata Home.
         return setStato(isIOS() && !isStandalone() ? 'serve_home' : 'non_supportate')
@@ -36,6 +42,18 @@ export function NotificheToggle({ variant }: { variant: 'banner' | 'impostazione
 
   async function attiva() {
     setBusy(true)
+    if (isAppNativa()) {
+      try {
+        const { receive } = await FirebaseMessaging.requestPermissions()
+        if (receive === 'granted' && (await registraTelefono())) setStato('attive')
+        else setStato(receive === 'denied' ? 'bloccate' : 'spente')
+      } catch {
+        setStato('spente')
+      } finally {
+        setBusy(false)
+      }
+      return
+    }
     try {
       const reg = await navigator.serviceWorker.ready
       const sub = await reg.pushManager.subscribe({
@@ -83,15 +101,13 @@ export function NotificheToggle({ variant }: { variant: 'banner' | 'impostazione
       return (
         <div className={`${box} border-zinc-200 dark:border-zinc-800`}>
           <span>🔔 Notifiche attive su questo dispositivo</span>
-          <button onClick={disattiva} disabled={busy} className={buttonClass('secondary')}>
-            {busy ? '…' : 'Disattiva'}
-          </button>
-        </div>
-      )
-    case 'app_nativa':
-      return (
-        <div className={`${box} border-zinc-200 text-zinc-500 dark:border-zinc-800`}>
-          🔔 Le notifiche nell&apos;app arrivano con il prossimo aggiornamento.
+          {nativa ? (
+            <span className="text-xs text-zinc-500">Per disattivarle: Impostazioni del telefono → TheCap → Notifiche</span>
+          ) : (
+            <button onClick={disattiva} disabled={busy} className={buttonClass('secondary')}>
+              {busy ? '…' : 'Disattiva'}
+            </button>
+          )}
         </div>
       )
     case 'serve_home':
@@ -106,7 +122,8 @@ export function NotificheToggle({ variant }: { variant: 'banner' | 'impostazione
     case 'bloccate':
       return (
         <div className={`${box} border-zinc-200 text-zinc-500 dark:border-zinc-800`}>
-          🔕 Le notifiche sono bloccate: riattivale dalle impostazioni del browser per questo sito.
+          🔕 Le notifiche sono bloccate:{' '}
+          {nativa ? 'riattivale da Impostazioni del telefono → TheCap → Notifiche.' : 'riattivale dalle impostazioni del browser per questo sito.'}
         </div>
       )
     case 'non_supportate':

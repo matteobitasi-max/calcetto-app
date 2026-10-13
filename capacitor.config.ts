@@ -1,3 +1,4 @@
+/// <reference types="@capacitor-firebase/messaging" />
 import type { CapacitorConfig } from '@capacitor/cli'
 
 // L'app nativa mostra il sito pubblicato. L'indirizzo viene scritto nei progetti
@@ -22,7 +23,15 @@ const config: CapacitorConfig = {
   ios: {
     contentInset: 'never',
   },
+  // Evita un conflitto di nomi tra pacchetti Swift (vedi documentazione del plugin Firebase).
+  experimental: {
+    ios: { spm: { packageOptions: { '@capacitor-firebase/messaging': { symlink: true } } } },
+  },
   plugins: {
+    // Notifiche native (Firebase Cloud Messaging), mostrate anche con l'app aperta.
+    FirebaseMessaging: {
+      presentationOptions: ['alert', 'badge', 'sound'],
+    },
     StatusBar: {
       // testo scuro su intestazione chiara, adattato al tema del telefono
       style: 'DEFAULT',

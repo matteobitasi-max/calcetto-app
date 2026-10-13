@@ -9,7 +9,7 @@ import { BADGE, COOKIE_LEGA, PIEDI, RUOLI, SKILLS, getUtente, membroDi, requireA
 import { assegnaPosti, finestra, getMatch, presenti, risultatoDa, type Match, type Risposta, type Stato } from '@/lib/matches'
 import { MAX_GIOCATORI } from '@/lib/limiti'
 import { daysBetween, formatData, isoToRomeLocal, romeLocalToISO } from '@/lib/dates'
-import { inviaAGiocatori, inviaATutti, rimuoviIscrizione, salvaIscrizione, type PushSub } from '@/lib/push'
+import { inviaAGiocatori, inviaATutti, rimuoviIscrizione, salvaIscrizione, salvaTokenNativo, type PushSub } from '@/lib/push'
 import { assicuraRicorrenze, getSeries, occurrenceId, rimuoviFutureVuote, type Series } from '@/lib/series'
 
 export type FormState = { error?: string } | undefined
@@ -500,6 +500,14 @@ export async function attivaNotifiche(sub: PushSub, dispositivo: string) {
   if (!utente) throw new Error('Accesso richiesto')
   if (!sub?.endpoint?.startsWith('https://') || !sub.keys?.p256dh || !sub.keys?.auth) throw new Error('Iscrizione non valida')
   await salvaIscrizione(utente.id, sub, dispositivo)
+}
+
+// App iPhone/Android: salva il token Firebase del telefono (anche quando Firebase lo rinnova).
+export async function attivaNotificheNative(token: string, tipo: 'ios' | 'android', dispositivo: string) {
+  const utente = await getUtente()
+  if (!utente) return
+  if (!token || token.length > 4096 || (tipo !== 'ios' && tipo !== 'android')) throw new Error('Token non valido')
+  await salvaTokenNativo(utente.id, token, tipo, dispositivo)
 }
 
 export async function disattivaNotifiche(endpoint: string) {

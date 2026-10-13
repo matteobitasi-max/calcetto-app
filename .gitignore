@@ -49,3 +49,4 @@ GoogleService-Info.plist
 *.jks
 *.keystore
 android/keystore.properties
+*firebase-adminsdk*.json

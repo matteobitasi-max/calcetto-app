@@ -17,6 +17,7 @@ export const pushSubscription = defineType({
       initialValue: 'web',
     }),
     defineField({ name: 'endpoint', type: 'url' }),
+    defineField({ name: 'token', title: 'Token Firebase (app native)', type: 'string' }),
     defineField({
       name: 'keys',
       type: 'object',
