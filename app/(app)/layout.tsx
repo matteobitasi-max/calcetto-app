@@ -6,14 +6,10 @@ import { avatarUrl } from '@/lib/image'
 import { Avatar } from '@/components/ui'
 import { LogoZoom } from '@/components/logo-zoom'
 import { LegaMenu } from '@/components/lega-menu'
+import { MenuSezioni } from '@/components/menu-sezioni'
+import { SEZIONI, pillClass } from '@/components/sezioni'
 import { NotificheNativeListener } from '@/components/notifiche-native'
 
-const MENU = [
-  ['/', 'Partite'],
-  ['/calendario', 'Calendario'],
-  ['/classifica', 'Classifica'],
-  ['/giocatori', 'Rosa'],
-] as const
 
 export default function AppLayout({ children }: LayoutProps<'/'>) {
   return (
@@ -26,12 +22,17 @@ export default function AppLayout({ children }: LayoutProps<'/'>) {
               <LegaEUtente />
             </Suspense>
           </div>
-          <nav className="-mx-1 flex gap-1 overflow-x-auto pb-2 text-sm">
-            {MENU.map(([href, label]) => (
-              <Link key={href} href={href} className="shrink-0 rounded-full px-3 py-1 hover:bg-zinc-100 dark:hover:bg-zinc-800">
-                {label}
-              </Link>
-            ))}
+          <nav className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-2.5">
+            {/* La pillola evidenziata dipende dalla pagina: fuori dal Suspense resta il menu senza evidenziazione */}
+            <Suspense
+              fallback={SEZIONI.map((s) => (
+                <Link key={s.href} href={s.href} className={pillClass(false)}>
+                  {s.label}
+                </Link>
+              ))}
+            >
+              <MenuSezioni />
+            </Suspense>
           </nav>
         </div>
       </header>
