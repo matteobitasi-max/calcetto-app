@@ -835,3 +835,42 @@ export async function unisciSchede(tieniId: string, togliId: string) {
   await tx.commit()
   redirect(`/giocatori/${tieniId}`)
 }
+
+// ---------- Eliminazione dell'account ----------
+
+// Cancella l'account (Clerk) e i dati personali. Le schede restano nelle partite già giocate
+// come "Ex giocatore", senza nome, contatti né foto, così le statistiche degli altri restano giuste.
+export async function eliminaAccount(): Promise<FormState> {
+  const utente = await getUtente()
+  if (!utente) return { error: 'Accesso richiesto.' }
+
+  const schede = await sanity.fetch<{ _id: string; isAdmin?: boolean; legaId: string; lega: string; altriAdmin: number; altriMembri: number }[]>(
+    `*[_type == "player" && clerkUserId == $id]{
+      _id, isAdmin, "legaId": lega._ref, "lega": lega->nome,
+      "altriAdmin": count(*[_type == "player" && lega._ref == ^.lega._ref && _id != ^._id && isAdmin == true && attivo != false]),
+      "altriMembri": count(*[_type == "player" && lega._ref == ^.lega._ref && _id != ^._id && attivo != false])
+    }`,
+    { id: utente.id },
+  )
+  const bloccanti = schede.filter((s) => s.isAdmin && s.altriAdmin === 0 && s.altriMembri > 0).map((s) => s.lega)
+  if (bloccanti.length) {
+    return { error: `Sei l'unico organizzatore di ${bloccanti.join(', ')}: prima nomina un altro organizzatore (Modifica giocatore → Organizzatore).` }
+  }
+
+  const tx = sanity.transaction()
+  for (const s of schede) {
+    tx.patch(s._id, (p) =>
+      p
+        .set({ nome: 'Ex giocatore', attivo: false, isAdmin: false, puoInserireRisultati: false })
+        .unset(['cognome', 'soprannome', 'email', 'telefono', 'foto', 'clerkUserId', 'badge', 'notifiche']),
+    )
+  }
+  const iscrizioni = await sanity.fetch<string[]>(`*[_type == "pushSubscription" && clerkUserId == $id]._id`, { id: utente.id })
+  for (const id of iscrizioni) tx.delete(id)
+  await tx.commit()
+
+  const { clerkClient } = await import('@clerk/nextjs/server')
+  await (await clerkClient()).users.deleteUser(utente.id)
+  ;(await cookies()).delete(COOKIE_LEGA)
+  redirect('/sign-in')
+}

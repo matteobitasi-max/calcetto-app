@@ -9,6 +9,7 @@ import { caricaFoto } from '@/app/actions'
 import { AvatarUpload } from '@/components/avatar-upload'
 import { NotificheToggle } from '@/components/notifiche-toggle'
 import { PreferenzeNotifiche } from '@/components/preferenze-notifiche'
+import { EliminaAccount } from '@/components/elimina-account'
 import { Avatar, ButtonLink, Card, Loading, Overall, PlayerBadge, SkillBars, buttonClass } from '@/components/ui'
 
 export default function GiocatorePage({ params }: PageProps<'/giocatori/[id]'>) {
@@ -97,6 +98,7 @@ async function Profilo({ params }: { params: Promise<{ id: string }> }) {
           <SignOutButton redirectUrl="/sign-in">
             <button className={`${buttonClass('secondary')} w-full`}>Esci</button>
           </SignOutButton>
+          <EliminaAccount />
         </div>
       )}
     </div>

@@ -30,7 +30,16 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <ClerkProvider>
+    <ClerkProvider
+      appearance={{
+        options: {
+          // Niente scritta "Development mode" nella schermata di accesso (chiavi Clerk di sviluppo).
+          unsafe_disableDevelopmentModeWarnings: true,
+          privacyPageUrl: "/privacy",
+          helpPageUrl: "/supporto",
+        },
+      }}
+    >
       <html
         lang="it"
         // L'app Android (Capacitor) aggiunge qui le misure delle zone sicure prima dell'avvio
