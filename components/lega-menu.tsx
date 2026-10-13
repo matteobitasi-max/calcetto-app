@@ -81,9 +81,14 @@ export function LegaMenu({ corrente, altre, organizzatore }: { corrente: LegaVoc
             </>
           )}
           {organizzatore && (
-            <Link href="/lega" role="menuitem" className={voce} onClick={() => setOpen(false)}>
-              ⚙️ Impostazioni e inviti
-            </Link>
+            <>
+              <Link href="/lega" role="menuitem" className={voce} onClick={() => setOpen(false)}>
+                ⚙️ Impostazioni e inviti
+              </Link>
+              <Link href="/partite/ricorrenti" role="menuitem" className={voce} onClick={() => setOpen(false)}>
+                🔁 Partite ricorrenti
+              </Link>
+            </>
           )}
           <Link href="/benvenuto" role="menuitem" className={voce} onClick={() => setOpen(false)}>
             ➕ Crea o entra in una lega

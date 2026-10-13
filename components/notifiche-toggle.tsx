@@ -41,7 +41,7 @@ export function NotificheToggle({ variant }: { variant: 'banner' | 'impostazione
       const reg = await navigator.serviceWorker.register('/sw.js', { scope: '/', updateViaCache: 'none' })
       if (Notification.permission === 'denied') return setStato('bloccate')
       setStato((await reg.pushManager.getSubscription()) ? 'attive' : 'spente')
-    })().catch(() => setStato('non_supportate'))
+    })().catch(() => setStato(isAppNativa() ? 'aggiorna_app' : 'non_supportate'))
   }, [])
 
   async function attiva() {

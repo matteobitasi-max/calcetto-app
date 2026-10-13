@@ -5,7 +5,8 @@ import { getCurrentPlayer, type Player } from '@/lib/player'
 import { finestra, formatoInCorso, getPastMatches, getUpcomingMatches, ordinati, presenti, type Match } from '@/lib/matches'
 import { formatData } from '@/lib/dates'
 import { assicuraRicorrenze } from '@/lib/series'
-import { ButtonLink, Card, Loading, StatoBadge } from '@/components/ui'
+import { Card, Loading, StatoBadge } from '@/components/ui'
+import { PillNuovaPartita } from '@/components/pill-nuova-partita'
 import { Countdown } from '@/components/countdown'
 import { NotificheToggle } from '@/components/notifiche-toggle'
 import { RispostaButtons } from './partite/risposta-buttons'
@@ -35,17 +36,10 @@ async function Partite() {
   const concluse = past.filter((m) => m !== ultima)
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-16">
       <NotificheToggle variant="banner" />
 
-      {player.isAdmin && (
-        <div className="flex justify-end gap-2">
-          <ButtonLink href="/partite/ricorrenti" variant="secondary" title="Partite ricorrenti">
-            🔁 Ricorrenti
-          </ButtonLink>
-          <ButtonLink href="/partite/nuova">+ Nuova partita</ButtonLink>
-        </div>
-      )}
+      {player.isAdmin && <PillNuovaPartita />}
 
       {/* In alto: la prossima partita con il conto alla rovescia delle convocazioni */}
       {prossima ? (
