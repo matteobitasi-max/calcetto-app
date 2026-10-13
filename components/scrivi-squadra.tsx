@@ -7,11 +7,16 @@ import { buttonClass, inputClass } from './ui-classes'
 // "Scrivi alla squadra": il capitano (o un organizzatore) manda una comunicazione a tutti.
 export function ScriviSquadra() {
   const [testo, setTesto] = useState('')
+  const [inviato, setInviato] = useState('')
   const [state, invia, pending] = useActionState(async (prev: AvvisoState, fd: FormData) => {
     const r = await inviaComunicazione(prev, fd)
-    if (!r?.error) setTesto('')
+    if (!r?.error) {
+      setInviato(String(fd.get('testo') ?? '').trim())
+      setTesto('')
+    }
     return r
   }, undefined)
+  const whatsapp = (t: string) => `https://wa.me/?text=${encodeURIComponent(`📢 ${t}`)}`
 
   return (
     <details className="group rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
@@ -33,15 +38,32 @@ export function ScriviSquadra() {
         />
         <div className="flex items-center justify-between gap-2">
           <span className="text-xs text-zinc-400">{testo.length}/300</span>
-          <button type="submit" disabled={pending || testo.trim().length < 2} className={buttonClass('primary')}>
-            {pending ? 'Invio…' : 'Invia a tutti'}
-          </button>
+          <span className="flex gap-2">
+            {/* WhatsApp non permette di scrivere da soli in un gruppo: si apre con il testo pronto e si sceglie il gruppo */}
+            <a
+              href={whatsapp(testo.trim())}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-disabled={testo.trim().length < 2}
+              className={`${buttonClass('secondary')} text-green-700 dark:text-green-400 ${testo.trim().length < 2 ? 'pointer-events-none opacity-50' : ''}`}
+            >
+              💬 Anche su WhatsApp
+            </a>
+            <button type="submit" disabled={pending || testo.trim().length < 2} className={buttonClass('primary')}>
+              {pending ? 'Invio…' : 'Invia a tutti'}
+            </button>
+          </span>
         </div>
         {state?.error && <p className="text-sm text-red-600">{state.error}</p>}
         {state && !state.error && (
           <p className="text-sm text-green-700 dark:text-green-400">
             ✓ Inviata{state.totali ? ` su ${state.inviate} dispositiv${state.inviate === 1 ? 'o' : 'i'}` : ''}.
-            {!state.totali && ' Nessuno ha le notifiche attive per le comunicazioni: scrivi anche su WhatsApp.'}
+            {!state.totali && ' Nessuno ha le notifiche attive per le comunicazioni.'}{' '}
+            {inviato && (
+              <a href={whatsapp(inviato)} target="_blank" rel="noopener noreferrer" className="font-medium underline">
+                💬 Mandalo anche su WhatsApp
+              </a>
+            )}
           </p>
         )}
       </form>
