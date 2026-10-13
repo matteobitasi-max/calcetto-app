@@ -78,7 +78,7 @@ export function RisultatoEditor({
                     aria-pressed={mvp === g.id}
                     className={`text-xl ${mvp === g.id ? '' : 'opacity-25 grayscale hover:opacity-60'}`}
                   >
-                    ⭐
+                    🫑
                   </button>
                   <Stepper label={g.nome} value={gol[g.id] ?? 0} onChange={(n) => setGol({ ...gol, [g.id]: n })} />
                   <input type="hidden" name={`gol_${g.id}`} value={gol[g.id] ?? 0} />
@@ -98,10 +98,10 @@ export function RisultatoEditor({
       <p className="text-sm text-zinc-500">
         {mvp ? (
           <>
-            ⭐ MVP: <b className="text-zinc-900 dark:text-zinc-100">{[...a.giocatori, ...b.giocatori].find((g) => g.id === mvp)?.nome}</b>
+            🫑 MVP: <b className="text-zinc-900 dark:text-zinc-100">{[...a.giocatori, ...b.giocatori].find((g) => g.id === mvp)?.nome}</b>
           </>
         ) : (
-          'Tocca la ⭐ accanto a un giocatore per sceglierlo come MVP.'
+          'Tocca il 🫑 accanto a un giocatore per sceglierlo come MVP.'
         )}
       </p>
 

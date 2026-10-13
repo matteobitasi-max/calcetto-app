@@ -101,7 +101,7 @@ function Statistiche({ stats: s }: { stats: PlayerStats }) {
             ['Partite', s.giocate, ''],
             ['Vittorie', `${pct(s.vinte)}%`, 'text-green-600'],
             ['Gol', s.gol, ''],
-            ['MVP ⭐', s.mvp, 'text-amber-500'],
+            ['MVP 🫑', s.mvp, 'text-amber-500'],
           ] as const
         ).map(([label, value, cls]) => (
           <div key={label} className="flex flex-col-reverse rounded-lg bg-zinc-50 py-2 dark:bg-zinc-950">
@@ -183,7 +183,7 @@ function Storico({ partite }: { partite: PartitaGiocata[] }) {
                   </span>
                   <span className="block text-xs">
                     {p.gol > 0 && `⚽${p.gol > 1 ? `×${p.gol}` : ''}`}
-                    {p.mvp && ' ⭐'}
+                    {p.mvp && ' 🫑'}
                   </span>
                 </span>
               </Link>

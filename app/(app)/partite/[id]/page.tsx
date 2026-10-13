@@ -310,7 +310,7 @@ function Prestazione({ match, playerId }: { match: Match; playerId: string }) {
   return (
     <span className="shrink-0 text-sm">
       {gol > 0 && <span title={`${gol} gol`}>⚽{gol > 1 && <sub>{gol}</sub>}</span>}
-      {match.mvpId === playerId && <span title="MVP"> ⭐</span>}
+      {match.mvpId === playerId && <span title="MVP"> 🫑</span>}
     </span>
   )
 }
@@ -335,7 +335,7 @@ function Tabellino({ match }: { match: Match }) {
       </div>
       {mvp && (
         <p className="text-center text-sm">
-          ⭐ MVP: <b>{displayName(mvp)}</b>
+          🫑 MVP: <b>{displayName(mvp)}</b>
         </p>
       )}
     </div>

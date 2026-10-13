@@ -40,7 +40,7 @@ async function Classifiche() {
         dettaglio={(s) => `${(s.gol / s.giocate).toFixed(1)} a partita`}
       />
       <Tabella
-        titolo="⭐ MVP"
+        titolo="🫑 MVP"
         righe={righe.filter((r) => r.s.mvp > 0).sort((a, b) => b.s.mvp - a.s.mvp || a.s.giocate - b.s.giocate)}
         valore={(s) => s.mvp}
         dettaglio={(s) => `su ${s.giocate} partite`}
