@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { Suspense } from 'react'
 import { SignOutButton } from '@clerk/nextjs'
-import { canEditPlayers, displayName, requirePlayer } from '@/lib/player'
+import { canEditPlayers, displayName, membroDi } from '@/lib/player'
 import { getPlayer, getPlayerStats, getStorico, type PartitaGiocata, type PlayerStats } from '@/lib/matches'
 import { formatData } from '@/lib/dates'
 import { caricaFoto } from '@/app/actions'
@@ -19,9 +19,12 @@ export default function GiocatorePage({ params }: PageProps<'/giocatori/[id]'>) 
 }
 
 async function Profilo({ params }: { params: Promise<{ id: string }> }) {
-  const [{ id }, me] = await Promise.all([params, requirePlayer()])
-  const [player, stats, storico] = await Promise.all([getPlayer(id), getPlayerStats(id), getStorico(id)])
-  if (!player) notFound()
+  const { id } = await params
+  const player = await getPlayer(id)
+  // Le schede si vedono solo tra membri della stessa lega.
+  const me = await membroDi(player?.legaId)
+  if (!player || !me) notFound()
+  const [stats, storico] = await Promise.all([getPlayerStats(id, me.lega._id), getStorico(id)])
 
   const fullName = [player.nome, player.cognome].filter(Boolean).join(' ')
   const canEdit = canEditPlayers(me)

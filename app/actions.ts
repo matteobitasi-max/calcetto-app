@@ -1,12 +1,12 @@
 'use server'
 
-import { randomUUID } from 'node:crypto'
+import { randomInt, randomUUID } from 'node:crypto'
+import { cookies } from 'next/headers'
 import { refresh } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { sanity } from '@/lib/sanity'
-import { PIEDI, RUOLI, SKILLS, requireAdmin, requireEditor, requirePlayer, requireRefertatore, type Skill } from '@/lib/player'
+import { COOKIE_LEGA, PIEDI, RUOLI, SKILLS, getUtente, membroDi, requireAdmin, requireForDoc, requireIn, type Skill } from '@/lib/player'
 import { assegnaPosti, finestra, getMatch, presenti, risultatoDa, type Match, type Risposta, type Stato } from '@/lib/matches'
-import { balanceTeams } from '@/lib/teams'
 import { MAX_GIOCATORI } from '@/lib/limiti'
 import { daysBetween, formatData, isoToRomeLocal, romeLocalToISO } from '@/lib/dates'
 import { inviaATutti, rimuoviIscrizione, salvaIscrizione, type PushSub } from '@/lib/push'
@@ -26,7 +26,8 @@ const ref = (id: string) => ({ _type: 'reference' as const, _ref: id, _key: rand
 type RawConvocazione = { _key: string; giocatore: { _ref: string }; risposta: Risposta; rispostoIl?: string }
 
 export async function rispondi(matchId: string, risposta: 'presente' | 'assente') {
-  const player = await requirePlayer()
+  // La mia scheda nella lega della partita.
+  const player = await requireForDoc(matchId)
 
   // Lettura-modifica-scrittura con controllo di revisione: se due giocatori
   // rispondono nello stesso istante, il secondo riprova sui dati aggiornati.
@@ -77,13 +78,13 @@ export async function rispondi(matchId: string, risposta: 'presente' | 'assente'
 // L'organizzatore prende una persona dalla lista d'attesa e la mette in lista:
 // i partecipanti totali salgono di uno, gli altri restano dove sono.
 export async function aggiungiDaAttesa(matchId: string, key: string) {
-  await requireAdmin()
+  await requireForDoc(matchId, 'organizzatore')
   await modificaLista(matchId, key, 'riserva', true, +1)
 }
 
 // Annulla l'aggiunta: torna in lista d'attesa e i partecipanti scendono di uno.
 export async function rimettiInAttesa(matchId: string, key: string) {
-  await requireAdmin()
+  await requireForDoc(matchId, 'organizzatore')
   await modificaLista(matchId, key, 'presente', false, -1)
 }
 
@@ -113,7 +114,9 @@ async function modificaLista(matchId: string, key: string, da: Risposta, aggiunt
 // ---------- Partite (organizzatori) ----------
 
 export async function salvaPartita(matchId: string | null, _prev: FormState, formData: FormData): Promise<FormState> {
-  await requireAdmin()
+  // Nuova partita: nella lega attiva. Modifica: nella lega della partita.
+  const admin = matchId ? await requireForDoc(matchId, 'organizzatore') : await requireAdmin()
+  const lega = { _type: 'reference' as const, _ref: admin.lega._id }
   const luogo = str(formData, 'luogo')
   const [data, apertura, chiusura] = ['data', 'aperturaConvocazioni', 'chiusuraConvocazioni'].map((k) => {
     const v = str(formData, k)
@@ -147,6 +150,7 @@ export async function salvaPartita(matchId: string | null, _prev: FormState, for
     if (fineData && fineData < giorno) return { error: 'La data di fine deve essere dopo la prima partita.' }
     const serie = await sanity.create({
       _type: 'series',
+      lega,
       attiva: true,
       primaData: giorno,
       ora,
@@ -162,7 +166,7 @@ export async function salvaPartita(matchId: string | null, _prev: FormState, for
       chiusuraGiorniPrima: daysBetween(chGiorno, giorno),
       chiusuraOra: chOra,
     })
-    await assicuraRicorrenze(serie as unknown as Series)
+    await assicuraRicorrenze({ serie: { ...(serie as unknown as Series), legaId: admin.lega._id } })
     redirect(`/partite/${occurrenceId(serie._id, giorno)}`)
   }
 
@@ -187,6 +191,7 @@ export async function salvaPartita(matchId: string | null, _prev: FormState, for
   } else {
     const doc = await sanity.create({
       _type: 'match',
+      lega,
       ...fields,
       ...(quota != null && { quota }),
       ...(note && { note }),
@@ -201,41 +206,35 @@ export async function salvaPartita(matchId: string | null, _prev: FormState, for
 const STATI: Stato[] = ['aperta', 'chiusa', 'giocata', 'annullata']
 
 export async function cambiaStato(matchId: string, stato: Stato) {
-  await requireAdmin()
+  await requireForDoc(matchId, 'organizzatore')
   if (!STATI.includes(stato)) throw new Error('Stato non valido')
   await sanity.patch(matchId).set({ stato }).commit()
   refresh()
 }
 
-export async function generaSquadre(matchId: string) {
-  await requireAdmin()
+// Formazioni decise dall'organizzatore (a mano o con il bilanciamento automatico),
+// solo a convocazioni chiuse: ogni giocatore in lista deve stare in una squadra.
+export async function salvaFormazioni(matchId: string, a: string[], b: string[]): Promise<FormState> {
+  await requireForDoc(matchId, 'organizzatore')
   const match = await getMatch(matchId)
-  if (!match) throw new Error('Partita non trovata')
-  if (match.stato !== 'chiusa') throw new Error('Chiudi prima le convocazioni')
-  const { a, b } = balanceTeams(presenti(match).map((c) => c.giocatore))
-  await sanity
-    .patch(matchId)
-    .set({ squadraA: a.map((p) => ref(p._id)), squadraB: b.map((p) => ref(p._id)) })
-    .commit()
-  refresh()
-}
+  if (!match) return { error: 'Partita non trovata.' }
+  if (match.stato !== 'chiusa') return { error: 'Le formazioni si fanno dopo aver chiuso le convocazioni.' }
 
-export async function spostaGiocatore(matchId: string, playerId: string) {
-  await requireAdmin()
-  const match = await getMatch(matchId)
-  if (!match) throw new Error('Partita non trovata')
-  const inA = match.squadraA.some((p) => p._id === playerId)
-  const a = match.squadraA.filter((p) => p._id !== playerId).map((p) => p._id)
-  const b = match.squadraB.filter((p) => p._id !== playerId).map((p) => p._id)
-  ;(inA ? b : a).push(playerId)
+  const inLista = new Set(presenti(match).map((c) => c.giocatore._id))
+  const scelti = [...a, ...b]
+  if (new Set(scelti).size !== scelti.length) return { error: 'Un giocatore è in tutte e due le squadre.' }
+  if (scelti.some((id) => !inLista.has(id))) return { error: 'C\u2019è un giocatore che non è in lista.' }
+  if (scelti.length !== inLista.size) return { error: 'Assegna tutti i giocatori in lista a una squadra.' }
+  if (!a.length || !b.length) return { error: 'Servono due squadre.' }
+
   await sanity.patch(matchId).set({ squadraA: a.map(ref), squadraB: b.map(ref) }).commit()
-  refresh()
+  redirect(`/partite/${matchId}`)
 }
 
 // Risultato, marcatori e MVP: dopo la fine della partita, per organizzatori e refertatori.
 // Il punteggio di ogni squadra è la somma dei gol dei suoi giocatori più autogol/altri.
 export async function salvaRisultato(matchId: string, _prev: FormState, formData: FormData): Promise<FormState> {
-  await requireRefertatore()
+  await requireForDoc(matchId, 'refertatore')
   const match = await getMatch(matchId)
   if (!match) return { error: 'Partita non trovata.' }
   if (match.stato === 'annullata') return { error: 'La partita è annullata.' }
@@ -277,7 +276,7 @@ export async function salvaRisultato(matchId: string, _prev: FormState, formData
 }
 
 export async function eliminaPartita(matchId: string) {
-  await requireAdmin()
+  await requireForDoc(matchId, 'organizzatore')
   const match = await sanity.fetch<{ serie?: { _ref: string }; data: string } | null>(
     `*[_type == "match" && _id == $id][0]{serie, data}`,
     { id: matchId },
@@ -297,7 +296,7 @@ export async function eliminaPartita(matchId: string) {
 const ORA = /^([01]\d|2[0-3]):[0-5]\d$/
 
 export async function salvaSerie(seriesId: string, _prev: FormState, formData: FormData): Promise<FormState> {
-  await requireAdmin()
+  await requireForDoc(seriesId, 'organizzatore')
   const current = await getSeries(seriesId)
   if (!current) return { error: 'Serie non trovata.' }
 
@@ -347,16 +346,16 @@ export async function salvaSerie(seriesId: string, _prev: FormState, formData: F
     .commit()
 
   await rimuoviFutureVuote(seriesId)
-  if (current.attiva !== false) await assicuraRicorrenze({ ...current, ...fields, ...optional })
+  if (current.attiva !== false) await assicuraRicorrenze({ serie: { ...current, ...fields, ...optional } })
   redirect('/partite/ricorrenti')
 }
 
 export async function attivaSerie(seriesId: string, attiva: boolean) {
-  await requireAdmin()
+  await requireForDoc(seriesId, 'organizzatore')
   await sanity.patch(seriesId).set({ attiva }).commit()
   if (attiva) {
     const serie = await getSeries(seriesId)
-    if (serie) await assicuraRicorrenze(serie)
+    if (serie) await assicuraRicorrenze({ serie })
   } else {
     await rimuoviFutureVuote(seriesId)
   }
@@ -385,7 +384,7 @@ const caratteristicheFromForm = (formData: FormData) =>
 
 // Cambio rapido della foto cliccando sull'avatar.
 export async function caricaFoto(playerId: string, _prev: FormState, formData: FormData): Promise<FormState> {
-  await requireEditor()
+  await requireForDoc(playerId, 'valutatore')
   const upload = await uploadFoto(formData.get('foto'))
   if (!upload) return { error: 'Nessuna foto selezionata.' }
   if ('error' in upload) return upload
@@ -395,7 +394,7 @@ export async function caricaFoto(playerId: string, _prev: FormState, formData: F
 
 // Chi ha solo il permesso "modifica giocatori" può cambiare caratteristiche e foto.
 export async function salvaValutazione(playerId: string, _prev: FormState, formData: FormData): Promise<FormState> {
-  await requireEditor()
+  await requireForDoc(playerId, 'valutatore')
   const upload = await uploadFoto(formData.get('foto'))
   if (upload && 'error' in upload) return upload
   const patch = sanity.patch(playerId).set({ caratteristiche: caratteristicheFromForm(formData) })
@@ -406,15 +405,16 @@ export async function salvaValutazione(playerId: string, _prev: FormState, formD
 }
 
 export async function salvaGiocatore(playerId: string | null, _prev: FormState, formData: FormData): Promise<FormState> {
-  const admin = await requireAdmin()
+  // Nuovo giocatore: nella lega attiva. Modifica: nella lega del giocatore.
+  const admin = playerId ? await requireForDoc(playerId, 'organizzatore') : await requireAdmin()
 
   const nome = str(formData, 'nome')
   const email = str(formData, 'email').toLowerCase()
   if (!nome || !email) return { error: 'Nome ed email sono obbligatori.' }
 
   const duplicate = await sanity.fetch<string | null>(
-    `*[_type == "player" && lower(email) == $email && _id != $id][0].nome`,
-    { email, id: playerId ?? '' },
+    `*[_type == "player" && lega._ref == $lega && lower(email) == $email && _id != $id][0].nome`,
+    { email, id: playerId ?? '', lega: admin.lega._id },
   )
   if (duplicate) return { error: `L'email è già usata da ${duplicate}.` }
 
@@ -450,7 +450,7 @@ export async function salvaGiocatore(playerId: string | null, _prev: FormState, 
       .map(([k]) => k)
     await sanity.patch(id).set(fields).unset(toUnset).commit()
   } else {
-    id = (await sanity.create({ _type: 'player', ...fields }))._id
+    id = (await sanity.create({ _type: 'player', lega: { _type: 'reference', _ref: admin.lega._id }, ...fields }))._id
   }
   redirect(`/giocatori/${id}`)
 }
@@ -458,21 +458,23 @@ export async function salvaGiocatore(playerId: string | null, _prev: FormState, 
 // ---------- Notifiche ----------
 
 export async function attivaNotifiche(sub: PushSub, dispositivo: string) {
-  const player = await requirePlayer()
+  const utente = await getUtente()
+  if (!utente) throw new Error('Accesso richiesto')
   if (!sub?.endpoint?.startsWith('https://') || !sub.keys?.p256dh || !sub.keys?.auth) throw new Error('Iscrizione non valida')
-  await salvaIscrizione(player._id, sub, dispositivo)
+  await salvaIscrizione(utente.id, sub, dispositivo)
 }
 
 export async function disattivaNotifiche(endpoint: string) {
-  const player = await requirePlayer()
-  await rimuoviIscrizione(player._id, endpoint)
+  const utente = await getUtente()
+  if (!utente) throw new Error('Accesso richiesto')
+  await rimuoviIscrizione(utente.id, endpoint)
 }
 
 export type AvvisoState = { inviate?: number; totali?: number; error?: string } | undefined
 
 // Apre subito le convocazioni (se non lo sono già per orario) e avvisa tutti.
 export async function apriConvocazioni(matchId: string): Promise<AvvisoState> {
-  await requireAdmin()
+  const { lega } = await requireForDoc(matchId, 'organizzatore')
   const match = await getMatch(matchId)
   if (!match) return { error: 'Partita non trovata.' }
   const stato = finestra(match)
@@ -485,12 +487,114 @@ export async function apriConvocazioni(matchId: string): Promise<AvvisoState> {
     .commit()
 
   const breve = { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' } as const
-  const risultato = await inviaATutti({
-    title: '⚽ Convocazioni aperte!',
+  const risultato = await inviaATutti(match.legaId, {
+    title: `⚽ ${lega.nome}: convocazioni aperte!`,
     body: `${formatData(match.data, breve)} · ${match.luogo}\n${match.postiDisponibili} posti, rispondi entro ${formatData(match.chiusuraConvocazioni, breve)}`,
     url: `/partite/${matchId}`,
     tag: matchId,
   })
   refresh()
   return risultato
+}
+
+// ---------- Leghe ----------
+
+// Codici facili da dettare: niente 0/O, 1/I.
+const ALFABETO = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
+
+async function nuovoCodice() {
+  for (;;) {
+    const codice = Array.from({ length: 6 }, () => ALFABETO[randomInt(ALFABETO.length)]).join('')
+    const esiste = await sanity.fetch<number>(`count(*[_type == "league" && codiceInvito == $codice])`, { codice })
+    if (!esiste) return codice
+  }
+}
+
+async function attivaLega(legaId: string) {
+  ;(await cookies()).set(COOKIE_LEGA, legaId, { path: '/', maxAge: 60 * 60 * 24 * 365, sameSite: 'lax', httpOnly: true })
+}
+
+// La mia scheda in una lega, creata a partire dal mio account.
+async function nuovaScheda(legaId: string, utente: NonNullable<Awaited<ReturnType<typeof getUtente>>>, isAdmin: boolean) {
+  await sanity.createIfNotExists({
+    // ID fisso: toccare due volte "entra" non crea due schede
+    _id: `player-${legaId}-${utente.id}`,
+    _type: 'player',
+    lega: { _type: 'reference', _ref: legaId },
+    nome: utente.nome || utente.emails[0]?.split('@')[0] || 'Giocatore',
+    ...(utente.cognome && { cognome: utente.cognome }),
+    ...(utente.emails[0] && { email: utente.emails[0] }),
+    clerkUserId: utente.id,
+    isAdmin,
+    attivo: true,
+    caratteristiche: Object.fromEntries(Object.keys(SKILLS).map((k) => [k, 5])),
+  })
+}
+
+export async function creaLega(_prev: FormState, formData: FormData): Promise<FormState> {
+  const utente = await getUtente()
+  if (!utente) return { error: 'Accesso richiesto.' }
+  const nome = str(formData, 'nome')
+  if (nome.length < 2 || nome.length > 40) return { error: 'Il nome deve avere tra 2 e 40 caratteri.' }
+
+  const lega = await sanity.create({ _type: 'league', nome, codiceInvito: await nuovoCodice(), creataDa: utente.id })
+  await nuovaScheda(lega._id, utente, true)
+  await attivaLega(lega._id)
+  redirect('/')
+}
+
+// Entrare con il link d'invito: chi ce l'ha entra subito nella rosa.
+export async function uniscitiConInvito(codice: string) {
+  const utente = await getUtente()
+  if (!utente) redirect('/sign-in')
+  const lega = await sanity.fetch<{ _id: string } | null>(`*[_type == "league" && codiceInvito == $codice][0]{_id}`, {
+    codice: codice.toUpperCase(),
+  })
+  if (!lega) throw new Error('Invito non valido o scaduto')
+
+  if (!(await membroDi(lega._id))) {
+    // Chi era stato tolto dalla rosa e riceve di nuovo l'invito, rientra con la sua scheda.
+    const vecchia = await sanity.fetch<string | null>(
+      `*[_type == "player" && lega._ref == $lega && clerkUserId == $id][0]._id`,
+      { lega: lega._id, id: utente.id },
+    )
+    if (vecchia) await sanity.patch(vecchia).set({ attivo: true }).commit()
+    else await nuovaScheda(lega._id, utente, false)
+  }
+  await attivaLega(lega._id)
+  redirect('/')
+}
+
+export async function uniscitiConCodice(_prev: FormState, formData: FormData): Promise<FormState> {
+  const codice = str(formData, 'codice').toUpperCase().replace(/[^A-Z0-9]/g, '')
+  const esiste = await sanity.fetch<number>(`count(*[_type == "league" && codiceInvito == $codice])`, { codice })
+  if (!esiste) return { error: 'Codice non valido: controlla di averlo scritto bene.' }
+  await uniscitiConInvito(codice)
+}
+
+// Cambia la lega attiva su questo dispositivo.
+export async function scegliLega(legaId: string, vai = '/') {
+  if (!(await membroDi(legaId))) throw new Error('Non fai parte di questa lega')
+  await attivaLega(legaId)
+  redirect(vai.startsWith('/') ? vai : '/')
+}
+
+export async function salvaLega(legaId: string, _prev: FormState, formData: FormData): Promise<FormState> {
+  await requireIn(legaId, 'organizzatore')
+  const nome = str(formData, 'nome')
+  if (nome.length < 2 || nome.length > 40) return { error: 'Il nome deve avere tra 2 e 40 caratteri.' }
+  const upload = await uploadFoto(formData.get('logo'))
+  if (upload && 'error' in upload) return upload
+  const patch = sanity.patch(legaId).set({ nome, ...(upload && { logo: upload.foto }) })
+  if (!upload && formData.get('rimuoviFoto') === 'on') patch.unset(['logo'])
+  await patch.commit()
+  refresh()
+  return {}
+}
+
+// Nuovo codice: i link d'invito già mandati smettono di funzionare.
+export async function rigeneraInvito(legaId: string) {
+  await requireIn(legaId, 'organizzatore')
+  await sanity.patch(legaId).set({ codiceInvito: await nuovoCodice() }).commit()
+  refresh()
 }

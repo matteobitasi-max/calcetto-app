@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation'
 import { Suspense } from 'react'
 import { salvaPartita } from '@/app/actions'
-import { requireAdmin } from '@/lib/player'
+import { requireIn } from '@/lib/player'
 import { getMatch } from '@/lib/matches'
 import { Loading, PageTitle } from '@/components/ui'
 import { MatchForm } from '../../match-form'
@@ -18,8 +18,9 @@ export default function ModificaPartitaPage({ params }: PageProps<'/partite/[id]
 }
 
 async function Form({ params }: { params: Promise<{ id: string }> }) {
-  const [{ id }] = await Promise.all([params, requireAdmin()])
+  const { id } = await params
   const match = await getMatch(id)
   if (!match) notFound()
+  await requireIn(match.legaId, 'organizzatore')
   return <MatchForm action={salvaPartita.bind(null, match._id)} match={match} submitLabel="Salva" />
 }

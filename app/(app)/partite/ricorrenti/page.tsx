@@ -20,10 +20,11 @@ export default function RicorrentiPage() {
 }
 
 async function Elenco() {
-  await requireAdmin()
-  const series = await getAllSeries()
+  const admin = await requireAdmin()
+  const series = await getAllSeries(admin.lega._id)
   const prossime = await sanity.fetch<{ _id: string; data: string; serie: string }[]>(
-    `*[_type == "match" && defined(serie) && data > now() && stato != "annullata"] | order(data asc){_id, data, "serie": serie._ref}`,
+    `*[_type == "match" && lega._ref == $legaId && defined(serie) && data > now() && stato != "annullata"] | order(data asc){_id, data, "serie": serie._ref}`,
+    { legaId: admin.lega._id },
   )
 
   if (series.length === 0) {

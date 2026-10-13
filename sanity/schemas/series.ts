@@ -15,6 +15,13 @@ export const series = defineType({
   ],
   fields: [
     defineField({
+      name: 'lega',
+      title: 'Lega',
+      type: 'reference',
+      to: [{ type: 'league' }],
+      validation: (r) => r.required(),
+    }),
+    defineField({
       name: 'attiva',
       title: 'Attiva',
       description: 'Se disattivata non vengono più create nuove partite',

@@ -3,7 +3,7 @@
 import { useRef, useState } from 'react'
 import { shrinkImage } from '@/lib/shrink-image'
 
-export function PhotoInput({ currentUrl }: { currentUrl?: string | null }) {
+export function PhotoInput({ currentUrl, name = 'foto' }: { currentUrl?: string | null; name?: string }) {
   const input = useRef<HTMLInputElement>(null)
   const [preview, setPreview] = useState(currentUrl ?? null)
   const [busy, setBusy] = useState(false)
@@ -18,7 +18,7 @@ export function PhotoInput({ currentUrl }: { currentUrl?: string | null }) {
         <input
           ref={input}
           type="file"
-          name="foto"
+          name={name}
           accept="image/*"
           className="block w-full text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-zinc-100 file:px-3 file:py-2 dark:file:bg-zinc-800"
           onChange={async (e) => {

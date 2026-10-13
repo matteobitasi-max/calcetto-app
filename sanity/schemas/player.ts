@@ -21,6 +21,13 @@ export const player = defineType({
     { name: 'gioco', title: 'In campo', options: { columns: 2 } },
   ],
   fields: [
+    defineField({
+      name: 'lega',
+      title: 'Lega',
+      type: 'reference',
+      to: [{ type: 'league' }],
+      validation: (r) => r.required(),
+    }),
     defineField({ name: 'nome', title: 'Nome', type: 'string', fieldset: 'anagrafica', validation: (r) => r.required() }),
     defineField({ name: 'cognome', title: 'Cognome', type: 'string', fieldset: 'anagrafica' }),
     defineField({ name: 'soprannome', title: 'Soprannome', type: 'string', description: 'Se presente, viene mostrato al posto del nome' }),

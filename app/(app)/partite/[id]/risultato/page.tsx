@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { Suspense } from 'react'
 import { salvaRisultato } from '@/app/actions'
-import { displayName, requireRefertatore, type Player } from '@/lib/player'
+import { displayName, requireIn, type Player } from '@/lib/player'
 import { getMatch, risultatoDa } from '@/lib/matches'
 import { avatarUrl } from '@/lib/image'
 import { formatData } from '@/lib/dates'
@@ -34,9 +34,10 @@ const giocatore = (p: Player): Giocatore => ({
 })
 
 async function Editor({ params }: { params: Promise<{ id: string }> }) {
-  const [{ id }] = await Promise.all([params, requireRefertatore()])
+  const { id } = await params
   const match = await getMatch(id)
   if (!match) notFound()
+  await requireIn(match.legaId, 'refertatore')
 
   const indietro = (
     <Link href={`/partite/${match._id}`} className="text-sm text-green-700 hover:underline dark:text-green-400">

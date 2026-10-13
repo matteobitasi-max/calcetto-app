@@ -15,30 +15,35 @@ export type PushPayload = { title: string; body: string; url: string; tag?: stri
 // Un documento per dispositivo: riattivare le notifiche non crea doppioni.
 const subId = (endpoint: string) => `push-${createHash('sha256').update(endpoint).digest('hex').slice(0, 32)}`
 
-export async function salvaIscrizione(playerId: string, sub: PushSub, dispositivo: string) {
+// Le notifiche appartengono all'utente (il dispositivo), non a una lega:
+// arrivano da tutte le leghe di cui fa parte.
+export async function salvaIscrizione(clerkUserId: string, sub: PushSub, dispositivo: string) {
   await sanity.createOrReplace({
     _id: subId(sub.endpoint),
     _type: 'pushSubscription',
     tipo: 'web',
-    giocatore: { _type: 'reference', _ref: playerId, _weak: true },
+    clerkUserId,
     endpoint: sub.endpoint,
     keys: { p256dh: sub.keys.p256dh, auth: sub.keys.auth },
     dispositivo: dispositivo.slice(0, 200),
   })
 }
 
-export async function rimuoviIscrizione(playerId: string, endpoint: string) {
+export async function rimuoviIscrizione(clerkUserId: string, endpoint: string) {
   const id = subId(endpoint)
-  const owner = await sanity.fetch<string | null>(`*[_id == $id][0].giocatore._ref`, { id })
-  if (owner === playerId) await sanity.delete(id)
+  const owner = await sanity.fetch<string | null>(`*[_id == $id][0].clerkUserId`, { id })
+  if (owner === clerkUserId) await sanity.delete(id)
 }
 
-// Invia a tutti i dispositivi dei giocatori attivi. I dispositivi che non
+// Invia a tutti i dispositivi dei giocatori attivi della lega. I dispositivi che non
 // esistono più (notifiche disattivate, app disinstallata) vengono rimossi.
 // Per ora solo notifiche web: le app native (APNs/FCM) si aggiungeranno qui.
-export async function inviaATutti(payload: PushPayload) {
+export async function inviaATutti(legaId: string, payload: PushPayload) {
   const subs = await sanity.fetch<(PushSub & { _id: string })[]>(
-    `*[_type == "pushSubscription" && coalesce(tipo, "web") == "web" && giocatore->attivo != false]{_id, endpoint, keys}`,
+    `*[_type == "pushSubscription" && coalesce(tipo, "web") == "web"
+      && coalesce(clerkUserId, giocatore->clerkUserId) in *[_type == "player" && lega._ref == $legaId && attivo != false].clerkUserId
+    ]{_id, endpoint, keys}`,
+    { legaId },
   )
   const results = await Promise.allSettled(
     subs.map((s) => webpush.sendNotification({ endpoint: s.endpoint, keys: s.keys }, JSON.stringify(payload), { TTL: 60 * 60 * 24 })),

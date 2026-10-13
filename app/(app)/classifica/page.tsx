@@ -18,7 +18,8 @@ export default function ClassificaPage() {
 type Riga = { player: Player; s: PlayerStats }
 
 async function Classifiche() {
-  const [, players, stats] = await Promise.all([requirePlayer(), getPlayers(), getAllStats()])
+  const me = await requirePlayer()
+  const [players, stats] = await Promise.all([getPlayers(me.lega._id), getAllStats(me.lega._id)])
   const righe: Riga[] = players.flatMap((player) => {
     const s = stats.get(player._id)
     return s && s.giocate > 0 ? [{ player, s }] : []

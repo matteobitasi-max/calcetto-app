@@ -17,6 +17,7 @@ export type Convocazione = {
 export type Match = {
   _id: string
   _rev: string
+  legaId: string
   data: string
   luogo: string
   serieId?: string
@@ -39,7 +40,7 @@ export type Match = {
 }
 
 const matchFields = `
-  _id, _rev, data, luogo, postiDisponibili, quota, note, aperturaConvocazioni, chiusuraConvocazioni, "serieId": serie._ref, notificaInviataIl,
+  _id, _rev, "legaId": lega._ref, data, luogo, postiDisponibili, quota, note, aperturaConvocazioni, chiusuraConvocazioni, "serieId": serie._ref, notificaInviataIl,
   "stato": coalesce(stato, "aperta"),
   "convocazioni": coalesce(convocazioni[]{_key, risposta, rispostoIl, aggiunto, "giocatore": giocatore->{${playerFields}}}, []),
   "squadraA": coalesce(squadraA[]->{${playerFields}}, []),
@@ -50,16 +51,17 @@ const matchFields = `
   "mvpId": mvp._ref
 `
 
-export function getUpcomingMatches() {
+export function getUpcomingMatches(legaId: string) {
   return sanity.fetch<Match[]>(
-    `*[_type == "match" && coalesce(stato, "aperta") in ["aperta", "chiusa"]] | order(data asc){${matchFields}}`,
+    `*[_type == "match" && lega._ref == $legaId && coalesce(stato, "aperta") in ["aperta", "chiusa"]] | order(data asc){${matchFields}}`,
+    { legaId },
   )
 }
 
-export function getPastMatches(limit = 20) {
+export function getPastMatches(legaId: string, limit = 20) {
   return sanity.fetch<Match[]>(
-    `*[_type == "match" && stato in ["giocata", "annullata"]] | order(data desc)[0...$limit]{${matchFields}}`,
-    { limit },
+    `*[_type == "match" && lega._ref == $legaId && stato in ["giocata", "annullata"]] | order(data desc)[0...$limit]{${matchFields}}`,
+    { legaId, limit },
   )
 }
 
@@ -67,8 +69,8 @@ export function getMatch(id: string) {
   return sanity.fetch<Match | null>(`*[_type == "match" && _id == $id][0]{${matchFields}}`, { id })
 }
 
-export function getPlayers() {
-  return sanity.fetch<Player[]>(`*[_type == "player"] | order(attivo desc, nome asc){${playerFields}}`)
+export function getPlayers(legaId: string) {
+  return sanity.fetch<Player[]>(`*[_type == "player" && lega._ref == $legaId] | order(attivo desc, nome asc){${playerFields}}`, { legaId })
 }
 
 export function getPlayer(id: string) {
@@ -81,14 +83,14 @@ const vuote = (): PlayerStats => ({ giocate: 0, vinte: 0, pari: 0, perse: 0, gol
 
 // Statistiche di tutti i giocatori dalle partite giocate:
 // gol = gol segnati, gs = gol subiti dalla sua squadra, mvp = volte MVP.
-export async function getAllStats(): Promise<Map<string, PlayerStats>> {
+export async function getAllStats(legaId: string): Promise<Map<string, PlayerStats>> {
   const matches = await sanity.fetch<
     { a: string[]; b: string[]; golA?: number; golB?: number; marcatori: { id: string; gol: number }[]; mvp?: string }[]
-  >(`*[_type == "match" && stato == "giocata" && defined(risultato.golA)]{
+  >(`*[_type == "match" && lega._ref == $legaId && stato == "giocata" && defined(risultato.golA)]{
     "a": coalesce(squadraA[]._ref, []), "b": coalesce(squadraB[]._ref, []),
     "golA": risultato.golA, "golB": risultato.golB,
     "marcatori": coalesce(marcatori[]{"id": giocatore._ref, gol}, []), "mvp": mvp._ref
-  }`)
+  }`, { legaId })
 
   const stats = new Map<string, PlayerStats>()
   const get = (id: string) => stats.get(id) ?? stats.set(id, vuote()).get(id)!
@@ -114,8 +116,8 @@ export async function getAllStats(): Promise<Map<string, PlayerStats>> {
   return stats
 }
 
-export async function getPlayerStats(id: string): Promise<PlayerStats> {
-  return (await getAllStats()).get(id) ?? vuote()
+export async function getPlayerStats(id: string, legaId: string): Promise<PlayerStats> {
+  return (await getAllStats(legaId)).get(id) ?? vuote()
 }
 
 // Il risultato si può inserire 1 minuto dopo la fine prevista della partita.
@@ -153,8 +155,11 @@ export function ordinati(m: Match, risposta: Risposta) {
     .sort((a, b) => (a.rispostoIl ?? '').localeCompare(b.rispostoIl ?? ''))
 }
 
-export function getMatchesBetween(from: string, to: string) {
-  return sanity.fetch<Match[]>(`*[_type == "match" && data >= $from && data < $to] | order(data asc){${matchFields}}`, { from, to })
+export function getMatchesBetween(legaId: string, from: string, to: string) {
+  return sanity.fetch<Match[]>(
+    `*[_type == "match" && lega._ref == $legaId && data >= $from && data < $to] | order(data asc){${matchFields}}`,
+    { legaId, from, to },
+  )
 }
 
 export type PartitaGiocata = {

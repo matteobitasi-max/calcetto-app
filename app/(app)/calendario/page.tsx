@@ -28,7 +28,7 @@ const pad = (n: number) => String(n).padStart(2, '0')
 
 async function Calendario({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const [{ mese }, me] = await Promise.all([searchParams, requirePlayer()])
-  await assicuraRicorrenze()
+  await assicuraRicorrenze({ legaId: me.lega._id })
 
   const oggi = isoToRomeLocal(new Date()).slice(0, 10)
   const [y, m] = (typeof mese === 'string' && /^\d{4}-\d{2}$/.test(mese) ? mese : oggi.slice(0, 7)).split('-').map(Number)
@@ -37,7 +37,7 @@ async function Calendario({ searchParams }: { searchParams: Promise<Record<strin
   const vuoti = (new Date(inizio).getUTCDay() + 6) % 7 // lunedì = prima colonna
 
   // Un giorno di margine per lato: il giorno "italiano" può cadere a cavallo del giorno UTC.
-  const matches = await getMatchesBetween(new Date(inizio - DAY).toISOString(), new Date(Date.UTC(y, m, 1) + DAY).toISOString())
+  const matches = await getMatchesBetween(me.lega._id, new Date(inizio - DAY).toISOString(), new Date(Date.UTC(y, m, 1) + DAY).toISOString())
   const perGiorno = new Map<string, Match[]>()
   for (const match of matches) {
     const key = isoToRomeLocal(match.data).slice(0, 10)

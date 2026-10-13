@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation'
 import { Suspense } from 'react'
 import { salvaSerie } from '@/app/actions'
-import { requireAdmin } from '@/lib/player'
+import { requireIn } from '@/lib/player'
 import { contaFutureConRisposte, descriviSerie, getSeries } from '@/lib/series'
 import { ActionForm } from '@/components/action-form'
 import { PostiInput } from '@/components/posti-input'
@@ -21,9 +21,10 @@ export default function ModificaSeriePage({ params }: PageProps<'/partite/ricorr
 }
 
 async function Form({ params }: { params: Promise<{ id: string }> }) {
-  const [{ id }] = await Promise.all([params, requireAdmin()])
+  const { id } = await params
   const [serie, conRisposte] = await Promise.all([getSeries(id), contaFutureConRisposte(id)])
   if (!serie) notFound()
+  await requireIn(serie.legaId, 'organizzatore')
 
   return (
     <ActionForm action={salvaSerie.bind(null, serie._id)} className="space-y-4">

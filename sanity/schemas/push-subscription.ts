@@ -7,6 +7,7 @@ export const pushSubscription = defineType({
   type: 'document',
   readOnly: true,
   fields: [
+    defineField({ name: 'clerkUserId', title: 'Utente (Clerk user ID)', type: 'string' }),
     defineField({ name: 'giocatore', type: 'reference', to: [{ type: 'player' }], weak: true }),
     defineField({
       name: 'tipo',

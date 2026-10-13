@@ -32,6 +32,13 @@ export const match = defineType({
     { name: 'squadre', title: 'Squadre', options: { columns: 2 } },
   ],
   fields: [
+    defineField({
+      name: 'lega',
+      title: 'Lega',
+      type: 'reference',
+      to: [{ type: 'league' }],
+      validation: (r) => r.required(),
+    }),
     defineField({ name: 'data', title: 'Data e ora della partita', type: 'datetime', validation: (r) => r.required() }),
     defineField({
       name: 'durataMinuti',

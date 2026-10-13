@@ -12,7 +12,8 @@ export default function GiocatoriPage() {
 }
 
 async function Rosa() {
-  const [me, players] = await Promise.all([requirePlayer(), getPlayers()])
+  const me = await requirePlayer()
+  const players = await getPlayers(me.lega._id)
   const attivi = players.filter((p) => p.attivo !== false).sort((a, b) => overall(b) - overall(a))
   const inattivi = players.filter((p) => p.attivo === false)
 

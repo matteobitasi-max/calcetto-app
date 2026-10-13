@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { Suspense } from 'react'
+import { redirect } from 'next/navigation'
 import { getCurrentPlayer, type Player } from '@/lib/player'
 import { getPastMatches, getUpcomingMatches, ordinati, presenti, type Match } from '@/lib/matches'
 import { formatData } from '@/lib/dates'
@@ -19,10 +20,12 @@ export default function Home() {
 
 async function Partite() {
   const player = await getCurrentPlayer()
-  if (!player || player.attivo === false) return <NotInRoster />
+  // Nessuna lega: si sceglie se crearne una o entrare con un invito.
+  if (!player) redirect('/benvenuto')
 
-  await assicuraRicorrenze()
-  const [upcoming, past] = await Promise.all([getUpcomingMatches(), getPastMatches(10)])
+  const legaId = player.lega._id
+  await assicuraRicorrenze({ legaId })
+  const [upcoming, past] = await Promise.all([getUpcomingMatches(legaId), getPastMatches(legaId, 10)])
   // Con le partite ricorrenti l'elenco può essere lungo: qui solo le prossime, il resto nel calendario.
   const prossime = upcoming.slice(0, 3)
 
@@ -108,18 +111,6 @@ function MatchCard({ match, player }: { match: Match; player: Player }) {
         <FinestraInfo match={match} />
       </Link>
       <RispostaButtons match={match} playerId={player._id} />
-    </Card>
-  )
-}
-
-function NotInRoster() {
-  return (
-    <Card>
-      <h1 className="mb-2 text-lg font-semibold">Non sei ancora nella rosa</h1>
-      <p className="text-sm text-zinc-500">
-        Chiedi all&apos;organizzatore di aggiungerti con l&apos;email con cui hai fatto l&apos;accesso (verificata), poi
-        ricarica la pagina.
-      </p>
     </Card>
   )
 }

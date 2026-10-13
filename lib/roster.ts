@@ -25,8 +25,11 @@ export const PIEDI = ['destro', 'sinistro', 'ambidestro'] as const
 
 export type SanityImage = { asset?: { _ref: string }; hotspot?: unknown; crop?: unknown }
 
+export type Lega = { _id: string; nome: string; logo?: SanityImage; codiceInvito?: string }
+
 export type Player = {
   _id: string
+  legaId?: string
   nome: string
   cognome?: string
   soprannome?: string
@@ -41,7 +44,7 @@ export type Player = {
   caratteristiche?: Partial<Record<Skill, number>>
 }
 
-export const playerFields = `_id, nome, cognome, soprannome, email, foto, ruolo, piede, isAdmin, puoModificareGiocatori, puoInserireRisultati, attivo, caratteristiche`
+export const playerFields = `_id, "legaId": lega._ref, nome, cognome, soprannome, email, foto, ruolo, piede, isAdmin, puoModificareGiocatori, puoInserireRisultati, attivo, caratteristiche`
 
 // Chi può cambiare caratteristiche e foto dei giocatori.
 export const canEditPlayers = (p: Pick<Player, 'isAdmin' | 'puoModificareGiocatori'>) => !!(p.isAdmin || p.puoModificareGiocatori)

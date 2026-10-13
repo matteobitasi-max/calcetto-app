@@ -1,10 +1,11 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { Suspense } from 'react'
-import { canEnterResults, displayName, requirePlayer, overall, type Player } from '@/lib/player'
+import { canEnterResults, displayName, getCurrentPlayer, membroDi, type Player } from '@/lib/player'
+import { forza } from '@/lib/teams'
 import { finestra, getMatch, getPlayers, ordinati, presenti, risultatoDa, type Match, type Risposta } from '@/lib/matches'
 import { formatData } from '@/lib/dates'
-import { aggiungiDaAttesa, apriConvocazioni, cambiaStato, rimettiInAttesa, eliminaPartita, generaSquadre, spostaGiocatore } from '@/app/actions'
+import { aggiungiDaAttesa, apriConvocazioni, cambiaStato, scegliLega, rimettiInAttesa, eliminaPartita } from '@/app/actions'
 import { Countdown } from '@/components/countdown'
 import { ApriConvocazioni } from '@/components/apri-convocazioni'
 import { baseUrl } from '@/lib/url'
@@ -22,9 +23,12 @@ export default function MatchPage({ params }: PageProps<'/partite/[id]'>) {
 }
 
 async function MatchDetail({ params }: { params: Promise<{ id: string }> }) {
-  const [{ id }, player] = await Promise.all([params, requirePlayer()])
-  const [match, rosa] = await Promise.all([getMatch(id), getPlayers()])
-  if (!match) notFound()
+  const { id } = await params
+  const match = await getMatch(id)
+  // Le partite si vedono solo tra membri della lega; vale la mia scheda in quella lega.
+  const player = await membroDi(match?.legaId)
+  if (!match || !player) notFound()
+  const [rosa, attiva] = await Promise.all([getPlayers(match.legaId), getCurrentPlayer()])
 
   const count = presenti(match).length
   const aggiunti = presenti(match).filter((c) => c.aggiunto).length
@@ -34,6 +38,17 @@ async function MatchDetail({ params }: { params: Promise<{ id: string }> }) {
 
   return (
     <div className="space-y-4">
+      {attiva && attiva.lega._id !== match.legaId && (
+        <form
+          action={scegliLega.bind(null, match.legaId, `/partite/${match._id}`)}
+          className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-amber-50 p-3 text-sm text-amber-900 dark:bg-amber-950 dark:text-amber-200"
+        >
+          <span>
+            Questa partita è della lega <b>{player.lega.nome}</b>
+          </span>
+          <SubmitButton className={buttonClass('secondary')}>Passa a questa lega</SubmitButton>
+        </form>
+      )}
       <Card className="space-y-2">
         <div className="flex items-start justify-between gap-2">
           <h1 className="text-lg font-bold capitalize">{formatData(match.data)}</h1>
@@ -65,10 +80,10 @@ async function MatchDetail({ params }: { params: Promise<{ id: string }> }) {
         </div>
       </Card>
 
-      {player.isAdmin && <AdminPanel match={match} whatsappUrl={await whatsappUrl(match)} />}
+      {player.isAdmin && <AdminPanel match={match} whatsappUrl={await whatsappUrl(match, player.lega.nome)} />}
 
       {match.squadraA.length + match.squadraB.length > 0 && (
-        <Squadre match={match} canEdit={!!player.isAdmin && match.stato === 'chiusa' && new Date() < risultatoDa(match)} />
+        <Squadre match={match} />
       )}
 
       <Card>
@@ -161,7 +176,7 @@ function Gruppo({
   )
 }
 
-function Squadre({ match, canEdit }: { match: Match; canEdit: boolean }) {
+function Squadre({ match }: { match: Match }) {
   const teams: [string, Player[], string][] = [
     ['Squadra A', match.squadraA, 'border-t-blue-500'],
     ['Squadra B', match.squadraB, 'border-t-orange-500'],
@@ -169,32 +184,19 @@ function Squadre({ match, canEdit }: { match: Match; canEdit: boolean }) {
   return (
     <div className="grid gap-4 sm:grid-cols-2">
       {teams.map(([nome, players, color]) => {
-        const forza = players.reduce((s, p) => s + overall(p), 0)
+        const totale = players.reduce((s, p) => s + forza(p), 0)
         return (
           <Card key={nome} className={`border-t-4 ${color}`}>
             <h2 className="mb-3 flex justify-between font-semibold">
               {nome}
-              <span className="text-sm font-normal text-zinc-500">forza {forza.toFixed(1)}</span>
+              <span className="text-sm font-normal text-zinc-500">forza {totale.toFixed(1)}</span>
             </h2>
             <ul className="space-y-2">
               {players.map((p) => (
                 <li key={p._id}>
                   <PlayerRow
                     player={p}
-                    right={
-                      canEdit ? (
-                        <form action={spostaGiocatore.bind(null, match._id, p._id)}>
-                          <SubmitButton
-                            className="rounded px-2 py-1 text-xs text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800"
-                            title="Sposta nell'altra squadra"
-                          >
-                            ⇄
-                          </SubmitButton>
-                        </form>
-                      ) : (
-                        <Prestazione match={match} playerId={p._id} />
-                      )
-                    }
+                    right={<Prestazione match={match} playerId={p._id} />}
                   />
                 </li>
               ))}
@@ -206,10 +208,10 @@ function Squadre({ match, canEdit }: { match: Match; canEdit: boolean }) {
   )
 }
 
-async function whatsappUrl(match: Match) {
+async function whatsappUrl(match: Match, legaNome: string) {
   const breve = { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' } as const
   const testo = [
-    '⚽ *Convocazioni aperte!*',
+    `⚽ *Convocazioni aperte!* · ${legaNome}`,
     `📅 ${formatData(match.data, breve)}`,
     `📍 ${match.luogo}`,
     `👥 ${match.postiDisponibili} posti${match.quota != null ? ` · ${match.quota} €` : ''}`,
@@ -254,6 +256,7 @@ function AdminPanel({ match, whatsappUrl }: { match: Match; whatsappUrl: string 
 
       {match.stato === 'aperta' && (
         <div className="space-y-2">
+          <p className="text-xs text-zinc-500">⚖️ Le formazioni si fanno dopo aver chiuso le convocazioni.</p>
           {scaduta && <p className="text-sm text-amber-700 dark:text-amber-400">Il tempo per convocarsi è finito: chiudi le convocazioni per fare le squadre.</p>}
           <div className="flex flex-wrap gap-2">
             {statoForm('chiusa', '🔒 Chiudi convocazioni', scaduta ? 'primary' : 'secondary', scaduta ? undefined : 'Chiudere le convocazioni prima della scadenza?')}
@@ -267,11 +270,11 @@ function AdminPanel({ match, whatsappUrl }: { match: Match; whatsappUrl: string 
       {match.stato === 'chiusa' && (
         <>
           <div className="flex flex-wrap gap-2">
-            <form action={generaSquadre.bind(null, match._id)}>
-              <SubmitButton className={buttonClass('primary')} disabled={count < 2} pendingText="Sto bilanciando…">
-                ⚖️ {match.squadraA.length ? 'Rigenera squadre' : 'Fai le squadre'}
-              </SubmitButton>
-            </form>
+            {count >= 2 && new Date() < risultatoDa(match) && (
+              <ButtonLink href={`/partite/${match._id}/formazioni`} variant={match.squadraA.length ? 'secondary' : 'primary'}>
+                ⚖️ {match.squadraA.length ? 'Modifica formazioni' : 'Fai le formazioni'}
+              </ButtonLink>
+            )}
             {statoForm('aperta', 'Riapri convocazioni', 'secondary')}
           </div>
         </>
