@@ -3,7 +3,7 @@ import { ActionForm } from '@/components/action-form'
 import { PostiInput } from '@/components/posti-input'
 import { SubmitButton } from '@/components/submit-button'
 import { Card, Field, buttonClass, inputClass } from '@/components/ui'
-import { addDays, isoToRomeLocal } from '@/lib/dates'
+import { adessoArrotondato, isoToRomeLocal, minutiTra } from '@/lib/dates'
 import type { Match } from '@/lib/matches'
 import { QuandoFields } from './quando-fields'
 
@@ -20,15 +20,15 @@ export function MatchForm({
   submitLabel: string
 }) {
   const giornoOk = giorno && /^\d{4}-\d{2}-\d{2}$/.test(giorno) ? giorno : undefined
+  // Nuova partita: convocazioni da adesso (arrotondato ai 5 minuti) per 2 ore.
   const quando = match
     ? {
         data: isoToRomeLocal(match.data),
         apertura: isoToRomeLocal(match.aperturaConvocazioni),
-        chiusura: isoToRomeLocal(match.chiusuraConvocazioni),
+        durata:
+          match.durataFinestraMinuti ?? minutiTra(isoToRomeLocal(match.aperturaConvocazioni), isoToRomeLocal(match.chiusuraConvocazioni)),
       }
-    : giornoOk
-      ? { data: `${giornoOk}T20:30`, apertura: `${addDays(giornoOk, -3)}T09:00`, chiusura: `${giornoOk}T12:00` }
-      : {}
+    : { data: giornoOk ? `${giornoOk}T20:30` : undefined, apertura: adessoArrotondato(), durata: 120 }
 
   return (
     <ActionForm action={action} className="space-y-4">

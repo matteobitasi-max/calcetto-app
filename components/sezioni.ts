@@ -9,9 +9,10 @@ export const SEZIONI = [
 export const sezioneAttiva = (s: (typeof SEZIONI)[number], pathname: string) =>
   pathname === s.href || pathname.startsWith(s.prefisso)
 
+// Un'unica pillola divisa in segmenti: il segmento della sezione attuale è verde.
+export const barraClass = 'flex w-full rounded-full bg-zinc-100 p-1 dark:bg-zinc-800'
+
 export const pillClass = (attiva: boolean) =>
-  `shrink-0 rounded-full px-4 py-1.5 text-sm font-medium transition ${
-    attiva
-      ? 'bg-green-600 text-white shadow-sm'
-      : 'bg-zinc-100 text-zinc-700 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700'
+  `flex-1 whitespace-nowrap rounded-full px-2 py-1.5 text-center text-sm font-medium transition ${
+    attiva ? 'bg-green-600 text-white shadow-sm' : 'text-zinc-600 hover:text-zinc-900 dark:text-zinc-300 dark:hover:text-white'
   }`

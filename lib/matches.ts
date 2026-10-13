@@ -26,6 +26,7 @@ export type Match = {
   notificaInviataIl?: string
   aperturaConvocazioni: string
   chiusuraConvocazioni: string
+  durataFinestraMinuti?: number
   postiDisponibili: number
   /** Numero deciso dalle convocazioni: pari alla chiusura. */
   postiAutomatici?: boolean
@@ -49,7 +50,7 @@ export type Match = {
 export type Pagamento = { giocatoreId: string; stato: 'dichiarato' | 'confermato'; metodo?: 'satispay' | 'contanti'; il?: string }
 
 const matchFields = `
-  _id, _rev, "legaId": lega._ref, data, luogo, postiDisponibili, postiAutomatici, quota, note, aperturaConvocazioni, chiusuraConvocazioni, "serieId": serie._ref, notificaInviataIl,
+  _id, _rev, "legaId": lega._ref, data, luogo, postiDisponibili, postiAutomatici, quota, note, aperturaConvocazioni, chiusuraConvocazioni, durataFinestraMinuti, "serieId": serie._ref, notificaInviataIl,
   "stato": coalesce(stato, "aperta"),
   "convocazioni": coalesce(convocazioni[]{_key, risposta, rispostoIl, aggiunto, "giocatore": giocatore->{${playerFields}}}, []),
   "squadraA": coalesce(squadraA[]->{${playerFields}}, []),

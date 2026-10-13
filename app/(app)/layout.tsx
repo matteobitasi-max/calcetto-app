@@ -7,7 +7,7 @@ import { Avatar } from '@/components/ui'
 import { LogoZoom } from '@/components/logo-zoom'
 import { LegaMenu } from '@/components/lega-menu'
 import { MenuSezioni } from '@/components/menu-sezioni'
-import { SEZIONI, pillClass } from '@/components/sezioni'
+import { SEZIONI, barraClass, pillClass } from '@/components/sezioni'
 import { NotificheNativeListener } from '@/components/notifiche-native'
 
 
@@ -22,7 +22,7 @@ export default function AppLayout({ children }: LayoutProps<'/'>) {
               <LegaEUtente />
             </Suspense>
           </div>
-          <nav className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-2.5">
+          <nav className={`${barraClass} mb-2.5`}>
             {/* La pillola evidenziata dipende dalla pagina: fuori dal Suspense resta il menu senza evidenziazione */}
             <Suspense
               fallback={SEZIONI.map((s) => (

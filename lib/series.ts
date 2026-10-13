@@ -15,6 +15,7 @@ export type Series = {
   luogo: string
   postiDisponibili: number
   postiAutomatici?: boolean
+  durataFinestraMinuti?: number
   quota?: number
   note?: string
   aperturaGiorniPrima: number
@@ -27,7 +28,7 @@ export type Series = {
 // Quante settimane in avanti tenere già create le partite.
 const ORIZZONTE_GIORNI = 42
 
-const seriesFields = `_id, "legaId": lega._ref, attiva, primaData, ora, ogniSettimane, fineData, durataMinuti, luogo, postiDisponibili, postiAutomatici, quota, note,
+const seriesFields = `_id, "legaId": lega._ref, attiva, primaData, ora, ogniSettimane, fineData, durataMinuti, luogo, postiDisponibili, postiAutomatici, durataFinestraMinuti, quota, note,
   aperturaGiorniPrima, aperturaOra, chiusuraGiorniPrima, chiusuraOra, esclusi`
 
 export function getSeries(id: string) {
@@ -57,6 +58,7 @@ function occurrence(s: Series, day: string) {
     luogo: s.luogo,
     postiDisponibili: s.postiDisponibili,
     postiAutomatici: !!s.postiAutomatici,
+    durataFinestraMinuti: s.durataFinestraMinuti ?? 120,
     ...(s.quota != null && { quota: s.quota }),
     ...(s.note && { note: s.note }),
     stato: 'aperta',

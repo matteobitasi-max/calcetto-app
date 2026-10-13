@@ -6,6 +6,7 @@ import { contaFutureConRisposte, descriviSerie, getSeries } from '@/lib/series'
 import { ActionForm } from '@/components/action-form'
 import { PostiInput } from '@/components/posti-input'
 import { DatePicker } from '@/components/date-picker'
+import { DURATE_FINESTRA } from '../../quando-fields'
 import { SubmitButton } from '@/components/submit-button'
 import { Card, Field, Loading, PageTitle, buttonClass, inputClass } from '@/components/ui'
 
@@ -66,21 +67,23 @@ async function Form({ params }: { params: Promise<{ id: string }> }) {
 
       <Card className="space-y-4">
         <h2 className="font-semibold">Finestra convocazioni</h2>
-        {(
-          [
-            ['Apertura', 'aperturaGiorniPrima', 'aperturaOra', serie.aperturaGiorniPrima, serie.aperturaOra],
-            ['Chiusura', 'chiusuraGiorniPrima', 'chiusuraOra', serie.chiusuraGiorniPrima, serie.chiusuraOra],
-          ] as const
-        ).map(([label, giorniName, oraName, giorni, ora]) => (
-          <div key={label} className="grid grid-cols-2 gap-4">
-            <Field label={`${label}: giorni prima`}>
-              <input name={giorniName} type="number" min={0} required defaultValue={giorni} className={inputClass} />
-            </Field>
-            <Field label="alle">
-              <input name={oraName} type="time" required defaultValue={ora} className={inputClass} />
-            </Field>
-          </div>
-        ))}
+        <div className="grid grid-cols-2 gap-4">
+          <Field label="Inizio: giorni prima">
+            <input name="aperturaGiorniPrima" type="number" min={0} required defaultValue={serie.aperturaGiorniPrima} className={inputClass} />
+          </Field>
+          <Field label="alle">
+            <input name="aperturaOra" type="time" required defaultValue={serie.aperturaOra} className={inputClass} />
+          </Field>
+        </div>
+        <Field label="Durata">
+          <select name="durataFinestraMinuti" defaultValue={serie.durataFinestraMinuti ?? 120} className={inputClass}>
+            {DURATE_FINESTRA.map(([m, label]) => (
+              <option key={m} value={m}>
+                {label}
+              </option>
+            ))}
+          </select>
+        </Field>
       </Card>
 
       <p className="text-sm text-zinc-500">

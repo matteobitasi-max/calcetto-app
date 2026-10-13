@@ -110,6 +110,13 @@ export const series = defineType({
       validation: (r) => r.required().regex(ORA, { name: 'ora' }),
     }),
     defineField({
+      name: 'durataFinestraMinuti',
+      title: 'Durata finestra (minuti)',
+      fieldset: 'chiusura',
+      type: 'number',
+      initialValue: 120,
+    }),
+    defineField({
       name: 'chiusuraGiorniPrima',
       title: 'Giorni prima',
       type: 'number',

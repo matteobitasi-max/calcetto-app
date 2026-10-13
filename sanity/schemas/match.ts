@@ -105,6 +105,13 @@ export const match = defineType({
       readOnly: true,
     }),
     defineField({
+      name: 'durataFinestraMinuti',
+      title: 'Durata finestra convocazioni (minuti)',
+      type: 'number',
+      initialValue: 120,
+      validation: (r) => r.min(15).integer(),
+    }),
+    defineField({
       name: 'stato',
       title: 'Stato',
       type: 'string',

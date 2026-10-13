@@ -129,7 +129,9 @@ export async function salvaPartita(matchId: string | null, _prev: FormState, for
   const note = str(formData, 'note')
 
   if (!Number.isInteger(durata) || durata < 10 || durata > 300) return { error: 'Durata non valida (10-300 minuti).' }
-  if (!data || !luogo || !apertura || !chiusura) return { error: 'Compila data, luogo e finestra delle convocazioni.' }
+  const durataFinestra = Math.max(15, Math.round(num(formData, 'durataFinestraMinuti') ?? 120))
+  if (!data || !luogo || !apertura || !chiusura) return { error: 'Compila data e ora della partita, campo e inizio delle convocazioni.' }
+  if (apertura >= data) return { error: 'Le convocazioni devono aprirsi prima della partita.' }
   if (chiusura <= apertura) return { error: 'La chiusura delle convocazioni deve essere dopo l’apertura.' }
   if (chiusura > data) return { error: 'Le convocazioni devono chiudersi prima della partita.' }
   if (!Number.isInteger(posti) || posti < 2) return { error: 'Servono almeno 2 posti.' }
@@ -172,6 +174,7 @@ export async function salvaPartita(matchId: string | null, _prev: FormState, for
       aperturaOra: apOra,
       chiusuraGiorniPrima: daysBetween(chGiorno, giorno),
       chiusuraOra: chOra,
+      durataFinestraMinuti: durataFinestra,
     })
     await assicuraRicorrenze({ serie: { ...(serie as unknown as Series), legaId: admin.lega._id } })
     redirect(`/partite/${occurrenceId(serie._id, giorno)}`)
@@ -183,6 +186,7 @@ export async function salvaPartita(matchId: string | null, _prev: FormState, for
     luogo,
     aperturaConvocazioni: apertura,
     chiusuraConvocazioni: chiusura,
+    durataFinestraMinuti: durataFinestra,
     postiDisponibili: posti,
     postiAutomatici: automatici,
   }
@@ -365,16 +369,15 @@ export async function salvaSerie(seriesId: string, _prev: FormState, formData: F
 
   const ora = str(formData, 'ora')
   const aperturaOra = str(formData, 'aperturaOra')
-  const chiusuraOra = str(formData, 'chiusuraOra')
   const aperturaGiorniPrima = num(formData, 'aperturaGiorniPrima') ?? 0
-  const chiusuraGiorniPrima = num(formData, 'chiusuraGiorniPrima') ?? 0
+  const durataFinestra = Math.max(15, Math.round(num(formData, 'durataFinestraMinuti') ?? 120))
   const luogo = str(formData, 'luogo')
   const posti = num(formData, 'postiDisponibili') ?? 10
   const quota = num(formData, 'quota')
   const note = str(formData, 'note')
   const fineData = str(formData, 'fineData')
 
-  if (!luogo || ![ora, aperturaOra, chiusuraOra].every((o) => ORA.test(o))) return { error: 'Controlla luogo e orari.' }
+  if (!luogo || ![ora, aperturaOra].every((o) => ORA.test(o))) return { error: 'Controlla luogo e orari.' }
   const automatici = formData.get('postiAutomatici') === 'on'
   if (!automatici && (!Number.isInteger(posti) || posti < 2 || posti > MAX_GIOCATORI)) return { error: `Da 2 a ${MAX_GIOCATORI} giocatori.` }
   // Confronto in minuti rispetto all'inizio della partita.
@@ -383,10 +386,16 @@ export async function salvaSerie(seriesId: string, _prev: FormState, formData: F
     const [ph, pm] = ora.split(':').map(Number)
     return giorni * 1440 + (ph * 60 + pm) - (h * 60 + m)
   }
-  if (minutiPrima(chiusuraGiorniPrima, chiusuraOra) < 0) return { error: 'Le convocazioni devono chiudersi prima della partita.' }
-  if (minutiPrima(aperturaGiorniPrima, aperturaOra) <= minutiPrima(chiusuraGiorniPrima, chiusuraOra)) {
-    return { error: 'L\u2019apertura deve venire prima della chiusura.' }
-  }
+  const aperturaMinutiPrima = minutiPrima(aperturaGiorniPrima, aperturaOra)
+  if (aperturaMinutiPrima <= 0) return { error: 'Le convocazioni devono aprirsi prima della partita.' }
+  // Chiusura = apertura + durata, al massimo all'inizio della partita; in "giorni prima" e "ora".
+  const chiusuraMinuti = (() => {
+    const [ph, pm] = ora.split(':').map(Number)
+    return ph * 60 + pm - Math.max(0, aperturaMinutiPrima - durataFinestra) // minuti dalla mezzanotte del giorno partita
+  })()
+  const chiusuraGiorniPrima = -Math.floor(chiusuraMinuti / 1440)
+  const minutoDelGiorno = chiusuraMinuti + chiusuraGiorniPrima * 1440
+  const chiusuraOra = `${String(Math.floor(minutoDelGiorno / 60)).padStart(2, '0')}:${String(minutoDelGiorno % 60).padStart(2, '0')}`
 
   const durata = num(formData, 'durataMinuti') ?? 60
   if (!Number.isInteger(durata) || durata < 10 || durata > 300) return { error: 'Durata non valida (10-300 minuti).' }
@@ -402,6 +411,7 @@ export async function salvaSerie(seriesId: string, _prev: FormState, formData: F
     aperturaOra,
     chiusuraGiorniPrima,
     chiusuraOra,
+    durataFinestraMinuti: durataFinestra,
   }
   const optional = { quota, note: note || undefined, fineData: fineData || undefined }
   await sanity
@@ -551,6 +561,26 @@ export async function disattivaNotifiche(endpoint: string) {
   await rimuoviIscrizione(utente.id, endpoint)
 }
 
+// L'organizzatore allunga la finestra delle convocazioni (al massimo fino all'inizio della partita).
+export async function allungaFinestra(matchId: string, minuti: number) {
+  await requireForDoc(matchId, 'organizzatore')
+  const match = await getMatch(matchId)
+  if (!match) throw new Error('Partita non trovata')
+  if (match.stato !== 'aperta') throw new Error('Le convocazioni sono chiuse')
+  const inizio = new Date(match.data).getTime()
+  // Se il tempo era già scaduto, si allunga a partire da adesso.
+  const base = Math.max(new Date(match.chiusuraConvocazioni).getTime(), Date.now())
+  const fine = Math.min(base + Math.max(15, minuti) * 60_000, inizio)
+  await sanity
+    .patch(matchId)
+    .set({
+      chiusuraConvocazioni: new Date(fine).toISOString(),
+      durataFinestraMinuti: Math.round((fine - new Date(match.aperturaConvocazioni).getTime()) / 60_000),
+    })
+    .commit()
+  refresh()
+}
+
 export type AvvisoState = { inviate?: number; totali?: number; error?: string } | undefined
 
 // Apre subito le convocazioni (se non lo sono già per orario) e avvisa tutti.
@@ -562,9 +592,11 @@ export async function apriConvocazioni(matchId: string): Promise<AvvisoState> {
   if (stato === 'chiusa' || stato === 'scaduta') return { error: 'Le convocazioni sono chiuse: modifica l\u2019orario di chiusura.' }
 
   const now = new Date().toISOString()
+  // Aprendo prima dell'orario previsto, la finestra parte adesso e dura quanto impostato.
+  const fine = new Date(Math.min(Date.now() + (match.durataFinestraMinuti ?? 120) * 60_000, new Date(match.data).getTime())).toISOString()
   await sanity
     .patch(matchId)
-    .set({ notificaInviataIl: now, ...(stato === 'non_ancora' && { aperturaConvocazioni: now }) })
+    .set({ notificaInviataIl: now, ...(stato === 'non_ancora' && { aperturaConvocazioni: now, chiusuraConvocazioni: fine }) })
     .commit()
 
   const breve = { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' } as const

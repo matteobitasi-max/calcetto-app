@@ -36,6 +36,17 @@ export function daysBetween(from: string, to: string) {
   return Math.round((Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / 86_400_000)
 }
 
+// "2026-10-15T20:30" + n minuti (orari di calendario, senza fusi orari)
+export function addMinuti(local: string, n: number) {
+  const [d, t] = local.split('T')
+  const [y, m, g] = d.split('-').map(Number)
+  const [h, min] = t.split(':').map(Number)
+  return new Date(Date.UTC(y, m - 1, g, h, min + n)).toISOString().slice(0, 16)
+}
+
+// Minuti tra due orari "AAAA-MM-GGTHH:MM"
+export const minutiTra = (da: string, a: string) => Math.round((Date.parse(`${a}:00Z`) - Date.parse(`${da}:00Z`)) / 60_000)
+
 // "2026-10-15T20:30" (ora di Roma) -> ISO UTC
 export function romeLocalToISO(local: string) {
   const asUtc = new Date(`${local}:00Z`)
@@ -43,3 +54,6 @@ export function romeLocalToISO(local: string) {
   const romeAsUtc = Date.UTC(+p.year, +p.month - 1, +p.day, +p.hour, +p.minute)
   return new Date(asUtc.getTime() - (romeAsUtc - asUtc.getTime())).toISOString()
 }
+
+// Adesso, in ora di Roma, arrotondato ai 5 minuti successivi ("2026-10-15T20:35").
+export const adessoArrotondato = () => isoToRomeLocal(new Date(Math.ceil(Date.now() / 300_000) * 300_000))

@@ -5,7 +5,7 @@ import { canEnterResults, getCurrentPlayer, membroDi, type Membro, type Player }
 import { forza } from '@/lib/teams'
 import { finestra, formatoInCorso, getMatch, getPlayers, ordinati, presenti, risultatoDa, type Match, type Risposta } from '@/lib/matches'
 import { formatData } from '@/lib/dates'
-import { aggiungiDaAttesa, apriConvocazioni, cambiaStato, scegliLega, rimettiInAttesa, eliminaPartita } from '@/app/actions'
+import { aggiungiDaAttesa, allungaFinestra, apriConvocazioni, cambiaStato, scegliLega, rimettiInAttesa, eliminaPartita } from '@/app/actions'
 import { Countdown } from '@/components/countdown'
 import { ApriConvocazioni } from '@/components/apri-convocazioni'
 import { baseUrl } from '@/lib/url'
@@ -288,7 +288,22 @@ function AdminPanel({ match, whatsappUrl }: { match: Match; whatsappUrl: string 
       {match.stato === 'aperta' && (
         <div className="space-y-2">
           <p className="text-xs text-zinc-500">⚖️ Le formazioni si fanno dopo aver chiuso le convocazioni.</p>
-          {scaduta && <p className="text-sm text-amber-700 dark:text-amber-400">Il tempo per convocarsi è finito: chiudi le convocazioni per fare le squadre.</p>}
+          {scaduta && <p className="text-sm text-amber-700 dark:text-amber-400">Il tempo per convocarsi è finito: chiudi le convocazioni per fare le squadre, oppure allunga la finestra.</p>}
+          {new Date(match.chiusuraConvocazioni) < new Date(match.data) && (
+            <div className="flex flex-wrap items-center gap-2 text-sm">
+              <span className="text-zinc-500">⏱ Allunga la finestra:</span>
+              {(
+                [
+                  [60, '+1 ora'],
+                  [1440, '+1 giorno'],
+                ] as const
+              ).map(([minuti, label]) => (
+                <form key={minuti} action={allungaFinestra.bind(null, match._id, minuti)}>
+                  <SubmitButton className={`${buttonClass('secondary')} px-3 py-1`}>{label}</SubmitButton>
+                </form>
+              ))}
+            </div>
+          )}
           <div className="flex flex-wrap gap-2">
             {statoForm('chiusa', '🔒 Chiudi convocazioni', scaduta ? 'primary' : 'secondary', scaduta ? undefined : 'Chiudere le convocazioni prima della scadenza?')}
             <ButtonLink href={`/partite/${match._id}/modifica`} variant="secondary">
