@@ -6,7 +6,7 @@ import { attivaNotifiche, disattivaNotifiche } from '@/app/actions'
 import { isAppNativa, registraTelefono } from './notifiche-native'
 import { buttonClass } from './ui-classes'
 
-type Stato = 'caricamento' | 'non_supportate' | 'serve_home' | 'bloccate' | 'attive' | 'spente'
+type Stato = 'caricamento' | 'non_supportate' | 'serve_home' | 'aggiorna_app' | 'bloccate' | 'attive' | 'spente'
 
 function urlBase64ToUint8Array(base64: string) {
   const padded = (base64 + '='.repeat((4 - (base64.length % 4)) % 4)).replace(/-/g, '+').replace(/_/g, '/')
@@ -27,7 +27,11 @@ export function NotificheToggle({ variant }: { variant: 'banner' | 'impostazione
       // Nell'app iPhone/Android: notifiche native (Firebase) con il permesso del telefono.
       if (isAppNativa()) {
         setNativa(true)
-        const { receive } = await FirebaseMessaging.checkPermissions()
+        // Se il telefono non risponde (es. app vecchia senza il plugin) si propone comunque di attivarle.
+        const { receive } = await Promise.race([
+          FirebaseMessaging.checkPermissions(),
+          new Promise<{ receive: 'prompt' }>((ok) => setTimeout(() => ok({ receive: 'prompt' }), 3000)),
+        ])
         return setStato(receive === 'granted' ? 'attive' : receive === 'denied' ? 'bloccate' : 'spente')
       }
       if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
@@ -48,7 +52,8 @@ export function NotificheToggle({ variant }: { variant: 'banner' | 'impostazione
         if (receive === 'granted' && (await registraTelefono())) setStato('attive')
         else setStato(receive === 'denied' ? 'bloccate' : 'spente')
       } catch {
-        setStato('spente')
+        // Il plugin delle notifiche manca: è installata una versione vecchia dell'app.
+        setStato('aggiorna_app')
       } finally {
         setBusy(false)
       }
@@ -84,7 +89,9 @@ export function NotificheToggle({ variant }: { variant: 'banner' | 'impostazione
   }
 
   if (variant === 'banner' && stato !== 'spente' && stato !== 'serve_home') return null
-  if (variant === 'impostazione' && stato === 'caricamento') return null
+  if (variant === 'impostazione' && stato === 'caricamento') {
+    return <div className="rounded-xl border border-zinc-200 p-4 text-sm text-zinc-500 dark:border-zinc-800">🔔 Notifiche…</div>
+  }
 
   const box = 'flex flex-wrap items-center justify-between gap-3 rounded-xl border p-4 text-sm'
   switch (stato) {
@@ -108,6 +115,12 @@ export function NotificheToggle({ variant }: { variant: 'banner' | 'impostazione
               {busy ? '…' : 'Disattiva'}
             </button>
           )}
+        </div>
+      )
+    case 'aggiorna_app':
+      return (
+        <div className={`${box} border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-300`}>
+          🔔 Per le notifiche aggiorna l&apos;app: iPhone da TestFlight (build 3 o successiva), Android dalla versione 1.2.
         </div>
       )
     case 'serve_home':

@@ -65,6 +65,8 @@ async function Profilo({ params }: { params: Promise<{ id: string }> }) {
         )}
       </Card>
 
+      {mio && <NotificheToggle variant="impostazione" />}
+
       <Statistiche stats={stats} />
 
       <Card>
@@ -76,7 +78,6 @@ async function Profilo({ params }: { params: Promise<{ id: string }> }) {
 
       {mio && (
         <div className="space-y-3">
-          <NotificheToggle variant="impostazione" />
           <SignOutButton redirectUrl="/sign-in">
             <button className={`${buttonClass('secondary')} w-full`}>Esci</button>
           </SignOutButton>
