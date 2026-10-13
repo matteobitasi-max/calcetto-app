@@ -5,7 +5,7 @@ import { canEnterResults, getCurrentPlayer, membroDi, type Membro, type Player }
 import { forza } from '@/lib/teams'
 import { finestra, formatoInCorso, getMatch, getPlayers, ordinati, presenti, risultatoDa, type Match, type Risposta } from '@/lib/matches'
 import { formatData } from '@/lib/dates'
-import { aggiungiDaAttesa, allungaFinestra, apriConvocazioni, cambiaStato, scegliLega, rimettiInAttesa, eliminaPartita } from '@/app/actions'
+import { aggiungiDaAttesa, allungaFinestra, apriConvocazioni, cambiaStato, scegliLega, rimettiInAttesa } from '@/app/actions'
 import { Countdown } from '@/components/countdown'
 import { ApriConvocazioni } from '@/components/apri-convocazioni'
 import { baseUrl } from '@/lib/url'
@@ -331,15 +331,6 @@ function AdminPanel({ match, whatsappUrl }: { match: Match; whatsappUrl: string 
         {match.stato === 'annullata'
           ? statoForm('aperta', 'Ripristina partita', 'secondary')
           : match.stato !== 'giocata' && statoForm('annullata', 'Annulla partita', 'danger', 'Annullare la partita?')}
-        <form action={eliminaPartita.bind(null, match._id)}>
-          <SubmitButton className={buttonClass('danger')} confirm={
-              match.serieId
-                ? 'Eliminare questa partita? Le altre della serie restano e questa data non verrà ricreata.'
-                : 'Eliminare definitivamente la partita?'
-            }>
-            Elimina
-          </SubmitButton>
-        </form>
       </div>
     </Card>
   )

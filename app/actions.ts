@@ -8,7 +8,7 @@ import { sanity } from '@/lib/sanity'
 import { BADGE, COOKIE_LEGA, PIEDI, RUOLI, SKILLS, getUtente, membroDi, requireAdmin, requireForDoc, requireIn, type Skill } from '@/lib/player'
 import { assegnaPosti, finestra, getMatch, presenti, risultatoDa, type Match, type Risposta, type Stato } from '@/lib/matches'
 import { MAX_GIOCATORI, MAX_ISCRITTI, formatoDaIscritti } from '@/lib/limiti'
-import { daysBetween, formatData, isoToRomeLocal, romeLocalToISO } from '@/lib/dates'
+import { daysBetween, formatData, romeLocalToISO } from '@/lib/dates'
 import { inviaAGiocatori, inviaATutti, rimuoviIscrizione, salvaIscrizione, salvaTokenNativo, type PushSub } from '@/lib/push'
 import { assicuraRicorrenze, getSeries, occurrenceId, rimuoviFutureVuote, type Series } from '@/lib/series'
 
@@ -340,22 +340,6 @@ export async function salvaRisultato(matchId: string, _prev: FormState, formData
   else patch.unset(['mvp'])
   await patch.commit()
   redirect(`/partite/${matchId}`)
-}
-
-export async function eliminaPartita(matchId: string) {
-  await requireForDoc(matchId, 'organizzatore')
-  const match = await sanity.fetch<{ serie?: { _ref: string }; data: string } | null>(
-    `*[_type == "match" && _id == $id][0]{serie, data}`,
-    { id: matchId },
-  )
-  const tx = sanity.transaction().delete(matchId)
-  // Se fa parte di una serie, quel giorno non va ricreato.
-  if (match?.serie) {
-    const giorno = isoToRomeLocal(match.data).slice(0, 10)
-    tx.patch(match.serie._ref, (p) => p.setIfMissing({ esclusi: [] }).append('esclusi', [giorno]))
-  }
-  await tx.commit()
-  redirect('/')
 }
 
 // ---------- Partite ricorrenti (organizzatori) ----------
