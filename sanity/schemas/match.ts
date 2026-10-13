@@ -137,6 +137,20 @@ export const match = defineType({
       ],
     }),
     playerRefs('squadraA', 'Squadra A'),
+    defineField({
+      name: 'pettorine',
+      title: 'Chi porta le pettorine',
+      type: 'string',
+      fieldset: 'squadre',
+      options: { list: [{ title: 'Squadra A', value: 'A' }, { title: 'Squadra B', value: 'B' }] },
+    }),
+    defineField({
+      name: 'formazioniUfficialiIl',
+      title: 'Formazioni comunicate il',
+      type: 'datetime',
+      fieldset: 'squadre',
+      readOnly: true,
+    }),
     playerRefs('squadraB', 'Squadra B'),
     defineField({
       name: 'risultato',

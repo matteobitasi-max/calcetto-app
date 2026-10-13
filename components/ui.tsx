@@ -1,7 +1,7 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import type { ComponentProps, ReactNode } from 'react'
-import { SKILLS, displayName, overall, type Player, type Skill } from '@/lib/roster'
+import { BADGE, SKILLS, displayName, overall, type Badge, type Player, type Skill } from '@/lib/roster'
 import type { Risposta, Stato } from '@/lib/matches'
 import { avatarUrl } from '@/lib/image'
 import { buttonClass, inputClass } from './ui-classes'
@@ -94,12 +94,31 @@ export function Avatar({ player, size = 40 }: { player: Player; size?: number })
   )
 }
 
+const STILE_BADGE: Record<Badge, string> = {
+  legend: 'bg-amber-100 text-amber-800 ring-amber-300 dark:bg-amber-950 dark:text-amber-300 dark:ring-amber-800',
+  rookie: 'bg-green-100 text-green-800 ring-green-300 dark:bg-green-950 dark:text-green-300 dark:ring-green-800',
+  asinus: 'bg-zinc-200 text-zinc-700 ring-zinc-300 dark:bg-zinc-800 dark:text-zinc-300 dark:ring-zinc-700',
+  promessa: 'bg-violet-100 text-violet-800 ring-violet-300 dark:bg-violet-950 dark:text-violet-300 dark:ring-violet-800',
+}
+
+export function PlayerBadge({ badge }: { badge?: Badge }) {
+  if (!badge || !BADGE[badge]) return null
+  return (
+    <span className={`inline-flex shrink-0 items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[11px] font-semibold ring-1 ${STILE_BADGE[badge]}`}>
+      {BADGE[badge].emoji} {BADGE[badge].label}
+    </span>
+  )
+}
+
 export function PlayerRow({ player, right }: { player: Player; right?: ReactNode }) {
   return (
     <div className="flex items-center gap-3">
       <Avatar player={player} />
       <Link href={`/giocatori/${player._id}`} className="min-w-0 flex-1 hover:underline">
-        <div className="truncate font-medium">{displayName(player)}</div>
+        <div className="flex min-w-0 items-center gap-1.5">
+          <span className="truncate font-medium">{displayName(player)}</span>
+          <PlayerBadge badge={player.badge} />
+        </div>
         {player.ruolo && <div className="text-xs capitalize text-zinc-500">{player.ruolo}</div>}
       </Link>
       <Overall player={player} />

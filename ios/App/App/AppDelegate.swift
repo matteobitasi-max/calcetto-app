@@ -42,3 +42,12 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         return config
     }
 }
+
+// La vista dell'app: come quella di Capacitor, ma con il gesto "trascina dal
+// bordo sinistro per tornare indietro" (e da destra per andare avanti).
+class MainViewController: CAPBridgeViewController {
+    override func capacitorDidLoad() {
+        super.capacitorDidLoad()
+        webView?.allowsBackForwardNavigationGestures = true
+    }
+}

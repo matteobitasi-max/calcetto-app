@@ -84,3 +84,40 @@ export function balanceTeams<T extends Giocatore>(players: T[], tentativi = 300)
   const scelta = buone[Math.floor(Math.random() * buone.length)]
   return { a: scelta.a, b: scelta.b }
 }
+
+// Formazioni il più simili possibile a quelle della volta prima: chi c'era resta
+// nella sua squadra, i nuovi vanno dove equilibrano meglio. Se i numeri non tornano
+// si sposta il minimo indispensabile, scegliendo chi sbilancia meno.
+export function similiAPrima<T extends Giocatore>(players: T[], prima: Record<string, 'A' | 'B'>) {
+  const a = players.filter((p) => prima[p._id] === 'A')
+  const b = players.filter((p) => prima[p._id] === 'B')
+  const nuovi = players.filter((p) => !prima[p._id])
+
+  // I nuovi: prima riempiono la squadra più corta, poi vanno dove lo squilibrio è minore.
+  for (const p of [...nuovi].sort((x, y) => forza(y) - forza(x))) {
+    if (a.length !== b.length) (a.length < b.length ? a : b).push(p)
+    else (squilibrio([...a, p], b) <= squilibrio(a, [...b, p]) ? a : b).push(p)
+  }
+  // Tra i nuovi si possono fare scambi liberamente: chi c'era la volta prima resta fermo.
+  const fermi = new Set(players.filter((p) => prima[p._id]).map((p) => p._id))
+  migliora(a, b, fermi)
+
+  // Squadre ancora troppo diverse di numero: si sposta chi pesa meno sull'equilibrio.
+  while (Math.abs(a.length - b.length) > 1) {
+    const [lunga, corta] = a.length > b.length ? [a, b] : [b, a]
+    let migliore = 0
+    let costo = Infinity
+    lunga.forEach((p, i) => {
+      const resto = lunga.filter((_, j) => j !== i)
+      const c = lunga === a ? squilibrio(resto, [...corta, p]) : squilibrio([...corta, p], resto)
+      if (c < costo) {
+        costo = c
+        migliore = i
+      }
+    })
+    corta.push(...lunga.splice(migliore, 1))
+  }
+
+  const stessaSquadra = players.filter((p) => prima[p._id] && (a.includes(p) ? 'A' : 'B') === prima[p._id]).length
+  return { a, b, stessaSquadra }
+}

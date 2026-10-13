@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { Suspense } from 'react'
-import { canEnterResults, getCurrentPlayer, membroDi, type Player } from '@/lib/player'
+import { canEnterResults, getCurrentPlayer, membroDi, type Membro, type Player } from '@/lib/player'
 import { forza } from '@/lib/teams'
 import { finestra, getMatch, getPlayers, ordinati, presenti, risultatoDa, type Match, type Risposta } from '@/lib/matches'
 import { formatData } from '@/lib/dates'
@@ -13,7 +13,7 @@ import { SubmitButton } from '@/components/submit-button'
 import { ButtonLink, Card, Loading, PlayerRow, StatoBadge, buttonClass } from '@/components/ui'
 import { FinestraInfo } from '../finestra-info'
 import { RispostaButtons } from '../risposta-buttons'
-import { Cassa, MiaQuota } from './cassa'
+import { Cassa, MiaQuota, PagamentoInLista } from './cassa'
 import { Tabellino } from '../tabellino'
 
 export default function MatchPage({ params }: PageProps<'/partite/[id]'>) {
@@ -88,7 +88,7 @@ async function MatchDetail({ params }: { params: Promise<{ id: string }> }) {
       {player.isAdmin && <Cassa match={match} />}
 
       {match.squadraA.length + match.squadraB.length > 0 && (
-        <Squadre match={match} />
+        <Squadre match={match} mioId={player._id} />
       )}
 
       <Card>
@@ -100,7 +100,7 @@ async function MatchDetail({ params }: { params: Promise<{ id: string }> }) {
             </span>
           )}
         </h2>
-        <Gruppo titolo="In lista" match={match} risposta="presente" numerati gestisci={gestisci} />
+        <Gruppo titolo="In lista" match={match} risposta="presente" numerati gestisci={gestisci} me={player} />
         <Gruppo titolo="Lista d'attesa" match={match} risposta="riserva" numerati gestisci={gestisci} />
         <Gruppo titolo="Non ci sono" match={match} risposta="assente" />
         {mancanti.length > 0 && (
@@ -129,6 +129,7 @@ function Gruppo({
   risposta,
   numerati,
   gestisci,
+  me,
 }: {
   titolo: string
   match: Match
@@ -136,6 +137,8 @@ function Gruppo({
   numerati?: boolean
   /** L'organizzatore può spostare persone tra lista e lista d'attesa. */
   gestisci?: boolean
+  /** Per mostrare accanto ai nomi in lista chi ha pagato la quota (e l'icona per pagare). */
+  me?: Membro
 }) {
   const items = ordinati(match, risposta)
   if (items.length === 0) return null
@@ -153,6 +156,7 @@ function Gruppo({
                 player={c.giocatore}
                 right={
                   <>
+                    {me && <PagamentoInLista match={match} me={me} playerId={c.giocatore._id} />}
                     {c.aggiunto && risposta === 'presente' && (
                       <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-xs text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">aggiunto</span>
                     )}
@@ -181,34 +185,46 @@ function Gruppo({
   )
 }
 
-function Squadre({ match }: { match: Match }) {
-  const teams: [string, Player[], string][] = [
-    ['Squadra A', match.squadraA, 'border-t-blue-500'],
-    ['Squadra B', match.squadraB, 'border-t-orange-500'],
+function Squadre({ match, mioId }: { match: Match; mioId: string }) {
+  const teams: ['A' | 'B', Player[], string][] = [
+    ['A', match.squadraA, 'border-t-blue-500'],
+    ['B', match.squadraB, 'border-t-orange-500'],
   ]
+  const mia = match.squadraA.some((p) => p._id === mioId) ? 'A' : match.squadraB.some((p) => p._id === mioId) ? 'B' : null
   return (
-    <div className="grid gap-4 sm:grid-cols-2">
-      {teams.map(([nome, players, color]) => {
-        const totale = players.reduce((s, p) => s + forza(p), 0)
-        return (
-          <Card key={nome} className={`border-t-4 ${color}`}>
-            <h2 className="mb-3 flex justify-between font-semibold">
-              {nome}
-              <span className="text-sm font-normal text-zinc-500">forza {totale.toFixed(1)}</span>
-            </h2>
-            <ul className="space-y-2">
-              {players.map((p) => (
-                <li key={p._id}>
-                  <PlayerRow
-                    player={p}
-                    right={<Prestazione match={match} playerId={p._id} />}
-                  />
-                </li>
-              ))}
-            </ul>
-          </Card>
-        )
-      })}
+    <div className="space-y-3">
+      {mia && match.stato !== 'giocata' && (
+        <p className={`rounded-xl p-3 text-center text-sm font-medium text-white ${mia === 'A' ? 'bg-blue-600' : 'bg-orange-500'}`}>
+          Sei nella Squadra {mia}
+          {match.pettorine === mia && ' · 🦺 porta la pettorina!'}
+        </p>
+      )}
+      <div className="grid gap-4 sm:grid-cols-2">
+        {teams.map(([lettera, players, color]) => {
+          const totale = players.reduce((s, p) => s + forza(p), 0)
+          return (
+            <Card key={lettera} className={`border-t-4 ${color}`}>
+              <h2 className="mb-3 flex items-center justify-between gap-2 font-semibold">
+                <span>
+                  Squadra {lettera}
+                  {match.pettorine === lettera && <span className="ml-2 rounded-full bg-zinc-100 px-2 py-0.5 text-xs font-normal dark:bg-zinc-800">🦺 pettorine</span>}
+                </span>
+                <span className="text-sm font-normal text-zinc-500">forza {totale.toFixed(1)}</span>
+              </h2>
+              <ul className="space-y-2">
+                {players.map((p) => (
+                  <li key={p._id}>
+                    <PlayerRow
+                      player={p}
+                      right={<Prestazione match={match} playerId={p._id} />}
+                    />
+                  </li>
+                ))}
+              </ul>
+            </Card>
+          )
+        })}
+      </div>
     </div>
   )
 }

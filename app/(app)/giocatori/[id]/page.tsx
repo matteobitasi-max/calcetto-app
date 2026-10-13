@@ -8,7 +8,7 @@ import { formatData } from '@/lib/dates'
 import { caricaFoto } from '@/app/actions'
 import { AvatarUpload } from '@/components/avatar-upload'
 import { NotificheToggle } from '@/components/notifiche-toggle'
-import { Avatar, ButtonLink, Card, Loading, Overall, SkillBars, buttonClass } from '@/components/ui'
+import { Avatar, ButtonLink, Card, Loading, Overall, PlayerBadge, SkillBars, buttonClass } from '@/components/ui'
 
 export default function GiocatorePage({ params }: PageProps<'/giocatori/[id]'>) {
   return (
@@ -49,6 +49,7 @@ async function Profilo({ params }: { params: Promise<{ id: string }> }) {
           <h1 className="flex items-center gap-2 text-xl font-bold">
             <span className="truncate">{displayName(player)}</span>
             <Overall player={player} />
+            <PlayerBadge badge={player.badge} />
           </h1>
           {player.soprannome && <p className="text-sm text-zinc-500">{fullName}</p>}
           <p className="text-sm capitalize text-zinc-500">

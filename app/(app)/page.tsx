@@ -178,6 +178,7 @@ function ProssimaPartita({ match, player }: { match: Match; player: Player }) {
   const inAttesa = ordinati(match, 'riserva').length
   const inLista = presenti(match).some((c) => c.giocatore._id === player._id)
   const quotaDaPagare = match.quota != null && inLista && !match.pagamenti.some((p) => p.giocatoreId === player._id)
+  const miaSquadra = match.squadraA.some((p) => p._id === player._id) ? 'A' : match.squadraB.some((p) => p._id === player._id) ? 'B' : null
 
   return (
     <section className="space-y-2">
@@ -203,6 +204,12 @@ function ProssimaPartita({ match, player }: { match: Match; player: Player }) {
             </span>
           </div>
           {inAttesa > 0 && <p className="text-xs text-amber-700 dark:text-amber-400">Lista piena · {inAttesa} in lista d&apos;attesa</p>}
+          {miaSquadra && (
+            <p className={`text-xs font-medium ${miaSquadra === 'A' ? 'text-blue-600 dark:text-blue-400' : 'text-orange-600 dark:text-orange-400'}`}>
+              Sei nella Squadra {miaSquadra}
+              {match.pettorine === miaSquadra && ' · 🦺 porta la pettorina!'}
+            </p>
+          )}
           {quotaDaPagare && (
             <Link href={`/partite/${match._id}`} className="block text-xs font-medium text-red-600 hover:underline">
               💶 Quota da pagare: {match.quota} € · tocca per pagare

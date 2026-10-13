@@ -23,6 +23,15 @@ export type Skill = keyof typeof SKILLS
 export const RUOLI = ['portiere', 'difensore', 'centrocampista', 'attaccante', 'jolly'] as const
 export const PIEDI = ['destro', 'sinistro', 'ambidestro'] as const
 
+// Il badge che si vede accanto al nome.
+export const BADGE = {
+  legend: { label: 'Legend', emoji: '🏆' },
+  rookie: { label: 'Rookie', emoji: '🐣' },
+  asinus: { label: 'Asinus', emoji: '🫏' },
+  promessa: { label: 'Promessa', emoji: '🌱' },
+} as const
+export type Badge = keyof typeof BADGE
+
 export type SanityImage = { asset?: { _ref: string }; hotspot?: unknown; crop?: unknown }
 
 export type Lega = { _id: string; nome: string; logo?: SanityImage; codiceInvito?: string; satispayLink?: string; satispayQr?: SanityImage }
@@ -37,6 +46,7 @@ export type Player = {
   foto?: SanityImage
   ruolo?: string
   piede?: string
+  badge?: Badge
   isAdmin?: boolean
   puoModificareGiocatori?: boolean
   puoInserireRisultati?: boolean
@@ -44,7 +54,7 @@ export type Player = {
   caratteristiche?: Partial<Record<Skill, number>>
 }
 
-export const playerFields = `_id, "legaId": lega._ref, nome, cognome, soprannome, email, foto, ruolo, piede, isAdmin, puoModificareGiocatori, puoInserireRisultati, attivo, caratteristiche`
+export const playerFields = `_id, "legaId": lega._ref, nome, cognome, soprannome, email, foto, ruolo, piede, badge, isAdmin, puoModificareGiocatori, puoInserireRisultati, attivo, caratteristiche`
 
 // Chi può cambiare caratteristiche e foto dei giocatori.
 export const canEditPlayers = (p: Pick<Player, 'isAdmin' | 'puoModificareGiocatori'>) => !!(p.isAdmin || p.puoModificareGiocatori)

@@ -5,7 +5,7 @@ import { cookies } from 'next/headers'
 import { refresh } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { sanity } from '@/lib/sanity'
-import { COOKIE_LEGA, PIEDI, RUOLI, SKILLS, getUtente, membroDi, requireAdmin, requireForDoc, requireIn, type Skill } from '@/lib/player'
+import { BADGE, COOKIE_LEGA, PIEDI, RUOLI, SKILLS, getUtente, membroDi, requireAdmin, requireForDoc, requireIn, type Skill } from '@/lib/player'
 import { assegnaPosti, finestra, getMatch, presenti, risultatoDa, type Match, type Risposta, type Stato } from '@/lib/matches'
 import { MAX_GIOCATORI } from '@/lib/limiti'
 import { daysBetween, formatData, isoToRomeLocal, romeLocalToISO } from '@/lib/dates'
@@ -214,8 +214,13 @@ export async function cambiaStato(matchId: string, stato: Stato) {
 
 // Formazioni decise dall'organizzatore (a mano o con il bilanciamento automatico),
 // solo a convocazioni chiuse: ogni giocatore in lista deve stare in una squadra.
-export async function salvaFormazioni(matchId: string, a: string[], b: string[]): Promise<FormState> {
-  await requireForDoc(matchId, 'organizzatore')
+export async function salvaFormazioni(
+  matchId: string,
+  a: string[],
+  b: string[],
+  opzioni: { pettorine: 'A' | 'B' | null; avvisa: boolean } = { pettorine: null, avvisa: false },
+): Promise<FormState> {
+  const { lega } = await requireForDoc(matchId, 'organizzatore')
   const match = await getMatch(matchId)
   if (!match) return { error: 'Partita non trovata.' }
   if (match.stato !== 'chiusa') return { error: 'Le formazioni si fanno dopo aver chiuso le convocazioni.' }
@@ -227,7 +232,32 @@ export async function salvaFormazioni(matchId: string, a: string[], b: string[])
   if (scelti.length !== inLista.size) return { error: 'Assegna tutti i giocatori in lista a una squadra.' }
   if (!a.length || !b.length) return { error: 'Servono due squadre.' }
 
-  await sanity.patch(matchId).set({ squadraA: a.map(ref), squadraB: b.map(ref) }).commit()
+  const pettorine = opzioni.pettorine === 'A' || opzioni.pettorine === 'B' ? opzioni.pettorine : null
+  const patch = sanity.patch(matchId).set({ squadraA: a.map(ref), squadraB: b.map(ref) })
+  if (pettorine) patch.set({ pettorine })
+  else patch.unset(['pettorine'])
+  if (opzioni.avvisa) patch.set({ formazioniUfficialiIl: new Date().toISOString() })
+  await patch.commit()
+
+  // Formazioni ufficiali: ognuno riceve la sua squadra, e chi porta le pettorine il promemoria.
+  if (opzioni.avvisa) {
+    const titolo = match.formazioniUfficialiIl ? `⚽ ${lega.nome}: formazioni aggiornate` : `⚽ ${lega.nome}: formazioni pronte!`
+    const quando = `${formatData(match.data, { weekday: 'long', hour: '2-digit', minute: '2-digit' })} · ${match.luogo}`
+    // Chi non ha ancora pagato la quota riceve anche l'invito a pagare con Satispay.
+    const pagato = new Set(match.pagamenti.map((p) => p.giocatoreId))
+    const invii = (['A', 'B'] as const).flatMap((squadra) => {
+      const ids = squadra === 'A' ? a : b
+      const base = `Sei nella Squadra ${squadra}${pettorine === squadra ? ': porta la pettorina! 🦺' : '.'}\n${quando}`
+      const paga = match.quota != null ? `\n💶 Entra nell'app per pagare ${match.quota} € con Satispay` : ''
+      return [
+        [ids.filter((id) => pagato.has(id)), base],
+        [ids.filter((id) => !pagato.has(id)), base + paga],
+      ] as const
+    })
+    await Promise.all(
+      invii.map(([ids, body]) => inviaAGiocatori([...ids], { title: titolo, body, url: `/partite/${matchId}`, tag: `formazioni-${matchId}` })),
+    )
+  }
   redirect(`/partite/${matchId}`)
 }
 
@@ -377,6 +407,11 @@ async function uploadFoto(foto: FormDataEntryValue | null) {
   return { foto: { _type: 'image', asset: { _type: 'reference', _ref: asset._id } } }
 }
 
+const badgeFromForm = (formData: FormData) => {
+  const b = str(formData, 'badge')
+  return b in BADGE ? b : undefined
+}
+
 const caratteristicheFromForm = (formData: FormData) =>
   Object.fromEntries(
     (Object.keys(SKILLS) as Skill[]).map((k) => [k, Math.min(10, Math.max(1, Math.round(num(formData, k) ?? 5)))]),
@@ -397,7 +432,9 @@ export async function salvaValutazione(playerId: string, _prev: FormState, formD
   await requireForDoc(playerId, 'valutatore')
   const upload = await uploadFoto(formData.get('foto'))
   if (upload && 'error' in upload) return upload
-  const patch = sanity.patch(playerId).set({ caratteristiche: caratteristicheFromForm(formData) })
+  const badge = badgeFromForm(formData)
+  const patch = sanity.patch(playerId).set({ caratteristiche: caratteristicheFromForm(formData), ...(badge && { badge }) })
+  if (!badge) patch.unset(['badge'])
   if (upload) patch.set({ foto: upload.foto })
   else if (formData.get('rimuoviFoto') === 'on') patch.unset(['foto'])
   await patch.commit()
@@ -429,6 +466,7 @@ export async function salvaGiocatore(playerId: string | null, _prev: FormState, 
     soprannome: str(formData, 'soprannome') || undefined,
     ruolo: (RUOLI as readonly string[]).includes(ruolo) ? ruolo : undefined,
     piede: (PIEDI as readonly string[]).includes(piede) ? piede : undefined,
+    badge: badgeFromForm(formData),
     foto: fotoField,
   }
   const fields = {
@@ -650,34 +688,24 @@ async function partitaConQuota(matchId: string) {
 
 const inLista = (match: Match, playerId: string) => presenti(match).some((c) => c.giocatore._id === playerId)
 
-// Il giocatore dice di aver pagato: resta "da confermare" finché l'organizzatore non controlla.
+// Il giocatore paga con Satispay e lo segna: da quel momento risulta pagato.
 export async function dichiaraPagamento(matchId: string) {
   const me = await requireForDoc(matchId)
   const match = await partitaConQuota(matchId)
   if (!inLista(match, me._id)) throw new Error('Non sei in lista per questa partita')
-  if (match.pagamenti.some((p) => p.giocatoreId === me._id && p.stato === 'confermato')) return
-  await segnaPagamento(matchId, me._id, { stato: 'dichiarato', metodo: 'satispay' })
+  if (match.pagamenti.some((p) => p.giocatoreId === me._id)) return
+  await segnaPagamento(matchId, me._id, { stato: 'confermato', metodo: 'satispay' })
 }
 
-export async function annullaDichiarazione(matchId: string) {
+// Annullare un pagamento segnato per errore: il giocatore il suo, l'organizzatore quello di chiunque.
+export async function annullaPagamento(matchId: string, playerId?: string) {
   const me = await requireForDoc(matchId)
-  const match = await partitaConQuota(matchId)
-  if (match.pagamenti.some((p) => p.giocatoreId === me._id && p.stato === 'dichiarato')) await segnaPagamento(matchId, me._id, null)
+  const chi = playerId ?? me._id
+  if (chi !== me._id && !me.isAdmin) throw new Error('Solo gli organizzatori possono farlo')
+  await segnaPagamento(matchId, chi, null)
 }
 
-export async function confermaPagamento(matchId: string, playerId: string, metodo: 'satispay' | 'contanti') {
-  await requireForDoc(matchId, 'organizzatore')
-  const match = await partitaConQuota(matchId)
-  if (!inLista(match, playerId)) throw new Error('Il giocatore non è in lista')
-  await segnaPagamento(matchId, playerId, { stato: 'confermato', metodo: metodo === 'contanti' ? 'contanti' : 'satispay' })
-}
-
-export async function annullaPagamento(matchId: string, playerId: string) {
-  await requireForDoc(matchId, 'organizzatore')
-  await segnaPagamento(matchId, playerId, null)
-}
-
-// Notifica a chi è in lista e non ha ancora pagato (né dichiarato).
+// Notifica a chi è in lista e non ha ancora pagato.
 export async function sollecitaPagamenti(matchId: string): Promise<AvvisoState> {
   const { lega } = await requireForDoc(matchId, 'organizzatore')
   const match = await partitaConQuota(matchId)

@@ -1,5 +1,5 @@
 import { defineField, defineType } from 'sanity'
-import { SKILLS, SKILL_DESCRIPTIONS, RUOLI, PIEDI } from '../../lib/roster'
+import { BADGE, SKILLS, SKILL_DESCRIPTIONS, RUOLI, PIEDI } from '../../lib/roster'
 
 const rating = (name: keyof typeof SKILLS) =>
   defineField({
@@ -85,6 +85,13 @@ export const player = defineType({
       type: 'string',
       fieldset: 'gioco',
       options: { list: PIEDI.map((p) => ({ title: p[0].toUpperCase() + p.slice(1), value: p })) },
+    }),
+    defineField({
+      name: 'badge',
+      title: 'Badge',
+      description: 'Si vede accanto al nome nella rosa',
+      type: 'string',
+      options: { list: Object.entries(BADGE).map(([value, b]) => ({ title: `${b.emoji} ${b.label}`, value })) },
     }),
     defineField({
       name: 'caratteristiche',

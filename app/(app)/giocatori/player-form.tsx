@@ -1,5 +1,5 @@
 import type { FormState } from '@/app/actions'
-import { PIEDI, RUOLI, SKILLS, SKILL_DESCRIPTIONS, type Player, type Skill } from '@/lib/player'
+import { BADGE, PIEDI, RUOLI, SKILLS, SKILL_DESCRIPTIONS, type Player, type Skill } from '@/lib/player'
 import { avatarUrl } from '@/lib/image'
 import { ActionForm } from '@/components/action-form'
 import { PhotoInput } from '@/components/photo-input'
@@ -23,6 +23,16 @@ export function PlayerForm({
     <ActionForm action={action} className="space-y-4">
       <Card className="space-y-4">
         <PhotoInput currentUrl={avatarUrl(player?.foto, 160)} />
+        <Field label="Badge (si vede accanto al nome)">
+          <select name="badge" defaultValue={player?.badge ?? ''} className={inputClass}>
+            <option value="">Nessuno</option>
+            {Object.entries(BADGE).map(([value, b]) => (
+              <option key={value} value={value}>
+                {b.emoji} {b.label}
+              </option>
+            ))}
+          </select>
+        </Field>
         {!limited && (
           <>
             <div className="grid grid-cols-2 gap-4">

@@ -6,6 +6,7 @@ import { displayName, requireIn } from '@/lib/player'
 import { getMatch, presenti } from '@/lib/matches'
 import { avatarUrl } from '@/lib/image'
 import { formatData } from '@/lib/dates'
+import { sanity } from '@/lib/sanity'
 import { Card, Loading, PageTitle } from '@/components/ui'
 import { FormazioniEditor, type GiocatoreFormazione } from './formazioni-editor'
 
@@ -62,6 +63,17 @@ async function Editor({ params }: { params: Promise<{ id: string }> }) {
     )
   }
 
+  // L'ultima partita precedente della lega con le formazioni fatte.
+  const prima = await sanity.fetch<{ data: string; a: string[]; b: string[] } | null>(
+    `*[_type == "match" && lega._ref == $lega && _id != $id && data < $data && count(squadraA) > 0 && count(squadraB) > 0]
+      | order(data desc)[0]{data, "a": squadraA[]._ref, "b": squadraB[]._ref}`,
+    { lega: match.legaId, id: match._id, data: match.data },
+  )
+  const precedente = prima && {
+    quando: formatData(prima.data, { day: 'numeric', month: 'long' }),
+    lati: Object.fromEntries([...prima.a.map((id) => [id, 'A' as const]), ...prima.b.map((id) => [id, 'B' as const])]),
+  }
+
   // Chi è in lista parte dalla squadra in cui era già (se le formazioni esistono).
   const iniziale = Object.fromEntries([
     ...match.squadraA.map((p) => [p._id, 'A' as const]),
@@ -73,7 +85,14 @@ async function Editor({ params }: { params: Promise<{ id: string }> }) {
       <p className="text-sm capitalize text-zinc-500">
         {formatData(match.data)} · {match.luogo} · {giocatori.length} in lista
       </p>
-      <FormazioniEditor giocatori={giocatori} iniziale={iniziale} salva={salvaFormazioni.bind(null, match._id)} />
+      <FormazioniEditor
+        giocatori={giocatori}
+        iniziale={iniziale}
+        precedente={precedente}
+        pettorineIniziali={match.pettorine}
+        giaUfficiali={!!match.formazioniUfficialiIl}
+        salva={salvaFormazioni.bind(null, match._id)}
+      />
     </div>
   )
 }

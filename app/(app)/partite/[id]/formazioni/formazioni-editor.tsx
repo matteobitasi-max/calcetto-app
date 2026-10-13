@@ -4,7 +4,7 @@ import { useState, useTransition } from 'react'
 import type { FormState } from '@/app/actions'
 import { buttonClass } from '@/components/ui-classes'
 import { SKILLS, type Player, type Skill } from '@/lib/roster'
-import { CHIAVE, balanceTeams, forza, medie, squilibrio } from '@/lib/teams'
+import { CHIAVE, balanceTeams, forza, medie, similiAPrima, squilibrio } from '@/lib/teams'
 
 export type GiocatoreFormazione = Pick<Player, '_id' | 'ruolo' | 'caratteristiche'> & {
   nome: string
@@ -33,14 +33,25 @@ function Faccia({ g }: { g: GiocatoreFormazione }) {
 export function FormazioniEditor({
   giocatori,
   iniziale,
+  precedente,
+  pettorineIniziali,
+  giaUfficiali,
   salva,
 }: {
   giocatori: GiocatoreFormazione[]
   iniziale: Record<string, Lato>
-  salva: (a: string[], b: string[]) => Promise<FormState>
+  /** Squadre dell'ultima partita con le formazioni, per "Simili alla volta precedente". */
+  precedente: { quando: string; lati: Record<string, 'A' | 'B'> } | null
+  pettorineIniziali?: 'A' | 'B'
+  /** Le formazioni erano già state comunicate: un nuovo avviso dirà "aggiornate". */
+  giaUfficiali: boolean
+  salva: (a: string[], b: string[], opzioni: { pettorine: 'A' | 'B' | null; avvisa: boolean }) => Promise<FormState>
 }) {
   const [lato, setLato] = useState<Record<string, Lato>>(iniziale)
   const [errore, setErrore] = useState<string>()
+  const [nota, setNota] = useState<string>()
+  const [pettorine, setPettorine] = useState<'A' | 'B' | null>(pettorineIniziali ?? 'B')
+  const [avvisa, setAvvisa] = useState(true)
   const [pending, startTransition] = useTransition()
 
   const di = (l: Lato) => giocatori.filter((g) => (lato[g._id] ?? null) === l)
@@ -61,11 +72,25 @@ export function FormazioniEditor({
     const { a, b } = balanceTeams(giocatori)
     setLato(Object.fromEntries([...a.map((g) => [g._id, 'A']), ...b.map((g) => [g._id, 'B'])]))
     setErrore(undefined)
+    setNota(undefined)
+  }
+
+  function similiAllaVoltaPrima() {
+    if (!precedente) return
+    const { a, b, stessaSquadra } = similiAPrima(giocatori, precedente.lati)
+    setLato(Object.fromEntries([...a.map((g) => [g._id, 'A']), ...b.map((g) => [g._id, 'B'])]))
+    setErrore(undefined)
+    const nuovi = giocatori.filter((g) => !precedente.lati[g._id]).length
+    setNota(
+      `Come il ${precedente.quando}: ${stessaSquadra} giocator${stessaSquadra === 1 ? 'e' : 'i'} nella stessa squadra` +
+        (nuovi ? `, ${nuovi} nuov${nuovi === 1 ? 'o' : 'i'} messi dove equilibrano meglio.` : '.'),
+    )
   }
 
   function sposta(id: string, l: Lato) {
     setLato({ ...lato, [id]: l })
     setErrore(undefined)
+    setNota(undefined)
   }
 
   const riga = (g: GiocatoreFormazione, l: Lato) => (
@@ -99,10 +124,20 @@ export function FormazioniEditor({
         <button type="button" onClick={automatico} className={buttonClass('primary')}>
           ⚖️ Automatico
         </button>
-        <button type="button" onClick={() => setLato({})} className={buttonClass('secondary')}>
+        <button
+          type="button"
+          onClick={similiAllaVoltaPrima}
+          disabled={!precedente}
+          title={precedente ? `Squadre del ${precedente.quando}` : 'Nessuna partita precedente con le formazioni'}
+          className={buttonClass('secondary')}
+        >
+          🔁 Simili alla volta precedente
+        </button>
+        <button type="button" onClick={() => { setLato({}); setNota(undefined) }} className={buttonClass('secondary')}>
           Svuota
         </button>
       </div>
+      {nota && <p className="rounded-lg bg-blue-50 p-3 text-sm text-blue-800 dark:bg-blue-950 dark:text-blue-200">{nota}</p>}
       <p className="text-xs text-zinc-500">
         L&apos;automatico pesa di più cervello, scatto, fiato e tecnica e cerca di pareggiarle una per una. Premilo di nuovo
         per un&apos;altra proposta; poi puoi ritoccare a mano.
@@ -157,6 +192,38 @@ export function FormazioniEditor({
         </section>
       )}
 
+      <section className="space-y-3 rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
+        <div className="space-y-2">
+          <h2 className="text-sm font-semibold">🦺 Chi porta le pettorine?</h2>
+          <div className="flex gap-2">
+            {(['A', 'B', null] as const).map((x) => (
+              <button
+                key={x ?? 'nessuna'}
+                type="button"
+                onClick={() => setPettorine(x)}
+                className={`rounded-full border px-3 py-1 text-sm ${
+                  pettorine === x
+                    ? `${x ? SQUADRE[x].barra : 'bg-zinc-600'} border-transparent text-white`
+                    : 'border-zinc-300 hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-800'
+                }`}
+              >
+                {x ? SQUADRE[x].nome : 'Nessuna'}
+              </button>
+            ))}
+          </div>
+        </div>
+        <label className="flex items-start gap-2 text-sm">
+          <input type="checkbox" checked={avvisa} onChange={(e) => setAvvisa(e.target.checked)} className="mt-0.5 h-4 w-4 accent-green-600" />
+          <span>
+            <b>📣 Rendi ufficiali e avvisa i giocatori</b>
+            <span className="block text-xs text-zinc-500">
+              Ognuno riceve una notifica con la sua squadra{pettorine ? `; la ${SQUADRE[pettorine].nome} anche "porta la pettorina"` : ''}.
+              {giaUfficiali && ' Erano già state comunicate: arriverà "formazioni aggiornate".'}
+            </span>
+          </span>
+        </label>
+      </section>
+
       {errore && <p className="rounded-lg bg-red-50 p-3 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">{errore}</p>}
       <button
         type="button"
@@ -166,13 +233,20 @@ export function FormazioniEditor({
             const r = await salva(
               a.map((g) => g._id),
               b.map((g) => g._id),
+              { pettorine, avvisa },
             )
             if (r?.error) setErrore(r.error)
           })
         }
         className={`${buttonClass('primary')} w-full`}
       >
-        {pending ? 'Salvo…' : liberi.length > 0 ? `Assegna ancora ${liberi.length} giocator${liberi.length === 1 ? 'e' : 'i'}` : 'Salva formazioni'}
+        {pending
+          ? 'Salvo…'
+          : liberi.length > 0
+            ? `Assegna ancora ${liberi.length} giocator${liberi.length === 1 ? 'e' : 'i'}`
+            : avvisa
+              ? '📣 Salva e comunica le formazioni'
+              : 'Salva formazioni'}
       </button>
     </div>
   )
