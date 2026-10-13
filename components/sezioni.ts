@@ -16,3 +16,11 @@ export const pillClass = (attiva: boolean) =>
   `flex-1 whitespace-nowrap rounded-full px-2 py-1.5 text-center text-sm font-medium transition ${
     attiva ? 'bg-green-600 text-white shadow-sm' : 'text-zinc-600 hover:text-zinc-900 dark:text-zinc-300 dark:hover:text-white'
   }`
+
+// Sulla pagina principale di una sezione: la sezione accanto nel menu (-1 precedente, +1 successiva).
+// undefined = non sei sulla pagina principale di una sezione; null = non c'è una sezione da quel lato.
+export function sezioneAccanto(pathname: string, verso: -1 | 1): string | null | undefined {
+  const i = SEZIONI.findIndex((s) => s.href === pathname)
+  if (i < 0) return undefined
+  return SEZIONI[i + verso]?.href ?? null
+}

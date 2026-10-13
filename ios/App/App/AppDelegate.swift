@@ -56,11 +56,12 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     }
 }
 
-// La vista dell'app: come quella di Capacitor, ma con il gesto "trascina dal
-// bordo sinistro per tornare indietro" (e da destra per andare avanti).
+// La vista dell'app: come quella di Capacitor. Il gesto dal bordo lo gestisce la pagina
+// (components/swipe-indietro.tsx), che passa da una sezione all'altra del menu: il gesto
+// nativo del browser va spento, altrimenti salterebbe alla pagina visitata prima.
 class MainViewController: CAPBridgeViewController {
     override func capacitorDidLoad() {
         super.capacitorDidLoad()
-        webView?.allowsBackForwardNavigationGestures = true
+        webView?.allowsBackForwardNavigationGestures = false
     }
 }
