@@ -24,7 +24,7 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "Calcetto",
+  title: "TheCap",
   description: "Convocazioni per le partite di calcetto",
 };
 

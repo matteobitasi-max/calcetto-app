@@ -3,8 +3,8 @@ import type { MetadataRoute } from 'next'
 // Permette di aggiungere l'app alla schermata Home (su iPhone è necessario per le notifiche).
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'Calcetto',
-    short_name: 'Calcetto',
+    name: 'TheCap',
+    short_name: 'TheCap',
     description: 'Convocazioni per le partite di calcetto',
     start_url: '/',
     display: 'standalone',

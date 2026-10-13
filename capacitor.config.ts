@@ -10,7 +10,7 @@ const url = process.env.CAP_SERVER_URL ?? 'http://localhost:3000'
 
 const config: CapacitorConfig = {
   appId: 'com.matteobitasi.thecap',
-  appName: 'Calcetto',
+  appName: 'TheCap',
   // Pagina mostrata solo se il sito non è raggiungibile.
   webDir: 'capacitor/www',
   server: {
