@@ -5,7 +5,7 @@ import { cookies } from 'next/headers'
 import { refresh } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { sanity } from '@/lib/sanity'
-import { BADGE, COOKIE_LEGA, PIEDI, RUOLI, SKILLS, getUtente, membroDi, requireAdmin, requireForDoc, requireIn, type Skill } from '@/lib/player'
+import { BADGE, CATEGORIE_NOTIFICHE, COOKIE_LEGA, PIEDI, RUOLI, SKILLS, displayName, requirePlayer, getUtente, membroDi, requireAdmin, requireForDoc, requireIn, type Skill } from '@/lib/player'
 import { assegnaPosti, finestra, getMatch, presenti, risultatoDa, type Match, type Risposta, type Stato } from '@/lib/matches'
 import { MAX_GIOCATORI, MAX_ISCRITTI, formatoDaIscritti } from '@/lib/limiti'
 import { daysBetween, formatData, romeLocalToISO } from '@/lib/dates'
@@ -292,7 +292,9 @@ export async function salvaFormazioni(
       ] as const
     })
     await Promise.all(
-      invii.map(([ids, body]) => inviaAGiocatori([...ids], { title: titolo, body, url: `/partite/${matchId}`, tag: `formazioni-${matchId}` })),
+      invii.map(([ids, body]) =>
+        inviaAGiocatori([...ids], { title: titolo, body, url: `/partite/${matchId}`, tag: `formazioni-${matchId}` }, 'formazioni'),
+      ),
     )
   }
   redirect(`/partite/${matchId}`)
@@ -584,12 +586,16 @@ export async function apriConvocazioni(matchId: string): Promise<AvvisoState> {
     .commit()
 
   const breve = { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' } as const
-  const risultato = await inviaATutti(match.legaId, {
-    title: `⚽ ${lega.nome}: convocazioni aperte!`,
-    body: `${formatData(match.data, breve)} · ${match.luogo}\n${match.postiDisponibili} posti, rispondi entro ${formatData(match.chiusuraConvocazioni, breve)}`,
-    url: `/partite/${matchId}`,
-    tag: matchId,
-  })
+  const risultato = await inviaATutti(
+    match.legaId,
+    {
+      title: `⚽ ${lega.nome}: convocazioni aperte!`,
+      body: `${formatData(match.data, breve)} · ${match.luogo}\n${match.postiDisponibili} posti, rispondi entro ${formatData(match.chiusuraConvocazioni, breve)}`,
+      url: `/partite/${matchId}`,
+      tag: matchId,
+    },
+    'convocazioni',
+  )
   refresh()
   return risultato
 }
@@ -779,4 +785,23 @@ export async function sollecitaPagamenti(matchId: string): Promise<AvvisoState> 
     url: `/partite/${matchId}`,
     tag: `quota-${matchId}`,
   })
+}
+
+// ---------- Preferenze notifiche e comunicazioni ----------
+
+// Il giocatore sceglie quali notifiche ricevere (per la lega attiva).
+export async function salvaPreferenzaNotifica(chiave: string, attiva: boolean) {
+  const me = await requirePlayer()
+  if (!(chiave in CATEGORIE_NOTIFICHE)) throw new Error('Tipo di notifica non valido')
+  await sanity.patch(me._id).setIfMissing({ notifiche: {} }).set({ [`notifiche.${chiave}`]: !!attiva }).commit()
+}
+
+// Messaggio del capitano (o di un organizzatore) a tutta la squadra, come notifica.
+export async function inviaComunicazione(_prev: AvvisoState, formData: FormData): Promise<AvvisoState> {
+  const me = await requirePlayer()
+  if (!me.isAdmin && me.badge !== 'capitano') return { error: 'Solo il capitano e gli organizzatori possono scrivere alla squadra.' }
+  const testo = str(formData, 'testo')
+  if (testo.length < 2) return { error: 'Scrivi un messaggio.' }
+  if (testo.length > 300) return { error: 'Massimo 300 caratteri.' }
+  return inviaATutti(me.lega._id, { title: `📢 ${displayName(me)} · ${me.lega.nome}`, body: testo, url: '/', tag: `comunicazione-${Date.now()}` }, 'capitano')
 }

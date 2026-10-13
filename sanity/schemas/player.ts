@@ -94,6 +94,17 @@ export const player = defineType({
       options: { list: Object.entries(BADGE).map(([value, b]) => ({ title: `${b.emoji} ${b.label}`, value })) },
     }),
     defineField({
+      name: 'notifiche',
+      title: 'Notifiche (le sceglie il giocatore)',
+      type: 'object',
+      options: { collapsible: true, collapsed: true },
+      fields: [
+        defineField({ name: 'convocazioni', title: 'Convocazioni aperte', type: 'boolean', initialValue: true }),
+        defineField({ name: 'formazioni', title: 'Formazioni create', type: 'boolean', initialValue: true }),
+        defineField({ name: 'capitano', title: 'Comunicazioni del capitano', type: 'boolean', initialValue: true }),
+      ],
+    }),
+    defineField({
       name: 'caratteristiche',
       title: 'Caratteristiche (1-10)',
       description: 'Usate per bilanciare le squadre',

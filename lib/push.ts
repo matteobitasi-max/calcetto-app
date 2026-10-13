@@ -3,6 +3,7 @@ import { createHash } from 'node:crypto'
 import webpush from 'web-push'
 import { sanity } from './sanity'
 import { inviaFcm } from './fcm'
+import type { CategoriaNotifica } from './roster'
 
 webpush.setVapidDetails(
   process.env.VAPID_SUBJECT ?? 'mailto:organizzatore@example.com',
@@ -80,11 +81,14 @@ async function invia(subs: Iscrizione[], payload: PushPayload) {
 
 const subFields = `{_id, tipo, endpoint, keys, token}`
 
-// A tutti i giocatori attivi della lega.
-export async function inviaATutti(legaId: string, payload: PushPayload) {
+// Filtro sulle preferenze del giocatore (la categoria arriva solo dal codice, mai dall'utente).
+const vuole = (categoria?: CategoriaNotifica) => (categoria ? ` && coalesce(notifiche.${categoria}, true)` : '')
+
+// A tutti i giocatori attivi della lega che non hanno spento questo tipo di notifica.
+export async function inviaATutti(legaId: string, payload: PushPayload, categoria?: CategoriaNotifica) {
   const subs = await sanity.fetch<Iscrizione[]>(
     `*[_type == "pushSubscription"
-      && coalesce(clerkUserId, giocatore->clerkUserId) in *[_type == "player" && lega._ref == $legaId && attivo != false].clerkUserId
+      && coalesce(clerkUserId, giocatore->clerkUserId) in *[_type == "player" && lega._ref == $legaId && attivo != false${vuole(categoria)}].clerkUserId
     ]${subFields}`,
     { legaId },
   )
@@ -92,11 +96,11 @@ export async function inviaATutti(legaId: string, payload: PushPayload) {
 }
 
 // Solo ad alcuni giocatori (per ID della loro scheda).
-export async function inviaAGiocatori(playerIds: string[], payload: PushPayload) {
+export async function inviaAGiocatori(playerIds: string[], payload: PushPayload, categoria?: CategoriaNotifica) {
   if (playerIds.length === 0) return { inviate: 0, totali: 0 }
   const subs = await sanity.fetch<Iscrizione[]>(
     `*[_type == "pushSubscription"
-      && coalesce(clerkUserId, giocatore->clerkUserId) in *[_type == "player" && _id in $ids].clerkUserId
+      && coalesce(clerkUserId, giocatore->clerkUserId) in *[_type == "player" && _id in $ids${vuole(categoria)}].clerkUserId
     ]${subFields}`,
     { ids: playerIds },
   )

@@ -7,6 +7,7 @@ import { formatData } from '@/lib/dates'
 import { assicuraRicorrenze } from '@/lib/series'
 import { Card, Loading, StatoBadge } from '@/components/ui'
 import { PillNuovaPartita } from '@/components/pill-nuova-partita'
+import { ScriviSquadra } from '@/components/scrivi-squadra'
 import { Countdown } from '@/components/countdown'
 import { NotificheToggle } from '@/components/notifiche-toggle'
 import { RispostaButtons } from './partite/risposta-buttons'
@@ -40,6 +41,7 @@ async function Partite() {
       <NotificheToggle variant="banner" />
 
       {player.isAdmin && <PillNuovaPartita />}
+      {(player.isAdmin || player.badge === 'capitano') && <ScriviSquadra />}
 
       {/* In alto: la prossima partita con il conto alla rovescia delle convocazioni */}
       {prossima ? (
@@ -87,9 +89,7 @@ async function Partite() {
           {concluse.map((m) => (
             <RigaPartita key={m._id} match={m}>
               {m.stato === 'giocata' && m.risultato?.golA != null ? (
-                <span className="font-bold tabular-nums">
-                  {m.risultato.golA} – {m.risultato.golB}
-                </span>
+                <Punteggio match={m} mioId={player._id} />
               ) : (
                 <StatoBadge stato={m.stato} />
               )}
@@ -225,5 +225,20 @@ function ProssimaPartita({ match, player }: { match: Match; player: Player }) {
         </Link>
       </Card>
     </section>
+  )
+}
+
+// Risultato: in grassetto i gol della squadra vincente, solo se io ero in quella squadra.
+function Punteggio({ match, mioId }: { match: Match; mioId: string }) {
+  const golA = match.risultato?.golA ?? 0
+  const golB = match.risultato?.golB ?? 0
+  const mia = match.squadraA.some((p) => p._id === mioId) ? 'A' : match.squadraB.some((p) => p._id === mioId) ? 'B' : null
+  const vinta = (mia === 'A' && golA > golB) || (mia === 'B' && golB > golA)
+  return (
+    <span className="tabular-nums text-zinc-600 dark:text-zinc-300">
+      <span className={vinta && mia === 'A' ? 'font-bold text-zinc-900 dark:text-white' : ''}>{golA}</span>
+      {' – '}
+      <span className={vinta && mia === 'B' ? 'font-bold text-zinc-900 dark:text-white' : ''}>{golB}</span>
+    </span>
   )
 }

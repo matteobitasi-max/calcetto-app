@@ -8,6 +8,7 @@ import { formatData } from '@/lib/dates'
 import { caricaFoto } from '@/app/actions'
 import { AvatarUpload } from '@/components/avatar-upload'
 import { NotificheToggle } from '@/components/notifiche-toggle'
+import { PreferenzeNotifiche } from '@/components/preferenze-notifiche'
 import { Avatar, ButtonLink, Card, Loading, Overall, PlayerBadge, SkillBars, buttonClass } from '@/components/ui'
 
 export default function GiocatorePage({ params }: PageProps<'/giocatori/[id]'>) {
@@ -65,8 +66,6 @@ async function Profilo({ params }: { params: Promise<{ id: string }> }) {
         )}
       </Card>
 
-      {mio && <NotificheToggle variant="impostazione" />}
-
       <Statistiche stats={stats} />
 
       <Card>
@@ -74,10 +73,18 @@ async function Profilo({ params }: { params: Promise<{ id: string }> }) {
         <SkillBars player={player} />
       </Card>
 
-      <Storico partite={storico} />
+      <Storico partite={storico} mio={mio} />
 
       {mio && (
         <div className="space-y-3">
+          <Card className="space-y-3">
+            <h2 className="font-semibold">🔔 Notifiche</h2>
+            <NotificheToggle variant="impostazione" />
+            <div>
+              <p className="text-xs text-zinc-500">Cosa vuoi ricevere da {me.lega.nome}:</p>
+              <PreferenzeNotifiche iniziali={player.notifiche} />
+            </div>
+          </Card>
           <SignOutButton redirectUrl="/sign-in">
             <button className={`${buttonClass('secondary')} w-full`}>Esci</button>
           </SignOutButton>
@@ -151,7 +158,8 @@ const ESITO = {
   S: 'bg-red-500 text-white',
 }
 
-function Storico({ partite }: { partite: PartitaGiocata[] }) {
+// mio: nel mio profilo i gol della mia squadra sono in grassetto quando ho vinto.
+function Storico({ partite, mio }: { partite: PartitaGiocata[]; mio: boolean }) {
   if (partite.length === 0) return null
   return (
     <Card>
@@ -180,8 +188,10 @@ function Storico({ partite }: { partite: PartitaGiocata[] }) {
                   <span className="block truncate text-xs text-zinc-500">{p.luogo}</span>
                 </span>
                 <span className="text-right">
-                  <span className="block font-bold tabular-nums">
-                    {p.fatti} – {p.subiti}
+                  <span className="block tabular-nums text-zinc-600 dark:text-zinc-300">
+                    <span className={mio && p.fatti > p.subiti ? 'font-bold text-zinc-900 dark:text-white' : ''}>{p.fatti}</span>
+                    {' – '}
+                    {p.subiti}
                   </span>
                   <span className="block text-xs">
                     {p.gol > 0 && `⚽${p.gol > 1 ? `×${p.gol}` : ''}`}

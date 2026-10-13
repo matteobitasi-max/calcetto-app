@@ -33,6 +33,14 @@ export const BADGE = {
 } as const
 export type Badge = keyof typeof BADGE
 
+// Tipi di notifica che ognuno può spegnere (di default accese).
+export const CATEGORIE_NOTIFICHE = {
+  convocazioni: { label: 'Convocazioni aperte', emoji: '📣' },
+  formazioni: { label: 'Formazioni create', emoji: '⚖️' },
+  capitano: { label: 'Comunicazioni del capitano', emoji: '📢' },
+} as const
+export type CategoriaNotifica = keyof typeof CATEGORIE_NOTIFICHE
+
 export type SanityImage = { asset?: { _ref: string }; hotspot?: unknown; crop?: unknown }
 
 export type Lega = { _id: string; nome: string; logo?: SanityImage; codiceInvito?: string; satispayLink?: string; satispayQr?: SanityImage }
@@ -48,6 +56,7 @@ export type Player = {
   ruolo?: string
   piede?: string
   badge?: Badge
+  notifiche?: Partial<Record<CategoriaNotifica, boolean>>
   isAdmin?: boolean
   puoModificareGiocatori?: boolean
   puoInserireRisultati?: boolean
@@ -55,7 +64,7 @@ export type Player = {
   caratteristiche?: Partial<Record<Skill, number>>
 }
 
-export const playerFields = `_id, "legaId": lega._ref, nome, cognome, soprannome, email, foto, ruolo, piede, badge, isAdmin, puoModificareGiocatori, puoInserireRisultati, attivo, caratteristiche`
+export const playerFields = `_id, "legaId": lega._ref, nome, cognome, soprannome, email, foto, ruolo, piede, badge, notifiche, isAdmin, puoModificareGiocatori, puoInserireRisultati, attivo, caratteristiche`
 
 // Chi può cambiare caratteristiche e foto dei giocatori.
 export const canEditPlayers = (p: Pick<Player, 'isAdmin' | 'puoModificareGiocatori'>) => !!(p.isAdmin || p.puoModificareGiocatori)
