@@ -1,17 +1,18 @@
-import { redirect } from 'next/navigation'
 import { Suspense } from 'react'
 import { requirePlayer } from '@/lib/player'
 import { Loading } from '@/components/ui'
+import { ProfiloGiocatore } from '../giocatori/profilo-giocatore'
 
+// Il mio profilo: pagina a sé (non dentro "Rosa"), con la mia scheda nella lega attiva.
 export default function ProfiloPage() {
   return (
     <Suspense fallback={<Loading />}>
-      <VaiAlProfilo />
+      <MioProfilo />
     </Suspense>
   )
 }
 
-async function VaiAlProfilo(): Promise<null> {
+async function MioProfilo() {
   const me = await requirePlayer()
-  redirect(`/giocatori/${me._id}`)
+  return <ProfiloGiocatore id={me._id} />
 }

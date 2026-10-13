@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { ClerkProvider } from "@clerk/nextjs";
 import { Geist, Geist_Mono } from "next/font/google";
 import { IndietroAndroid } from "@/components/indietro-android";
+import { SwipeIndietro } from "@/components/swipe-indietro";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -48,6 +49,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       >
         <body className="min-h-full flex flex-col">
           <IndietroAndroid />
+          <SwipeIndietro />
           {children}
         </body>
       </html>
