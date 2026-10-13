@@ -44,3 +44,8 @@ next-env.d.ts
 *.p8
 google-services.json
 GoogleService-Info.plist
+
+# firma Android: chiave e password solo sul Mac
+*.jks
+*.keystore
+android/keystore.properties
