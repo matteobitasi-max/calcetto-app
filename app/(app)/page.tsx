@@ -91,7 +91,7 @@ async function Partite() {
               {m.stato === 'giocata' && m.risultato?.golA != null ? (
                 <Punteggio match={m} mioId={player._id} />
               ) : (
-                <StatoBadge stato={m.stato} />
+                <StatoBadge match={m} />
               )}
             </RigaPartita>
           ))}

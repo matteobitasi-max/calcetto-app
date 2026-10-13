@@ -3,6 +3,7 @@ import Link from 'next/link'
 import type { ComponentProps, ReactNode } from 'react'
 import { BADGE, SKILLS, displayName, overall, type Badge, type Player, type Skill } from '@/lib/roster'
 import type { Risposta, Stato } from '@/lib/matches'
+import { finestra } from '@/lib/finestra'
 import { avatarUrl } from '@/lib/image'
 import { buttonClass, inputClass } from './ui-classes'
 
@@ -43,7 +44,9 @@ const RISPOSTA: Record<Risposta | 'nessuna', [string, string]> = {
   nessuna: ['Non hai risposto', 'bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300'],
 }
 
-const STATO: Record<Stato, [string, string]> = {
+const STATO: Record<Stato | 'non_ancora' | 'scaduta', [string, string]> = {
+  non_ancora: ['Convocazioni non ancora aperte', 'bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300'],
+  scaduta: ['Tempo scaduto', 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'],
   aperta: ['Convocazioni aperte', 'bg-green-100 text-green-800 dark:bg-green-950 dark:text-green-300'],
   chiusa: ['Convocazioni chiuse', 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300'],
   giocata: ['Giocata', 'bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300'],
@@ -59,8 +62,10 @@ export const RispostaBadge = ({ risposta }: { risposta?: Risposta }) => {
   return <Badge label={label} className={cls} />
 }
 
-export const StatoBadge = ({ stato }: { stato: Stato }) => {
-  const [label, cls] = STATO[stato] ?? STATO.aperta
+// L'etichetta segue la finestra vera delle convocazioni, non solo lo stato salvato.
+export const StatoBadge = ({ match }: { match: { stato: Stato; aperturaConvocazioni: string; chiusuraConvocazioni: string } }) => {
+  const f = match.stato === 'aperta' ? finestra(match) : null
+  const [label, cls] = STATO[f === 'non_ancora' || f === 'scaduta' ? f : match.stato] ?? STATO.aperta
   return <Badge label={label} className={cls} />
 }
 

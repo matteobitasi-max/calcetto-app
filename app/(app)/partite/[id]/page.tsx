@@ -55,7 +55,7 @@ async function MatchDetail({ params }: { params: Promise<{ id: string }> }) {
       <Card className="space-y-2">
         <div className="flex items-start justify-between gap-2">
           <h1 className="text-lg font-bold capitalize">{formatData(match.data)}</h1>
-          <StatoBadge stato={match.stato} />
+          <StatoBadge match={match} />
         </div>
         <p className="text-sm text-zinc-500">
           📍 {match.luogo}

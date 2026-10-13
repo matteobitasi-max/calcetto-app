@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { Suspense } from 'react'
 import { requirePlayer } from '@/lib/player'
-import { getMatchesBetween, presenti, type Match, type Stato } from '@/lib/matches'
+import { finestra, getMatchesBetween, presenti, type Match, type Stato } from '@/lib/matches'
 import { formatData, isoToRomeLocal } from '@/lib/dates'
 import { assicuraRicorrenze } from '@/lib/series'
 import { Card, Loading, StatoBadge } from '@/components/ui'
@@ -9,11 +9,19 @@ import { Card, Loading, StatoBadge } from '@/components/ui'
 const GIORNI = ['L', 'M', 'M', 'G', 'V', 'S', 'D']
 const DAY = 86_400_000
 
-const COLORE: Record<Stato, string> = {
+const COLORE: Record<Stato | 'non_ancora' | 'scaduta', string> = {
+  non_ancora: 'bg-zinc-200 text-zinc-800 dark:bg-zinc-700 dark:text-zinc-100',
   aperta: 'bg-green-600 text-white',
+  scaduta: 'bg-amber-500 text-white',
   chiusa: 'bg-blue-600 text-white',
   giocata: 'bg-zinc-400 text-white dark:bg-zinc-600',
   annullata: 'bg-red-100 text-red-700 line-through dark:bg-red-950 dark:text-red-300',
+}
+
+// Colore del giorno: segue la finestra vera delle convocazioni, come l'etichetta.
+const coloreDi = (m: Match) => {
+  const f = m.stato === 'aperta' ? finestra(m) : null
+  return COLORE[f === 'non_ancora' || f === 'scaduta' ? f : m.stato]
 }
 
 export default function CalendarioPage({ searchParams }: PageProps<'/calendario'>) {
@@ -82,7 +90,7 @@ async function Calendario({ searchParams }: { searchParams: Promise<Record<strin
             if (partite) {
               const p = partite[0]
               return (
-                <Link key={key} href={`/partite/${p._id}`} className={`${base} font-bold ${COLORE[p.stato]}`} title={`${p.luogo}`}>
+                <Link key={key} href={`/partite/${p._id}`} className={`${base} font-bold ${coloreDi(p)}`} title={`${p.luogo}`}>
                   {giorno}
                   <span className="text-[10px] font-normal leading-none">⚽{partite.length > 1 && `×${partite.length}`}</span>
                 </Link>
@@ -109,6 +117,7 @@ async function Calendario({ searchParams }: { searchParams: Promise<Record<strin
         </div>
 
         <div className="mt-4 flex flex-wrap gap-x-4 gap-y-1 text-xs text-zinc-500">
+          <span><span className="mr-1 inline-block h-2 w-2 rounded-full bg-zinc-300" />in programma</span>
           <span><span className="mr-1 inline-block h-2 w-2 rounded-full bg-green-600" />convocazioni aperte</span>
           <span><span className="mr-1 inline-block h-2 w-2 rounded-full bg-blue-600" />convocazioni chiuse</span>
           <span><span className="mr-1 inline-block h-2 w-2 rounded-full bg-zinc-400" />giocata</span>
@@ -128,7 +137,7 @@ async function Calendario({ searchParams }: { searchParams: Promise<Record<strin
                   {match.luogo} · {presenti(match).length}/{match.postiDisponibili}
                 </span>
               </span>
-              <StatoBadge stato={match.stato} />
+              <StatoBadge match={match} />
             </Link>
           ))
         )}

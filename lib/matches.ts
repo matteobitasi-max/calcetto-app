@@ -138,16 +138,7 @@ export const risultatoDa = (m: Pick<Match, 'data' | 'durataMinuti'>) =>
 
 export const presenti = (m: Match) => m.convocazioni.filter((c) => c.risposta === 'presente' && c.giocatore)
 
-export type Finestra = 'non_ancora' | 'aperta' | 'scaduta' | 'chiusa'
-
-// Se i giocatori possono convocarsi adesso. "scaduta" = orario passato ma
-// l'organizzatore non ha ancora chiuso ufficialmente le convocazioni.
-export function finestra(m: Pick<Match, 'stato' | 'aperturaConvocazioni' | 'chiusuraConvocazioni'>, now = new Date()): Finestra {
-  if (m.stato !== 'aperta') return 'chiusa'
-  if (m.aperturaConvocazioni && now < new Date(m.aperturaConvocazioni)) return 'non_ancora'
-  if (m.chiusuraConvocazioni && now >= new Date(m.chiusuraConvocazioni)) return 'scaduta'
-  return 'aperta'
-}
+export { finestra, type Finestra } from './finestra'
 
 // Lista in ordine di arrivo: i primi N che hanno detto "ci sono" sono in lista,
 // gli altri in lista d'attesa. Chi si cancella fa salire il primo in attesa.
