@@ -86,11 +86,12 @@ async function MatchDetail({ params }: { params: Promise<{ id: string }> }) {
       <MiaQuota match={match} me={player} />
 
       {player.isAdmin && <AdminPanel match={match} whatsappUrl={await whatsappUrl(match, player.lega.nome)} />}
-      {player.isAdmin && <Cassa match={match} />}
 
       {match.squadraA.length + match.squadraB.length > 0 && (
         <Squadre match={match} mioId={player._id} />
       )}
+
+      {player.isAdmin && <Cassa match={match} />}
 
       <Card>
         <h2 className="mb-3 font-semibold">

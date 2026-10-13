@@ -73,51 +73,63 @@ export function Cassa({ match }: { match: Match }) {
   const mancanti = lista.length - pagati
 
   return (
-    <Card className="space-y-4">
-      <h2 className="font-semibold">💰 Cassa</h2>
-      <dl className="grid grid-cols-2 gap-2 text-center">
-        {(
-          [
-            ['Incassato', `${euro(pagati * match.quota)} · ${pagati}`, 'text-green-600'],
-            ['Mancano', `${euro(mancanti * match.quota)} · ${mancanti}`, 'text-red-600'],
-          ] as const
-        ).map(([label, valore, cls]) => (
-          <div key={label} className="flex flex-col-reverse rounded-lg bg-zinc-50 py-2 dark:bg-zinc-950">
-            <dt className="text-xs text-zinc-500">{label}</dt>
-            <dd className={`text-lg font-bold tabular-nums ${cls}`}>{valore}</dd>
-          </div>
-        ))}
-      </dl>
+    <Card className="p-0!">
+      <details className="group">
+        {/* Chiusa: solo i totali. Toccando si apre l'elenco dei giocatori. */}
+        <summary className="cursor-pointer list-none space-y-3 p-4 [&::-webkit-details-marker]:hidden">
+          <h2 className="flex items-center justify-between font-semibold">
+            💰 Cassa
+            <span className="text-zinc-400 transition group-open:rotate-180" aria-hidden>
+              ▾
+            </span>
+          </h2>
+          <dl className="grid grid-cols-2 gap-2 text-center">
+            {(
+              [
+                ['Incassato', `${euro(pagati * match.quota)} · ${pagati}`, 'text-green-600'],
+                ['Mancano', `${euro(mancanti * match.quota)} · ${mancanti}`, 'text-red-600'],
+              ] as const
+            ).map(([label, valore, cls]) => (
+              <div key={label} className="flex flex-col-reverse rounded-lg bg-zinc-50 py-2 dark:bg-zinc-950">
+                <dt className="text-xs text-zinc-500">{label}</dt>
+                <dd className={`text-lg font-bold tabular-nums ${cls}`}>{valore}</dd>
+              </div>
+            ))}
+          </dl>
+        </summary>
 
-      <ul className="space-y-2">
-        {lista.map(({ giocatore }) => {
-          const pagato = haPagato(match, giocatore._id)
-          return (
-            <li key={giocatore._id}>
-              <PlayerRow
-                player={giocatore}
-                right={
-                  <span className="flex shrink-0 items-center gap-1 text-xs">
-                    {pagato ? (
-                      <>
-                        <span className="rounded-full bg-green-100 px-2 py-0.5 text-green-800 dark:bg-green-950 dark:text-green-300">✅ pagato</span>
-                        <form action={annullaPagamento.bind(null, match._id, giocatore._id)}>
-                          <SubmitButton className={`${piccolo} text-zinc-400`} title="Annulla: torna da pagare" confirm="Segnare di nuovo come da pagare?">
-                            ↩
-                          </SubmitButton>
-                        </form>
-                      </>
-                    ) : (
-                      <span className="rounded-full bg-red-100 px-2 py-0.5 text-red-800 dark:bg-red-950 dark:text-red-300">da pagare</span>
-                    )}
-                  </span>
-                }
-              />
-            </li>
-          )
-        })}
-      </ul>
-      <SollecitaButton action={sollecitaPagamenti.bind(null, match._id)} quanti={mancanti} />
+        <div className="space-y-4 border-t border-zinc-200 p-4 dark:border-zinc-800">
+          <ul className="space-y-2">
+            {lista.map(({ giocatore }) => {
+              const pagato = haPagato(match, giocatore._id)
+              return (
+                <li key={giocatore._id}>
+                  <PlayerRow
+                    player={giocatore}
+                    right={
+                      <span className="flex shrink-0 items-center gap-1 text-xs">
+                        {pagato ? (
+                          <>
+                            <span className="rounded-full bg-green-100 px-2 py-0.5 text-green-800 dark:bg-green-950 dark:text-green-300">✅ pagato</span>
+                            <form action={annullaPagamento.bind(null, match._id, giocatore._id)}>
+                              <SubmitButton className={`${piccolo} text-zinc-400`} title="Annulla: torna da pagare" confirm="Segnare di nuovo come da pagare?">
+                                ↩
+                              </SubmitButton>
+                            </form>
+                          </>
+                        ) : (
+                          <span className="rounded-full bg-red-100 px-2 py-0.5 text-red-800 dark:bg-red-950 dark:text-red-300">da pagare</span>
+                        )}
+                      </span>
+                    }
+                  />
+                </li>
+              )
+            })}
+          </ul>
+          <SollecitaButton action={sollecitaPagamenti.bind(null, match._id)} quanti={mancanti} />
+        </div>
+      </details>
     </Card>
   )
 }
