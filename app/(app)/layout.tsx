@@ -9,6 +9,7 @@ import { LegaMenu } from '@/components/lega-menu'
 import { MenuSezioni } from '@/components/menu-sezioni'
 import { SEZIONI, barraClass, pillClass } from '@/components/sezioni'
 import { NotificheNativeListener } from '@/components/notifiche-native'
+import { caricaLogoLega } from '@/app/actions'
 
 
 export default function AppLayout({ children }: LayoutProps<'/'>) {
@@ -58,7 +59,12 @@ async function LegaEUtente() {
   const voce = (m: (typeof leghe)[number]) => ({ id: m.lega._id, nome: m.lega.nome, logo: avatarUrl(m.lega.logo, 64) })
   return (
     <>
-      <LegaZoom nome={me.lega.nome} piccola={avatarUrl(me.lega.logo, 96)} grande={immagineUrl(me.lega.logo, 1024)} />
+      <LegaZoom
+        nome={me.lega.nome}
+        piccola={avatarUrl(me.lega.logo, 96)}
+        grande={immagineUrl(me.lega.logo, 1024)}
+        cambia={me.isAdmin ? caricaLogoLega.bind(null, me.lega._id) : undefined}
+      />
       <div className="min-w-0 flex-1">
         <LegaMenu corrente={voce(me)} altre={leghe.filter((m) => m.lega._id !== me.lega._id).map(voce)} organizzatore={!!me.isAdmin} />
       </div>

@@ -72,5 +72,9 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>Per scattare la foto del profilo o il logo della lega.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Per scegliere la foto del profilo o il logo della lega dalla libreria.</string>
 </dict>
 </plist>

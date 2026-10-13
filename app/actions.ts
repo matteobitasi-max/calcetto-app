@@ -686,6 +686,17 @@ export async function salvaLega(legaId: string, _prev: FormState, formData: Form
   return {}
 }
 
+// Cambio rapido del logo toccandolo nell'intestazione (fotocamera o libreria foto).
+export async function caricaLogoLega(legaId: string, _prev: FormState, formData: FormData): Promise<FormState> {
+  await requireIn(legaId, 'organizzatore')
+  const upload = await uploadFoto(formData.get('logo'))
+  if (!upload) return { error: 'Nessuna foto selezionata.' }
+  if ('error' in upload) return upload
+  await sanity.patch(legaId).set({ logo: upload.foto }).commit()
+  refresh()
+  return {}
+}
+
 // Nuovo codice: i link d'invito già mandati smettono di funzionare.
 export async function rigeneraInvito(legaId: string) {
   await requireIn(legaId, 'organizzatore')
