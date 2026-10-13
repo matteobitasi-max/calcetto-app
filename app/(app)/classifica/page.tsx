@@ -39,24 +39,28 @@ async function Classifiche() {
     <div className="space-y-4">
       <Generale righe={generale} giocatori={giocatori} mioId={me._id} />
       <Tabella
+        mioId={me._id}
         titolo="⚽ Marcatori"
         righe={righe.filter((r) => r.s.gol > 0).sort((a, b) => b.s.gol - a.s.gol || a.s.giocate - b.s.giocate)}
         valore={(s) => s.gol}
         dettaglio={(s) => `${(s.gol / s.giocate).toFixed(1)} a partita`}
       />
       <Tabella
+        mioId={me._id}
         titolo="🫑 MVP"
         righe={righe.filter((r) => r.s.mvp > 0).sort((a, b) => b.s.mvp - a.s.mvp || a.s.giocate - b.s.giocate)}
         valore={(s) => s.mvp}
         dettaglio={(s) => `su ${s.giocate} partite`}
       />
       <Tabella
+        mioId={me._id}
         titolo="🏆 Vittorie"
         righe={[...righe].sort((a, b) => perc(b.s) - perc(a.s) || b.s.giocate - a.s.giocate)}
         valore={(s) => `${perc(s)}%`}
         dettaglio={(s) => `${s.vinte}V ${s.pari}P ${s.perse}S`}
       />
       <Tabella
+        mioId={me._id}
         titolo="🧱 Meno gol subiti"
         righe={[...righe].sort((a, b) => a.s.gs / a.s.giocate - b.s.gs / b.s.giocate)}
         valore={(s) => (s.gs / s.giocate).toFixed(1)}
@@ -67,11 +71,13 @@ async function Classifiche() {
 }
 
 function Tabella({
+  mioId,
   titolo,
   righe,
   valore,
   dettaglio,
 }: {
+  mioId: string
   titolo: string
   righe: Riga[]
   valore: (s: PlayerStats) => string | number
@@ -83,11 +89,14 @@ function Tabella({
       <h2 className="mb-3 font-semibold">{titolo}</h2>
       <ol className="space-y-2">
         {righe.slice(0, 10).map(({ player, s }, i) => (
-          <li key={player._id} className="flex items-center gap-3">
+          <li
+            key={player._id}
+            className={`flex items-center gap-3 rounded-lg px-1 py-1 ${player._id === mioId ? 'bg-green-50 dark:bg-green-950' : ''}`}
+          >
             <span className="w-5 text-right text-sm tabular-nums text-zinc-400">{i + 1}</span>
             <Avatar player={player} size={32} />
             <Link href={`/giocatori/${player._id}`} className="min-w-0 flex-1 hover:underline">
-              <span className="block truncate text-sm font-medium">{displayName(player)}</span>
+              <span className={`block truncate text-sm ${player._id === mioId ? 'font-extrabold' : 'font-medium'}`}>{displayName(player)}</span>
               <span className="block text-xs text-zinc-500">{dettaglio(s)}</span>
             </Link>
             <span className="text-lg font-bold tabular-nums">{valore(s)}</span>
@@ -142,7 +151,7 @@ function Generale({ righe, giocatori, mioId }: { righe: RigaClassifica[]; giocat
               <Avatar player={p} size={32} />
               <Link href={`/giocatori/${p._id}`} className="min-w-0 flex-1 hover:underline">
                 <span className="flex min-w-0 items-center gap-1.5">
-                  <span className="truncate text-sm font-medium">{displayName(p)}</span>
+                  <span className={`truncate text-sm ${r.id === mioId ? 'font-extrabold' : 'font-medium'}`}>{displayName(p)}</span>
                   <PlayerBadge badge={p.badge} />
                 </span>
                 <span className="block text-xs text-zinc-500">
