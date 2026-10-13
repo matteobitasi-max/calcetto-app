@@ -73,7 +73,23 @@ export const series = defineType({
       title: 'Giocatori in lista',
       type: 'number',
       initialValue: 10,
-      validation: (r) => r.required().min(2).max(MAX_GIOCATORI).integer(),
+      validation: (r) =>
+        r
+          .required()
+          .min(2)
+          .integer()
+          .custom((v, ctx) =>
+            (ctx.document as { postiAutomatici?: boolean } | undefined)?.postiAutomatici || (v ?? 0) <= MAX_GIOCATORI
+              ? true
+              : `Massimo ${MAX_GIOCATORI}, oppure scegli "in base alle convocazioni"`,
+          ),
+    }),
+    defineField({
+      name: 'postiAutomatici',
+      title: 'Numero in base alle convocazioni',
+      description: 'Si iscrivono fino al massimo; alla chiusura delle convocazioni il numero diventa pari',
+      type: 'boolean',
+      initialValue: true,
     }),
     defineField({ name: 'quota', title: 'Quota a testa (€)', type: 'number', validation: (r) => r.min(0) }),
     defineField({ name: 'note', title: 'Note', type: 'text', rows: 3 }),

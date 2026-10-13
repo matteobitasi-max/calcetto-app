@@ -43,7 +43,7 @@ export function MatchForm({
         <div className="space-y-1 text-sm">
           <span className="font-medium">Giocatori in lista</span>
           <p className="text-zinc-500">Raggiunto questo numero, chi si convoca va in lista d&apos;attesa.</p>
-          <PostiInput defaultValue={match?.postiDisponibili} />
+          <PostiInput defaultValue={match?.postiDisponibili} defaultAutomatico={match ? !!match.postiAutomatici : true} />
         </div>
         <div className="grid grid-cols-2 gap-4">
           <Field label="Durata (minuti)">

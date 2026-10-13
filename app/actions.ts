@@ -7,7 +7,7 @@ import { redirect } from 'next/navigation'
 import { sanity } from '@/lib/sanity'
 import { BADGE, COOKIE_LEGA, PIEDI, RUOLI, SKILLS, getUtente, membroDi, requireAdmin, requireForDoc, requireIn, type Skill } from '@/lib/player'
 import { assegnaPosti, finestra, getMatch, presenti, risultatoDa, type Match, type Risposta, type Stato } from '@/lib/matches'
-import { MAX_GIOCATORI } from '@/lib/limiti'
+import { MAX_GIOCATORI, MAX_ISCRITTI, formatoDaIscritti } from '@/lib/limiti'
 import { daysBetween, formatData, isoToRomeLocal, romeLocalToISO } from '@/lib/dates'
 import { inviaAGiocatori, inviaATutti, rimuoviIscrizione, salvaIscrizione, salvaTokenNativo, type PushSub } from '@/lib/push'
 import { assicuraRicorrenze, getSeries, occurrenceId, rimuoviFutureVuote, type Series } from '@/lib/series'
@@ -122,7 +122,8 @@ export async function salvaPartita(matchId: string | null, _prev: FormState, for
     const v = str(formData, k)
     return v ? romeLocalToISO(v) : ''
   })
-  const posti = num(formData, 'postiDisponibili') ?? 10
+  const automatici = formData.get('postiAutomatici') === 'on'
+  let posti = num(formData, 'postiDisponibili') ?? 10
   const durata = num(formData, 'durataMinuti') ?? 60
   const quota = num(formData, 'quota')
   const note = str(formData, 'note')
@@ -134,10 +135,15 @@ export async function salvaPartita(matchId: string | null, _prev: FormState, for
   if (!Number.isInteger(posti) || posti < 2) return { error: 'Servono almeno 2 posti.' }
   // Oltre il limite si va solo aggiungendo persone dalla lista d'attesa: in modifica
   // si può lasciare il numero raggiunto così, ma non aumentarlo ancora.
-  const postiAttuali = matchId
-    ? ((await sanity.fetch<number | null>(`*[_type == "match" && _id == $id][0].postiDisponibili`, { id: matchId })) ?? 0)
-    : 0
-  if (posti > Math.max(MAX_GIOCATORI, postiAttuali)) {
+  const attuale = matchId
+    ? await sanity.fetch<{ posti?: number; stato?: Stato } | null>(`*[_type == "match" && _id == $id][0]{"posti": postiDisponibili, stato}`, {
+        id: matchId,
+      })
+    : null
+  const postiAttuali = attuale?.posti ?? 0
+  // In base alle convocazioni: aperte fino al massimo; a convocazioni chiuse il numero è già deciso.
+  if (automatici) posti = attuale?.stato === 'chiusa' ? postiAttuali : MAX_ISCRITTI
+  if (!automatici && posti > Math.max(MAX_GIOCATORI, postiAttuali)) {
     return { error: `Massimo ${MAX_GIOCATORI} giocatori: per andare oltre aggiungi le persone dalla lista d\u2019attesa.` }
   }
 
@@ -159,6 +165,7 @@ export async function salvaPartita(matchId: string | null, _prev: FormState, for
       durataMinuti: durata,
       luogo,
       postiDisponibili: posti,
+      postiAutomatici: automatici,
       ...(quota != null && { quota }),
       ...(note && { note }),
       aperturaGiorniPrima: daysBetween(apGiorno, giorno),
@@ -170,7 +177,15 @@ export async function salvaPartita(matchId: string | null, _prev: FormState, for
     redirect(`/partite/${occurrenceId(serie._id, giorno)}`)
   }
 
-  const fields = { data, durataMinuti: durata, luogo, aperturaConvocazioni: apertura, chiusuraConvocazioni: chiusura, postiDisponibili: posti }
+  const fields = {
+    data,
+    durataMinuti: durata,
+    luogo,
+    aperturaConvocazioni: apertura,
+    chiusuraConvocazioni: chiusura,
+    postiDisponibili: posti,
+    postiAutomatici: automatici,
+  }
   let id = matchId
   if (id) {
     // Se cambiano i posti, la lista si riallinea: sale chi era in attesa o scende l'ultimo arrivato.
@@ -208,7 +223,25 @@ const STATI: Stato[] = ['aperta', 'chiusa', 'giocata', 'annullata']
 export async function cambiaStato(matchId: string, stato: Stato) {
   await requireForDoc(matchId, 'organizzatore')
   if (!STATI.includes(stato)) throw new Error('Stato non valido')
-  await sanity.patch(matchId).set({ stato }).commit()
+  const doc = await sanity.fetch<{ stato?: Stato; postiAutomatici?: boolean; convocazioni?: (RawConvocazione & { aggiunto?: boolean })[] } | null>(
+    `*[_type == "match" && _id == $id][0]{stato, postiAutomatici, convocazioni}`,
+    { id: matchId },
+  )
+  const patch = sanity.patch(matchId).set({ stato })
+
+  // "In base alle convocazioni": chiudendo si gioca in numero pari (l'ultimo arrivato, se dispari,
+  // va in lista d'attesa); riaprendo si torna al massimo.
+  if (doc?.postiAutomatici && doc.convocazioni) {
+    const iscritti = doc.convocazioni.filter((c) => c.risposta !== 'assente').length
+    const posti =
+      stato === 'chiusa' && doc.stato === 'aperta' && iscritti >= 2
+        ? formatoDaIscritti(iscritti).giocano
+        : stato === 'aperta' && doc.stato === 'chiusa'
+          ? MAX_ISCRITTI
+          : null
+    if (posti) patch.set({ postiDisponibili: posti, convocazioni: assegnaPosti(doc.convocazioni, posti) })
+  }
+  await patch.commit()
   refresh()
 }
 
@@ -342,7 +375,8 @@ export async function salvaSerie(seriesId: string, _prev: FormState, formData: F
   const fineData = str(formData, 'fineData')
 
   if (!luogo || ![ora, aperturaOra, chiusuraOra].every((o) => ORA.test(o))) return { error: 'Controlla luogo e orari.' }
-  if (!Number.isInteger(posti) || posti < 2 || posti > MAX_GIOCATORI) return { error: `Da 2 a ${MAX_GIOCATORI} giocatori.` }
+  const automatici = formData.get('postiAutomatici') === 'on'
+  if (!automatici && (!Number.isInteger(posti) || posti < 2 || posti > MAX_GIOCATORI)) return { error: `Da 2 a ${MAX_GIOCATORI} giocatori.` }
   // Confronto in minuti rispetto all'inizio della partita.
   const minutiPrima = (giorni: number, hhmm: string) => {
     const [h, m] = hhmm.split(':').map(Number)
@@ -361,7 +395,8 @@ export async function salvaSerie(seriesId: string, _prev: FormState, formData: F
     ora,
     durataMinuti: durata,
     luogo,
-    postiDisponibili: posti,
+    postiDisponibili: automatici ? MAX_ISCRITTI : posti,
+    postiAutomatici: automatici,
     ogniSettimane: num(formData, 'ogniSettimane') === 2 ? 2 : 1,
     aperturaGiorniPrima,
     aperturaOra,

@@ -49,7 +49,7 @@ async function Form({ params }: { params: Promise<{ id: string }> }) {
         </Field>
         <div className="space-y-1 text-sm">
           <span className="font-medium">Giocatori in lista</span>
-          <PostiInput defaultValue={serie.postiDisponibili} />
+          <PostiInput defaultValue={serie.postiDisponibili} defaultAutomatico={!!serie.postiAutomatici} />
         </div>
         <div className="grid grid-cols-2 gap-4">
           <Field label="Durata (minuti)">

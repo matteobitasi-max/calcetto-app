@@ -57,6 +57,13 @@ export const match = defineType({
       initialValue: 10,
       validation: (r) => r.required().min(2).integer(),
     }),
+    defineField({
+      name: 'postiAutomatici',
+      title: 'Numero in base alle convocazioni',
+      description: 'Si iscrivono fino al massimo; alla chiusura delle convocazioni il numero diventa pari',
+      type: 'boolean',
+      initialValue: true,
+    }),
     defineField({ name: 'quota', title: 'Quota a testa (€)', type: 'number', validation: (r) => r.min(0) }),
     defineField({ name: 'note', title: 'Note', type: 'text', rows: 3 }),
     defineField({

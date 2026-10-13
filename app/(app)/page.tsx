@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { Suspense, type ReactNode } from 'react'
 import { redirect } from 'next/navigation'
 import { getCurrentPlayer, type Player } from '@/lib/player'
-import { finestra, getPastMatches, getUpcomingMatches, ordinati, presenti, type Match } from '@/lib/matches'
+import { finestra, formatoInCorso, getPastMatches, getUpcomingMatches, ordinati, presenti, type Match } from '@/lib/matches'
 import { formatData } from '@/lib/dates'
 import { assicuraRicorrenze } from '@/lib/series'
 import { ButtonLink, Card, Loading, StatoBadge } from '@/components/ui'
@@ -176,6 +176,7 @@ function ContoAllaRovescia({ match }: { match: Match }) {
 function ProssimaPartita({ match, player }: { match: Match; player: Player }) {
   const count = presenti(match).length
   const inAttesa = ordinati(match, 'riserva').length
+  const formato = formatoInCorso(match)
   const inLista = presenti(match).some((c) => c.giocatore._id === player._id)
   const quotaDaPagare = match.quota != null && inLista && !match.pagamenti.some((p) => p.giocatoreId === player._id)
   const miaSquadra = match.squadraA.some((p) => p._id === player._id) ? 'A' : match.squadraB.some((p) => p._id === player._id) ? 'B' : null
@@ -200,9 +201,15 @@ function ProssimaPartita({ match, player }: { match: Match; player: Player }) {
               <span className="block h-2 rounded bg-green-600" style={{ width: `${Math.min(100, (count / match.postiDisponibili) * 100)}%` }} />
             </span>
             <span className="tabular-nums">
-              {count}/{match.postiDisponibili} in lista
+              {formato ? `${formato.iscritti} iscritti` : `${count}/${match.postiDisponibili} in lista`}
             </span>
           </div>
+          {formato && formato.iscritti >= 2 && (
+            <p className="text-xs text-zinc-500">
+              📋 Se si chiudesse ora: {formato.perSquadra} contro {formato.perSquadra}
+              {formato.inAttesa > 0 && ` (${formato.inAttesa} in lista d'attesa)`}
+            </p>
+          )}
           {inAttesa > 0 && <p className="text-xs text-amber-700 dark:text-amber-400">Lista piena · {inAttesa} in lista d&apos;attesa</p>}
           {miaSquadra && (
             <p className={`text-xs font-medium ${miaSquadra === 'A' ? 'text-blue-600 dark:text-blue-400' : 'text-orange-600 dark:text-orange-400'}`}>

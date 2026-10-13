@@ -1,6 +1,8 @@
 import 'server-only'
 import { sanity } from './sanity'
 import { playerFields, type Player } from './roster'
+import type { PartitaPunteggio } from './punteggio'
+import { formatoDaIscritti } from './limiti'
 
 export type Risposta = 'presente' | 'assente' | 'riserva'
 export type Stato = 'aperta' | 'chiusa' | 'giocata' | 'annullata'
@@ -25,6 +27,8 @@ export type Match = {
   aperturaConvocazioni: string
   chiusuraConvocazioni: string
   postiDisponibili: number
+  /** Numero deciso dalle convocazioni: pari alla chiusura. */
+  postiAutomatici?: boolean
   quota?: number
   stato: Stato
   note?: string
@@ -45,7 +49,7 @@ export type Match = {
 export type Pagamento = { giocatoreId: string; stato: 'dichiarato' | 'confermato'; metodo?: 'satispay' | 'contanti'; il?: string }
 
 const matchFields = `
-  _id, _rev, "legaId": lega._ref, data, luogo, postiDisponibili, quota, note, aperturaConvocazioni, chiusuraConvocazioni, "serieId": serie._ref, notificaInviataIl,
+  _id, _rev, "legaId": lega._ref, data, luogo, postiDisponibili, postiAutomatici, quota, note, aperturaConvocazioni, chiusuraConvocazioni, "serieId": serie._ref, notificaInviataIl,
   "stato": coalesce(stato, "aperta"),
   "convocazioni": coalesce(convocazioni[]{_key, risposta, rispostoIl, aggiunto, "giocatore": giocatore->{${playerFields}}}, []),
   "squadraA": coalesce(squadraA[]->{${playerFields}}, []),
@@ -203,4 +207,23 @@ export async function getStorico(id: string, limit = 10): Promise<PartitaGiocata
     gol: r.gol ?? 0,
     mvp: !!r.mvp,
   }))
+}
+
+// Le partite giocate della lega, in ordine di data, per la classifica a punti.
+export function getPartitePunteggio(legaId: string) {
+  return sanity.fetch<PartitaPunteggio[]>(
+    `*[_type == "match" && lega._ref == $legaId && stato == "giocata" && defined(risultato.golA)] | order(data asc){
+      "a": coalesce(squadraA[]._ref, []), "b": coalesce(squadraB[]._ref, []),
+      "golA": risultato.golA, "golB": risultato.golB,
+      "marcatori": coalesce(marcatori[]{"id": giocatore._ref, gol}, []), "mvp": mvp._ref
+    }`,
+    { legaId },
+  )
+}
+
+// Per le partite "in base alle convocazioni" ancora aperte: iscritti e formato se si chiudesse adesso.
+export function formatoInCorso(m: Match) {
+  if (!m.postiAutomatici || m.stato !== 'aperta') return null
+  const iscritti = m.convocazioni.filter((c) => c.risposta !== 'assente' && c.giocatore).length
+  return { iscritti, ...formatoDaIscritti(iscritti) }
 }

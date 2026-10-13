@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation'
 import { Suspense } from 'react'
 import { canEnterResults, getCurrentPlayer, membroDi, type Membro, type Player } from '@/lib/player'
 import { forza } from '@/lib/teams'
-import { finestra, getMatch, getPlayers, ordinati, presenti, risultatoDa, type Match, type Risposta } from '@/lib/matches'
+import { finestra, formatoInCorso, getMatch, getPlayers, ordinati, presenti, risultatoDa, type Match, type Risposta } from '@/lib/matches'
 import { formatData } from '@/lib/dates'
 import { aggiungiDaAttesa, apriConvocazioni, cambiaStato, scegliLega, rimettiInAttesa, eliminaPartita } from '@/app/actions'
 import { Countdown } from '@/components/countdown'
@@ -33,6 +33,7 @@ async function MatchDetail({ params }: { params: Promise<{ id: string }> }) {
   const [rosa, attiva] = await Promise.all([getPlayers(match.legaId), getCurrentPlayer()])
 
   const count = presenti(match).length
+  const formato = formatoInCorso(match)
   const aggiunti = presenti(match).filter((c) => c.aggiunto).length
   const gestisci = !!player.isAdmin && match.stato !== 'giocata' && match.stato !== 'annullata'
   const risposto = new Set(match.convocazioni.map((c) => c.giocatore?._id))
@@ -93,13 +94,21 @@ async function MatchDetail({ params }: { params: Promise<{ id: string }> }) {
 
       <Card>
         <h2 className="mb-3 font-semibold">
-          Convocati <span className="font-normal text-zinc-500">· {count}/{match.postiDisponibili}</span>
+          Convocati{' '}
+          <span className="font-normal text-zinc-500">
+            · {formato ? `${formato.iscritti} iscritti` : `${count}/${match.postiDisponibili}`}
+          </span>
           {aggiunti > 0 && (
             <span className="ml-1 text-xs font-normal text-zinc-500">
               ({match.postiDisponibili - aggiunti} + {aggiunti} aggiunt{aggiunti === 1 ? 'o' : 'i'})
             </span>
           )}
         </h2>
+        {formato && (
+          <p className="mb-3 rounded-lg bg-zinc-50 p-2 text-xs text-zinc-600 dark:bg-zinc-950 dark:text-zinc-400">
+            📋 Numero in base alle convocazioni: <TestoFormato f={formato} />
+          </p>
+        )}
         <Gruppo titolo="In lista" match={match} risposta="presente" numerati gestisci={gestisci} me={player} />
         <Gruppo titolo="Lista d'attesa" match={match} risposta="riserva" numerati gestisci={gestisci} />
         <Gruppo titolo="Non ci sono" match={match} risposta="assente" />
@@ -348,5 +357,15 @@ function RisultatoAzione({ match }: { match: Match }) {
     <ButtonLink href={`/partite/${match._id}/risultato`} variant={match.stato === 'giocata' ? 'secondary' : 'primary'}>
       {match.stato === 'giocata' ? '✏️ Modifica risultato' : '📝 Inserisci risultato, marcatori e MVP'}
     </ButtonLink>
+  )
+}
+
+function TestoFormato({ f }: { f: NonNullable<ReturnType<typeof formatoInCorso>> }) {
+  if (f.iscritti < 2) return <>in base alle convocazioni</>
+  return (
+    <>
+      se si chiudesse ora: {f.perSquadra} contro {f.perSquadra}
+      {f.inAttesa > 0 && ` (${f.inAttesa} in lista d'attesa)`}
+    </>
   )
 }
