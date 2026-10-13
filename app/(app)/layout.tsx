@@ -7,6 +7,7 @@ import { Avatar } from '@/components/ui'
 import { LogoZoom } from '@/components/logo-zoom'
 import { LegaMenu } from '@/components/lega-menu'
 import { NotificheNativeListener } from '@/components/notifiche-native'
+import { IndietroAndroid } from '@/components/indietro-android'
 
 const MENU = [
   ['/', 'Partite'],
@@ -36,6 +37,7 @@ export default function AppLayout({ children }: LayoutProps<'/'>) {
         </div>
       </header>
       <NotificheNativeListener />
+      <IndietroAndroid />
       <main className="mx-auto w-full max-w-2xl flex-1 p-4 pb-[max(1rem,var(--safe-area-inset-bottom,env(safe-area-inset-bottom)))]">
         {children}
       </main>
