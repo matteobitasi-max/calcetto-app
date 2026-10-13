@@ -95,17 +95,31 @@ export function Avatar({ player, size = 40 }: { player: Player; size?: number })
 }
 
 const STILE_BADGE: Record<Badge, string> = {
+  capitano: 'bg-sky-100 text-sky-800 ring-sky-300 dark:bg-sky-950 dark:text-sky-300 dark:ring-sky-800',
   legend: 'bg-amber-100 text-amber-800 ring-amber-300 dark:bg-amber-950 dark:text-amber-300 dark:ring-amber-800',
   rookie: 'bg-green-100 text-green-800 ring-green-300 dark:bg-green-950 dark:text-green-300 dark:ring-green-800',
   asinus: 'bg-zinc-200 text-zinc-700 ring-zinc-300 dark:bg-zinc-800 dark:text-zinc-300 dark:ring-zinc-700',
   promessa: 'bg-violet-100 text-violet-800 ring-violet-300 dark:bg-violet-950 dark:text-violet-300 dark:ring-violet-800',
 }
 
+// La fascia da capitano: banda gialla con la "C".
+function FasciaCapitano() {
+  return (
+    <svg viewBox="0 0 24 16" className="h-3 w-[18px]" aria-hidden>
+      <rect x="0.5" y="1.5" width="23" height="13" rx="3" fill="#facc15" stroke="#a16207" />
+      <path d="M3 1.5v13M21 1.5v13" stroke="#a16207" strokeWidth="1" />
+      <text x="12" y="12" textAnchor="middle" fontSize="10" fontWeight="900" fill="#1e3a8a" fontFamily="system-ui, sans-serif">
+        C
+      </text>
+    </svg>
+  )
+}
+
 export function PlayerBadge({ badge }: { badge?: Badge }) {
   if (!badge || !BADGE[badge]) return null
   return (
-    <span className={`inline-flex shrink-0 items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[11px] font-semibold ring-1 ${STILE_BADGE[badge]}`}>
-      {BADGE[badge].emoji} {BADGE[badge].label}
+    <span className={`inline-flex shrink-0 items-center gap-1 rounded-full px-1.5 py-0.5 text-[11px] font-semibold ring-1 ${STILE_BADGE[badge]}`}>
+      {badge === 'capitano' ? <FasciaCapitano /> : BADGE[badge].emoji} {BADGE[badge].label}
     </span>
   )
 }

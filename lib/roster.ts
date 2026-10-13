@@ -25,6 +25,7 @@ export const PIEDI = ['destro', 'sinistro', 'ambidestro'] as const
 
 // Il badge che si vede accanto al nome.
 export const BADGE = {
+  capitano: { label: 'Capitano', emoji: 'Ⓒ' },
   legend: { label: 'Legend', emoji: '🏆' },
   rookie: { label: 'Rookie', emoji: '🐣' },
   asinus: { label: 'Asinus', emoji: '🫏' },
