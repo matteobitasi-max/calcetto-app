@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { Suspense } from 'react'
-import { canEnterResults, displayName, getCurrentPlayer, membroDi, type Player } from '@/lib/player'
+import { canEnterResults, getCurrentPlayer, membroDi, type Player } from '@/lib/player'
 import { forza } from '@/lib/teams'
 import { finestra, getMatch, getPlayers, ordinati, presenti, risultatoDa, type Match, type Risposta } from '@/lib/matches'
 import { formatData } from '@/lib/dates'
@@ -14,6 +14,7 @@ import { ButtonLink, Card, Loading, PlayerRow, StatoBadge, buttonClass } from '@
 import { FinestraInfo } from '../finestra-info'
 import { RispostaButtons } from '../risposta-buttons'
 import { Cassa, MiaQuota } from './cassa'
+import { Tabellino } from '../tabellino'
 
 export default function MatchPage({ params }: PageProps<'/partite/[id]'>) {
   return (
@@ -312,33 +313,6 @@ function Prestazione({ match, playerId }: { match: Match; playerId: string }) {
       {gol > 0 && <span title={`${gol} gol`}>⚽{gol > 1 && <sub>{gol}</sub>}</span>}
       {match.mvpId === playerId && <span title="MVP"> 🫑</span>}
     </span>
-  )
-}
-
-function Tabellino({ match }: { match: Match }) {
-  const tutti = new Map([...match.squadraA, ...match.squadraB].map((p) => [p._id, p]))
-  const marcatori = (squadra: Player[], autogol?: number) => [
-    ...match.marcatori
-      .filter((m) => squadra.some((p) => p._id === m.giocatoreId))
-      .map((m) => `${displayName(tutti.get(m.giocatoreId)!)}${m.gol > 1 ? ` ×${m.gol}` : ''}`),
-    ...(autogol ? [`autogol${autogol > 1 ? ` ×${autogol}` : ''}`] : []),
-  ]
-  const mvp = match.mvpId ? tutti.get(match.mvpId) : undefined
-  return (
-    <div className="space-y-2 pt-2">
-      <div className="grid grid-cols-[1fr_auto_1fr] items-start gap-3 text-center">
-        <p className="text-xs text-zinc-500">{marcatori(match.squadraA, match.autogolA).join(', ')}</p>
-        <p className="text-3xl font-bold tabular-nums">
-          {match.risultato?.golA} – {match.risultato?.golB}
-        </p>
-        <p className="text-xs text-zinc-500">{marcatori(match.squadraB, match.autogolB).join(', ')}</p>
-      </div>
-      {mvp && (
-        <p className="text-center text-sm">
-          🫑 MVP: <b>{displayName(mvp)}</b>
-        </p>
-      )}
-    </div>
   )
 }
 
