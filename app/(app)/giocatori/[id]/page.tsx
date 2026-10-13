@@ -95,6 +95,14 @@ async function Profilo({ params }: { params: Promise<{ id: string }> }) {
               <PreferenzeNotifiche iniziali={player.notifiche} />
             </div>
           </Card>
+          <Card className="divide-y divide-zinc-100 p-0! text-sm dark:divide-zinc-800">
+            <Link href="/privacy" className="flex items-center justify-between px-4 py-3 hover:bg-zinc-50 dark:hover:bg-zinc-800">
+              🔒 Privacy policy <span className="text-zinc-400">›</span>
+            </Link>
+            <Link href="/supporto" className="flex items-center justify-between px-4 py-3 hover:bg-zinc-50 dark:hover:bg-zinc-800">
+              💬 Supporto <span className="text-zinc-400">›</span>
+            </Link>
+          </Card>
           <SignOutButton redirectUrl="/sign-in">
             <button className={`${buttonClass('secondary')} w-full`}>Esci</button>
           </SignOutButton>
