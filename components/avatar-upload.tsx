@@ -1,10 +1,10 @@
 'use client'
 
-import { startTransition, useActionState, useRef, useState, type ReactNode } from 'react'
+import { startTransition, useActionState, useState, type ReactNode } from 'react'
 import type { FormState } from '@/app/actions'
-import { shrinkImage } from '@/lib/shrink-image'
+import { useSceltaFoto } from './scelta-foto'
 
-// Avatar cliccabile: scegli una foto e viene caricata subito.
+// Avatar cliccabile: scatta o scegli una foto e viene caricata subito.
 export function AvatarUpload({
   action,
   size,
@@ -14,15 +14,23 @@ export function AvatarUpload({
   size: number
   children: ReactNode
 }) {
-  const input = useRef<HTMLInputElement>(null)
   const [state, formAction, pending] = useActionState(action, undefined)
   const [preview, setPreview] = useState<string | null>(null)
+  const scelta = useSceltaFoto({
+    titolo: 'Foto del profilo',
+    onFoto: (foto) => {
+      setPreview(URL.createObjectURL(foto))
+      const fd = new FormData()
+      fd.set('foto', foto)
+      startTransition(() => formAction(fd))
+    },
+  })
 
   return (
     <div className="shrink-0">
       <button
         type="button"
-        onClick={() => input.current?.click()}
+        onClick={scelta.apri}
         disabled={pending}
         title="Cambia foto"
         className="group relative block overflow-hidden rounded-full"
@@ -41,22 +49,7 @@ export function AvatarUpload({
       <span className="pointer-events-none relative -mt-6 ml-auto block h-6 w-6 rounded-full bg-green-600 text-center text-xs leading-6 text-white ring-2 ring-white dark:ring-zinc-900">
         ✎
       </span>
-      <input
-        ref={input}
-        type="file"
-        accept="image/*"
-        hidden
-        onChange={async (e) => {
-          const file = e.target.files?.[0]
-          e.target.value = ''
-          if (!file) return
-          const small = await shrinkImage(file).catch(() => file)
-          setPreview(URL.createObjectURL(small))
-          const fd = new FormData()
-          fd.set('foto', small)
-          startTransition(() => formAction(fd))
-        }}
-      />
+      {scelta.menu}
       {state?.error && <p className="mt-1 max-w-40 text-xs text-red-600">{state.error}</p>}
     </div>
   )
