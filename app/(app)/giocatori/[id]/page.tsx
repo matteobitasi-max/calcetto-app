@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { Suspense } from 'react'
 import { SignOutButton } from '@clerk/nextjs'
-import { canEditPlayers, displayName, membroDi } from '@/lib/player'
+import { displayName, membroDi } from '@/lib/player'
 import { getPlayer, getPlayerStats, getStorico, type PartitaGiocata, type PlayerStats } from '@/lib/matches'
 import { formatData } from '@/lib/dates'
 import { caricaFoto } from '@/app/actions'
@@ -28,10 +28,11 @@ async function Profilo({ params }: { params: Promise<{ id: string }> }) {
   const [stats, storico] = await Promise.all([getPlayerStats(id, me.lega._id), getStorico(id)])
 
   const fullName = [player.nome, player.cognome].filter(Boolean).join(' ')
-  const canEdit = canEditPlayers(me)
+  // Modifica, foto e unione dei doppioni: solo per gli organizzatori.
+  const canEdit = !!me.isAdmin
   const mio = me._id === player._id
   const ruoli = [
-    player.isAdmin ? 'organizzatore' : player.puoModificareGiocatori && 'valutatore',
+    player.isAdmin && 'organizzatore',
     !player.isAdmin && player.puoInserireRisultati && 'refertatore',
   ]
 

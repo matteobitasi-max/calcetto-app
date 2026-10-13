@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation'
 import { Suspense } from 'react'
-import { salvaGiocatore, salvaValutazione } from '@/app/actions'
+import { salvaGiocatore } from '@/app/actions'
 import { displayName, requireIn } from '@/lib/player'
 import { getPlayer } from '@/lib/matches'
 import { Loading, PageTitle } from '@/components/ui'
@@ -18,15 +18,11 @@ async function Form({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const player = await getPlayer(id)
   if (!player) notFound()
-  const me = await requireIn(player.legaId, 'valutatore')
+  await requireIn(player.legaId, 'organizzatore')
   return (
     <>
       <PageTitle>Modifica {displayName(player)}</PageTitle>
-      {me.isAdmin ? (
-        <PlayerForm action={salvaGiocatore.bind(null, player._id)} player={player} submitLabel="Salva" />
-      ) : (
-        <PlayerForm action={salvaValutazione.bind(null, player._id)} player={player} submitLabel="Salva" limited />
-      )}
+      <PlayerForm action={salvaGiocatore.bind(null, player._id)} player={player} submitLabel="Salva" />
     </>
   )
 }

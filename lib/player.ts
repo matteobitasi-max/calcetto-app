@@ -4,7 +4,7 @@ import { cookies } from 'next/headers'
 import { currentUser } from '@clerk/nextjs/server'
 import { redirect } from 'next/navigation'
 import { sanity } from './sanity'
-import { canEditPlayers, canEnterResults, playerFields, type Lega, type Player } from './roster'
+import { canEnterResults, playerFields, type Lega, type Player } from './roster'
 
 export * from './roster'
 
@@ -67,11 +67,10 @@ export async function membroDi(legaId: string | null | undefined) {
   return (await getMemberships()).find((m) => m.lega._id === legaId) ?? null
 }
 
-type Permesso = 'giocatore' | 'organizzatore' | 'valutatore' | 'refertatore'
+type Permesso = 'giocatore' | 'organizzatore' | 'refertatore'
 
 function controlla(m: Membro, permesso: Permesso) {
   if (permesso === 'organizzatore' && !m.isAdmin) throw new Error('Solo gli organizzatori possono farlo')
-  if (permesso === 'valutatore' && !canEditPlayers(m)) throw new Error('Non hai il permesso di modificare i giocatori')
   if (permesso === 'refertatore' && !canEnterResults(m)) throw new Error('Non hai il permesso di inserire i risultati')
   return m
 }

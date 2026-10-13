@@ -60,7 +60,6 @@ export type Player = {
   badge?: Badge
   notifiche?: Partial<Record<CategoriaNotifica, boolean>>
   isAdmin?: boolean
-  puoModificareGiocatori?: boolean
   puoInserireRisultati?: boolean
   attivo?: boolean
   /** Ha già fatto l'accesso (la scheda è collegata a un account). */
@@ -68,10 +67,8 @@ export type Player = {
   caratteristiche?: Partial<Record<Skill, number>>
 }
 
-export const playerFields = `_id, "legaId": lega._ref, nome, cognome, soprannome, email, telefono, foto, ruolo, piede, badge, notifiche, isAdmin, puoModificareGiocatori, puoInserireRisultati, attivo, "collegato": defined(clerkUserId), caratteristiche`
+export const playerFields = `_id, "legaId": lega._ref, nome, cognome, soprannome, email, telefono, foto, ruolo, piede, badge, notifiche, isAdmin, puoInserireRisultati, attivo, "collegato": defined(clerkUserId), caratteristiche`
 
-// Chi può cambiare caratteristiche e foto dei giocatori.
-export const canEditPlayers = (p: Pick<Player, 'isAdmin' | 'puoModificareGiocatori'>) => !!(p.isAdmin || p.puoModificareGiocatori)
 
 // Chi può segnare risultato, marcatori e MVP.
 export const canEnterResults = (p: Pick<Player, 'isAdmin' | 'puoInserireRisultati'>) => !!(p.isAdmin || p.puoInserireRisultati)

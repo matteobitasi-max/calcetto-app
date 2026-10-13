@@ -61,14 +61,6 @@ export const player = defineType({
       initialValue: false,
     }),
     defineField({
-      name: 'puoModificareGiocatori',
-      title: 'Può modificare caratteristiche e foto',
-      description: 'Può cambiare i valori e la foto di tutti i giocatori, ma non il resto',
-      type: 'boolean',
-      fieldset: 'accesso',
-      initialValue: false,
-    }),
-    defineField({
       name: 'puoInserireRisultati',
       title: 'Può inserire i risultati',
       description: 'Può segnare risultato, marcatori e MVP a fine partita',

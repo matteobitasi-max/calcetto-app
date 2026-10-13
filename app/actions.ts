@@ -451,26 +451,12 @@ const caratteristicheFromForm = (formData: FormData) =>
 
 // Cambio rapido della foto cliccando sull'avatar.
 export async function caricaFoto(playerId: string, _prev: FormState, formData: FormData): Promise<FormState> {
-  await requireForDoc(playerId, 'valutatore')
+  await requireForDoc(playerId, 'organizzatore')
   const upload = await uploadFoto(formData.get('foto'))
   if (!upload) return { error: 'Nessuna foto selezionata.' }
   if ('error' in upload) return upload
   await sanity.patch(playerId).set({ foto: upload.foto }).commit()
   refresh()
-}
-
-// Chi ha solo il permesso "modifica giocatori" può cambiare caratteristiche e foto.
-export async function salvaValutazione(playerId: string, _prev: FormState, formData: FormData): Promise<FormState> {
-  await requireForDoc(playerId, 'valutatore')
-  const upload = await uploadFoto(formData.get('foto'))
-  if (upload && 'error' in upload) return upload
-  const badge = badgeFromForm(formData)
-  const patch = sanity.patch(playerId).set({ caratteristiche: caratteristicheFromForm(formData), ...(badge && { badge }) })
-  if (!badge) patch.unset(['badge'])
-  if (upload) patch.set({ foto: upload.foto })
-  else if (formData.get('rimuoviFoto') === 'on') patch.unset(['foto'])
-  await patch.commit()
-  redirect(`/giocatori/${playerId}`)
 }
 
 export async function salvaGiocatore(playerId: string | null, _prev: FormState, formData: FormData): Promise<FormState> {
@@ -510,7 +496,6 @@ export async function salvaGiocatore(playerId: string | null, _prev: FormState, 
     nome,
     // Un organizzatore non può togliersi da solo i permessi e restare chiuso fuori.
     isAdmin: playerId === admin._id || formData.get('isAdmin') === 'on',
-    puoModificareGiocatori: formData.get('puoModificareGiocatori') === 'on',
     puoInserireRisultati: formData.get('puoInserireRisultati') === 'on',
     attivo: formData.get('attivo') === 'on',
     caratteristiche: caratteristicheFromForm(formData),

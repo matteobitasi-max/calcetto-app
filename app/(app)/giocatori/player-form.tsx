@@ -11,13 +11,10 @@ export function PlayerForm({
   action,
   player,
   submitLabel,
-  limited = false,
 }: {
   action: (prev: FormState, fd: FormData) => Promise<FormState>
   player?: Player
   submitLabel: string
-  /** Solo foto e caratteristiche, per chi non è organizzatore. */
-  limited?: boolean
 }) {
   return (
     <ActionForm action={action} className="space-y-4">
@@ -33,82 +30,69 @@ export function PlayerForm({
             ))}
           </select>
         </Field>
-        {!limited && (
-          <>
-            <div className="grid grid-cols-2 gap-4">
-              <Field label="Nome">
-                <input name="nome" required defaultValue={player?.nome} className={inputClass} />
-              </Field>
-              <Field label="Cognome">
-                <input name="cognome" defaultValue={player?.cognome} className={inputClass} />
-              </Field>
-            </div>
-            <Field label="Soprannome">
-              <input name="soprannome" defaultValue={player?.soprannome} className={inputClass} />
+        <div className="grid grid-cols-2 gap-4">
+          <Field label="Nome">
+            <input name="nome" required defaultValue={player?.nome} className={inputClass} />
+          </Field>
+          <Field label="Cognome">
+            <input name="cognome" defaultValue={player?.cognome} className={inputClass} />
+          </Field>
+        </div>
+        <Field label="Soprannome">
+          <input name="soprannome" defaultValue={player?.soprannome} className={inputClass} />
+        </Field>
+        <div className="space-y-1">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="Email">
+              <input name="email" type="email" defaultValue={player?.email} placeholder="mario@gmail.com" className={inputClass} />
             </Field>
-            <div className="space-y-1">
-              <div className="grid gap-4 sm:grid-cols-2">
-                <Field label="Email">
-                  <input name="email" type="email" defaultValue={player?.email} placeholder="mario@gmail.com" className={inputClass} />
-                </Field>
-                <Field label="oppure Telefono">
-                  <input name="telefono" type="tel" inputMode="tel" defaultValue={player?.telefono} placeholder="333 1234567" className={inputClass} />
-                </Field>
-              </div>
-              <p className="text-xs text-zinc-500">Basta uno dei due: quando fa l&apos;accesso con quell&apos;email o quel numero, la scheda si collega da sola.</p>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <Field label="Ruolo">
-                <select name="ruolo" defaultValue={player?.ruolo ?? ''} className={`${inputClass} capitalize`}>
-                  <option value="">—</option>
-                  {RUOLI.map((r) => (
-                    <option key={r} value={r}>
-                      {r}
-                    </option>
-                  ))}
-                </select>
-              </Field>
-              <Field label="Piede">
-                <select name="piede" defaultValue={player?.piede ?? ''} className={`${inputClass} capitalize`}>
-                  <option value="">—</option>
-                  {PIEDI.map((p) => (
-                    <option key={p} value={p}>
-                      {p}
-                    </option>
-                  ))}
-                </select>
-              </Field>
-            </div>
-            <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm">
-              <label className="flex items-center gap-2">
-                <input type="checkbox" name="attivo" defaultChecked={player?.attivo !== false} className="accent-green-600" />
-                Attivo
-              </label>
-              <label className="flex items-center gap-2">
-                <input type="checkbox" name="isAdmin" defaultChecked={!!player?.isAdmin} className="accent-green-600" />
-                Organizzatore
-              </label>
-              <label className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  name="puoModificareGiocatori"
-                  defaultChecked={!!player?.puoModificareGiocatori}
-                  className="accent-green-600"
-                />
-                Può modificare caratteristiche e foto
-              </label>
-              <label className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  name="puoInserireRisultati"
-                  defaultChecked={!!player?.puoInserireRisultati}
-                  className="accent-green-600"
-                />
-                Può inserire i risultati
-              </label>
-            </div>
-          </>
-        )}
+            <Field label="oppure Telefono">
+              <input name="telefono" type="tel" inputMode="tel" defaultValue={player?.telefono} placeholder="333 1234567" className={inputClass} />
+            </Field>
+          </div>
+          <p className="text-xs text-zinc-500">Basta uno dei due: quando fa l&apos;accesso con quell&apos;email o quel numero, la scheda si collega da sola.</p>
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          <Field label="Ruolo">
+            <select name="ruolo" defaultValue={player?.ruolo ?? ''} className={`${inputClass} capitalize`}>
+              <option value="">—</option>
+              {RUOLI.map((r) => (
+                <option key={r} value={r}>
+                  {r}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <Field label="Piede">
+            <select name="piede" defaultValue={player?.piede ?? ''} className={`${inputClass} capitalize`}>
+              <option value="">—</option>
+              {PIEDI.map((p) => (
+                <option key={p} value={p}>
+                  {p}
+                </option>
+              ))}
+            </select>
+          </Field>
+        </div>
+        <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm">
+          <label className="flex items-center gap-2">
+            <input type="checkbox" name="attivo" defaultChecked={player?.attivo !== false} className="accent-green-600" />
+            Attivo
+          </label>
+          <label className="flex items-center gap-2">
+            <input type="checkbox" name="isAdmin" defaultChecked={!!player?.isAdmin} className="accent-green-600" />
+            Organizzatore
+          </label>
+          <label className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              name="puoInserireRisultati"
+              defaultChecked={!!player?.puoInserireRisultati}
+              className="accent-green-600"
+            />
+            Può inserire i risultati
+          </label>
+        </div>
       </Card>
 
       <Card className="space-y-3">

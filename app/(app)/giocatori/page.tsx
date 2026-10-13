@@ -34,7 +34,6 @@ async function Rosa() {
                     <span title="Organizzatore">👑</span>
                   ) : (
                     <span>
-                      {p.puoModificareGiocatori && <span title="Può modificare caratteristiche e foto">✏️</span>}
                       {p.puoInserireRisultati && <span title="Può inserire i risultati">📝</span>}
                     </span>
                   )
