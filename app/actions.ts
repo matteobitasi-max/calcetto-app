@@ -670,6 +670,24 @@ export async function uniscitiConCodice(_prev: FormState, formData: FormData): P
   await uniscitiConInvito(codice)
 }
 
+// Super admin: il titolare dell'app entra come giocatore (e organizzatore) in una lega non sua.
+export async function aggiungimiAllaLega(legaId: string) {
+  const utente = await getUtente()
+  if (!utente || !(await isTitolare())) throw new Error('Solo il titolare dell\u2019app può farlo')
+  const lega = await sanity.fetch<string | null>(`*[_type == "league" && _id == $legaId][0]._id`, { legaId })
+  if (!lega) throw new Error('Lega non trovata')
+  if (!(await getMemberships()).some((m) => m.lega._id === legaId)) {
+    const vecchia = await sanity.fetch<string | null>(`*[_type == "player" && lega._ref == $lega && clerkUserId == $id][0]._id`, {
+      lega: legaId,
+      id: utente.id,
+    })
+    if (vecchia) await sanity.patch(vecchia).set({ attivo: true, isAdmin: true }).commit()
+    else await nuovaScheda(legaId, utente, true)
+  }
+  await attivaLega(legaId)
+  redirect('/')
+}
+
 // Cambia la lega attiva su questo dispositivo.
 export async function scegliLega(legaId: string, vai = '/') {
   if (!(await membroDi(legaId))) throw new Error('Non fai parte di questa lega')
@@ -938,12 +956,23 @@ export async function eliminaAccount(): Promise<FormState> {
     }`,
     { id: utente.id },
   )
-  const bloccanti = schede.filter((s) => s.isAdmin && s.altriAdmin === 0 && s.altriMembri > 0).map((s) => s.lega)
-  if (bloccanti.length) {
-    return { error: `Sei l'unico organizzatore di ${bloccanti.join(', ')}: prima nomina un altro organizzatore (Modifica giocatore → Organizzatore).` }
+  const tx = sanity.transaction()
+
+  // Se ero l'unico organizzatore di una lega con altri giocatori, ne diventa organizzatore uno a caso
+  // della rosa (prima chi usa già l'app), che riceve una notifica.
+  const nuoviOrganizzatori: { id: string; lega: string }[] = []
+  for (const s of schede.filter((s) => s.isAdmin && s.altriAdmin === 0 && s.altriMembri > 0)) {
+    const candidati = await sanity.fetch<{ _id: string; collegato: boolean }[]>(
+      `*[_type == "player" && lega._ref == $lega && _id != $me && attivo != false]{_id, "collegato": defined(clerkUserId)}`,
+      { lega: s.legaId, me: s._id },
+    )
+    const collegati = candidati.filter((c) => c.collegato)
+    const tra = collegati.length ? collegati : candidati
+    const scelto = tra[randomInt(tra.length)]
+    tx.patch(scelto._id, (p) => p.set({ isAdmin: true }))
+    nuoviOrganizzatori.push({ id: scelto._id, lega: s.lega })
   }
 
-  const tx = sanity.transaction()
   for (const s of schede) {
     tx.patch(s._id, (p) =>
       p
@@ -954,6 +983,15 @@ export async function eliminaAccount(): Promise<FormState> {
   const iscrizioni = await sanity.fetch<string[]>(`*[_type == "pushSubscription" && clerkUserId == $id]._id`, { id: utente.id })
   for (const id of iscrizioni) tx.delete(id)
   await tx.commit()
+
+  for (const n of nuoviOrganizzatori) {
+    await inviaAGiocatori([n.id], {
+      title: `👑 Sei il nuovo organizzatore di ${n.lega}`,
+      body: 'L\u2019organizzatore ha lasciato l\u2019app: ora gestisci tu partite, squadre e inviti.',
+      url: '/',
+      tag: `nuovo-organizzatore-${n.id}`,
+    }).catch(() => undefined)
+  }
 
   const { clerkClient } = await import('@clerk/nextjs/server')
   await (await clerkClient()).users.deleteUser(utente.id)

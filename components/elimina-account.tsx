@@ -10,7 +10,7 @@ export function EliminaAccount() {
     <form
       action={elimina}
       onSubmit={(e) => {
-        if (!window.confirm("Eliminare il tuo account? Verranno cancellati accesso, foto e dati personali in tutte le leghe. Non si torna indietro.")) {
+        if (!window.confirm("Eliminare il tuo account? Verranno cancellati accesso, foto e dati personali in tutte le leghe. Se sei l'unico organizzatore di una lega, un altro giocatore della rosa diventerà organizzatore. Non si torna indietro.")) {
           e.preventDefault()
         }
       }}
