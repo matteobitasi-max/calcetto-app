@@ -31,7 +31,7 @@ export default function PrivacyPage() {
           <b>Notifiche</b>: un identificativo tecnico del dispositivo, se attivi le notifiche, e le tue preferenze sulle notifiche.
         </li>
         <li>
-          <b>Km percorsi</b>: i km di ogni partita, visibili ai membri della lega. Li scrivi tu oppure, solo se lo scegli, li prendiamo
+          <b>Km percorsi</b>: i km di ogni partita, visibili ai membri della lega. Solo se lo scegli, li prendiamo
           da <b>Apple Salute</b> (la distanza camminata/corsa registrata durante l&apos;orario della partita, nient&apos;altro; i dati di
           Salute non vengono usati per pubblicità né venduti) o da <b>Strava</b> (la distanza dell&apos;attività fatta durante la partita).
           Per Strava conserviamo il collegamento al tuo account, che puoi togliere quando vuoi da &ldquo;Il mio account&rdquo;.

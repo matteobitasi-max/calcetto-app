@@ -846,7 +846,7 @@ export async function sollecitaPagamenti(matchId: string): Promise<AvvisoState> 
   })
 }
 
-// ---------- Km percorsi (a mano, da Strava o da Apple Salute) ----------
+// ---------- Km percorsi (da Apple Salute o da Strava) ----------
 
 // I km si aggiungono a partita finita, solo da chi era in lista.
 async function partitaPerKm(matchId: string) {
@@ -869,9 +869,11 @@ async function scriviKm(matchId: string, playerId: string, km: number | null, fo
   refresh()
 }
 
-export async function salvaKm(matchId: string, km: number, fonte: 'salute' | 'manuale'): Promise<{ error?: string }> {
+// Km letti da Apple Salute nell'app per iPhone (non si inseriscono a mano).
+export async function salvaKm(matchId: string, km: number, fonte: 'salute'): Promise<{ error?: string }> {
   const { me } = await partitaPerKm(matchId)
-  if (!Number.isFinite(km) || km <= 0 || km > 30) return { error: 'Inserisci un numero di km valido (es. 5,2).' }
+  if (fonte !== 'salute') return { error: 'I km si prendono da Apple Salute.' }
+  if (!Number.isFinite(km) || km <= 0 || km > 30) return { error: 'Da Apple Salute arriva una distanza non valida.' }
   await scriviKm(matchId, me._id, Math.round(km * 100) / 100, fonte)
   return {}
 }

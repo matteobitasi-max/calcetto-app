@@ -13,7 +13,8 @@ const DOPO_STRAVA = 'km-dopo-strava'
 const FONTI: Record<string, string> = { strava: 'da Strava', salute: 'da Apple Salute', manuale: 'inseriti a mano' }
 const formatoKm = (km: number) => km.toLocaleString('it-IT', { maximumFractionDigits: 2 })
 
-// "I tuoi km" nella partita finita: da Apple Salute (iPhone), da Strava o scritti a mano.
+// "I tuoi km" nella partita finita: da Apple Salute (app per iPhone) o da Strava (se attivo).
+// Dove nessuno dei due è disponibile e non ci sono km, non mostra niente.
 export function KmPartita({
   matchId,
   miei,
@@ -31,7 +32,6 @@ export function KmPartita({
 }) {
   const [pending, startTransition] = useTransition()
   const [messaggio, setMessaggio] = useState<{ testo: string; errore?: boolean } | null>(null)
-  const [aMano, setAMano] = useState('')
   const [salute, setSalute] = useState(false)
 
   const daStrava = () =>
@@ -83,15 +83,7 @@ export function KmPartita({
       }
     })
 
-  const salvaAMano = () =>
-    startTransition(async () => {
-      const r = await salvaKm(matchId, Number(aMano.replace(',', '.')), 'manuale')
-      if (r.error) setMessaggio({ testo: r.error, errore: true })
-      else {
-        setAMano('')
-        setMessaggio(null)
-      }
-    })
+  if (!miei && !salute && !stravaAttivo) return null
 
   const pulsante = 'inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold disabled:opacity-50'
 
@@ -107,7 +99,7 @@ export function KmPartita({
           </button>
         </p>
       ) : (
-        <p className="text-sm text-zinc-500">Aggiungi quanti km hai corso: compaiono nella partita e nella classifica.</p>
+        <p className="text-sm text-zinc-500">Prendi i km che hai corso: compaiono nella partita e nella classifica.</p>
       )}
 
       <div className="flex flex-wrap gap-2">
@@ -126,24 +118,6 @@ export function KmPartita({
             {stravaCollegato ? `${miei ? 'Aggiorna' : 'Prendi'} da Strava` : 'Collega Strava'}
           </button>
         )}
-      </div>
-
-      <div className="flex items-center gap-2">
-        <input
-          inputMode="decimal"
-          placeholder="oppure scrivili: es. 5,2"
-          value={aMano}
-          onChange={(e) => setAMano(e.target.value)}
-          className="w-44 rounded-lg border border-zinc-300 bg-white px-3 py-2 text-base sm:text-sm dark:border-zinc-700 dark:bg-zinc-900"
-        />
-        <button
-          type="button"
-          disabled={pending || !aMano.trim()}
-          onClick={salvaAMano}
-          className={`${pulsante} bg-zinc-100 text-zinc-800 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-100`}
-        >
-          Salva
-        </button>
       </div>
 
       {pending && <p className="text-sm text-zinc-500">…</p>}

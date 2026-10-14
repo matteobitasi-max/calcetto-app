@@ -349,7 +349,7 @@ async function KmCard({ match, me, rosa }: { match: Match; me: Membro; rosa: Pla
   const classifica = [...match.distanze].sort((a, b) => b.km - a.km)
 
   return (
-    <Card className="space-y-4">
+    <Card className="space-y-4 empty:hidden">
       {mostroMiei && (
         <KmPartita
           matchId={match._id}
