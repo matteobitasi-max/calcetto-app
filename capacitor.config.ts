@@ -16,6 +16,8 @@ const config: CapacitorConfig = {
   webDir: 'capacitor/www',
   server: {
     url,
+    // senza internet il sito non si carica: si mostra questa pagina salvata nell'app
+    errorPath: 'offline.html',
     cleartext: url.startsWith('http://'),
     // Il login di Clerk passa dai suoi domini: devono restare dentro l'app,
     // altrimenti vengono aperti nel browser esterno e la sessione si perde.

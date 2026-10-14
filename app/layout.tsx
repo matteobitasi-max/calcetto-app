@@ -4,6 +4,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { IndietroAndroid } from "@/components/indietro-android";
 import { SwipeIndietro } from "@/components/swipe-indietro";
 import { RitornoAccesso } from "@/components/accesso-nativo";
+import { SenzaConnessione } from "@/components/senza-connessione";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -52,6 +53,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           <IndietroAndroid />
           <SwipeIndietro />
           <RitornoAccesso />
+          <SenzaConnessione />
           {children}
         </body>
       </html>
