@@ -6,6 +6,7 @@ import type { Risposta, Stato } from '@/lib/matches'
 import { finestra } from '@/lib/finestra'
 import { avatarUrl, immagineUrl } from '@/lib/image'
 import { FotoZoom } from './foto-zoom'
+import { Medaglia } from './medaglia'
 import { buttonClass, inputClass } from './ui-classes'
 
 export { buttonClass, inputClass }
@@ -130,12 +131,19 @@ function FasciaCapitano() {
   )
 }
 
+// Il badge del giocatore: toccandolo si apre la spiegazione.
 export function PlayerBadge({ badge }: { badge?: Badge }) {
   if (!badge || !BADGE[badge]) return null
+  const simbolo = badge === 'capitano' ? <FasciaCapitano /> : BADGE[badge].emoji
   return (
-    <span className={`inline-flex shrink-0 items-center gap-1 rounded-full px-1.5 py-0.5 text-[11px] font-semibold ring-1 ${STILE_BADGE[badge]}`}>
-      {badge === 'capitano' ? <FasciaCapitano /> : BADGE[badge].emoji} {BADGE[badge].label}
-    </span>
+    <Medaglia
+      emoji={badge === 'capitano' ? <span className="inline-block scale-[2.5] py-3"><FasciaCapitano /></span> : simbolo}
+      titolo={BADGE[badge].label}
+      testo={BADGE[badge].descrizione}
+      className={`inline-flex shrink-0 items-center gap-1 rounded-full px-1.5 py-0.5 text-[11px] font-semibold ring-1 ${STILE_BADGE[badge]}`}
+    >
+      {simbolo} {BADGE[badge].label}
+    </Medaglia>
   )
 }
 

@@ -4,6 +4,8 @@ import { SignOutButton } from '@clerk/nextjs'
 import { displayName, eta, membroDi } from '@/lib/player'
 import { getKmTotali, getPartitePunteggio, getPlayer, getPlayerStats, getStorico, type PartitaGiocata, type PlayerStats } from '@/lib/matches'
 import { classifica } from '@/lib/punteggio'
+import { TROFEI, trofeiLega, type IdTrofeo } from '@/lib/trofei'
+import { Medaglia } from '@/components/medaglia'
 import { formatData } from '@/lib/dates'
 import { immagineUrl } from '@/lib/image'
 import { caricaFoto } from '@/app/actions'
@@ -19,12 +21,14 @@ export async function ProfiloGiocatore({ id }: { id: string }) {
   // Le schede si vedono solo tra membri della stessa lega.
   const me = await membroDi(player?.legaId)
   if (!player || !me) notFound()
-  const [stats, storico, partite, kmTotali] = await Promise.all([
+  const [stats, storico, partite, kmTotali, trofeiTutti] = await Promise.all([
     getPlayerStats(id, me.lega._id),
     getStorico(id),
     getPartitePunteggio(me.lega._id),
     getKmTotali(me.lega._id),
+    trofeiLega(me.lega._id),
   ])
+  const trofei = trofeiTutti.get(id) ?? {}
   const inClassifica = classifica(partite).find((r) => r.id === player._id)
 
   const fullName = [player.nome, player.cognome].filter(Boolean).join(' ')
@@ -61,7 +65,15 @@ export async function ProfiloGiocatore({ id }: { id: string }) {
           <div className="min-w-0 flex-1 space-y-1">
             <h1 className="break-words text-xl font-bold leading-tight">{displayName(player)}</h1>
             {player.soprannome && <p className="text-sm text-zinc-500">{fullName}</p>}
-            <PlayerBadge badge={player.badge} />
+            <div className="flex flex-wrap items-center gap-1.5">
+              <PlayerBadge badge={player.badge} />
+              {/* i trofei sbloccati, accanto al badge: toccandoli si vede cosa sono */}
+              {(Object.keys(TROFEI) as IdTrofeo[])
+                .filter((t) => trofei[t])
+                .map((t) => (
+                  <Trofeo key={t} id={t} sbloccato={trofei[t]} piccolo />
+                ))}
+            </div>
             <p className="text-sm leading-snug text-zinc-500 first-letter:uppercase">
               {[player.ruolo, player.piede && `piede ${player.piede}`, player.dataNascita && `${eta(player.dataNascita)} anni`, ...ruoli, player.attivo === false && 'non attivo']
                 .filter(Boolean)
@@ -90,6 +102,18 @@ export async function ProfiloGiocatore({ id }: { id: string }) {
       </Card>
 
       <Statistiche stats={stats} km={kmTotali.get(id)} />
+
+      <Card>
+        <h2 className="mb-1 font-semibold">🏅 Trofei</h2>
+        <p className="mb-3 text-xs text-zinc-500">
+          {Object.keys(trofei).length} su {Object.keys(TROFEI).length} sbloccati · tocca un trofeo per sapere cos&apos;è
+        </p>
+        <div className="grid grid-cols-3 gap-2">
+          {(Object.keys(TROFEI) as IdTrofeo[]).map((t) => (
+            <Trofeo key={t} id={t} sbloccato={trofei[t]} />
+          ))}
+        </div>
+      </Card>
 
       <Card>
         <h2 className="mb-3 font-semibold">Caratteristiche</h2>
@@ -246,5 +270,36 @@ function Storico({ partite, mio }: { partite: PartitaGiocata[]; mio: boolean }) 
         })}
       </ul>
     </Card>
+  )
+}
+
+// Un trofeo: sbloccato a colori (con quante volte), da sbloccare in grigio. Toccandolo si apre la spiegazione.
+function Trofeo({ id, sbloccato, piccolo = false }: { id: IdTrofeo; sbloccato?: { il: string; volte: number }; piccolo?: boolean }) {
+  const t = TROFEI[id]
+  const dettaglio = sbloccato
+    ? `Sbloccato il ${formatData(sbloccato.il, { day: 'numeric', month: 'long', year: 'numeric' })}${sbloccato.volte > 1 ? ` · ${sbloccato.volte} volte` : ''}`
+    : '🔒 Ancora da sbloccare'
+  if (piccolo) {
+    return (
+      <Medaglia emoji={t.emoji} titolo={t.nome} testo={t.descrizione} dettaglio={dettaglio} className="text-lg leading-none">
+        {t.emoji}
+        {sbloccato && sbloccato.volte > 1 && <sub className="text-[10px] font-semibold text-zinc-500">{sbloccato.volte}</sub>}
+      </Medaglia>
+    )
+  }
+  return (
+    <Medaglia
+      emoji={t.emoji}
+      titolo={t.nome}
+      testo={t.descrizione}
+      dettaglio={dettaglio}
+      className={`flex flex-col items-center gap-1 rounded-xl p-2 text-center ${
+        sbloccato ? 'bg-amber-50 ring-1 ring-amber-300 dark:bg-amber-950/40 dark:ring-amber-700' : 'bg-zinc-50 opacity-50 grayscale dark:bg-zinc-950'
+      }`}
+    >
+      <span className="text-3xl">{t.emoji}</span>
+      <span className="text-xs font-semibold leading-tight">{t.nome}</span>
+      {sbloccato && sbloccato.volte > 1 && <span className="text-[11px] text-zinc-500">×{sbloccato.volte}</span>}
+    </Medaglia>
   )
 }
