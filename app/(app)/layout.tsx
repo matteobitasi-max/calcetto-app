@@ -15,7 +15,7 @@ import { ScuotiFoto } from '@/components/scuoti-foto'
 
 export default function AppLayout({ children }: LayoutProps<'/'>) {
   return (
-    <div className="flex min-h-full flex-1 flex-col bg-zinc-50 dark:bg-zinc-950">
+    <div className="campo flex min-h-full flex-1 flex-col">
       <header className="sticky top-0 z-10 border-b border-zinc-200 bg-white/90 pt-[var(--safe-area-inset-top,env(safe-area-inset-top))] backdrop-blur dark:border-zinc-800 dark:bg-zinc-900/90">
         <div className="mx-auto max-w-2xl px-4">
           <div className="flex items-center gap-3 py-2">

@@ -42,3 +42,27 @@ body {
     font-size: 16px !important;
   }
 }
+
+/* Sfondo delle schermate dell'app: erba a strisce come un campo da calcio, tenue.
+   Le strisce stanno ferme mentre la pagina scorre (livello fisso dietro i contenuti:
+   su iPhone "background-attachment: fixed" non funziona). */
+.campo {
+  --erba-chiara: #eaf5ea;
+  --erba-scura: #e0efe0;
+  position: relative;
+  isolation: isolate;
+}
+.campo::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: repeating-linear-gradient(to bottom, var(--erba-chiara) 0 72px, var(--erba-scura) 72px 144px);
+}
+@media (prefers-color-scheme: dark) {
+  .campo {
+    --erba-chiara: #0d1910;
+    --erba-scura: #112015;
+  }
+}
