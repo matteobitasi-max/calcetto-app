@@ -125,7 +125,18 @@ export function PlayerBadge({ badge }: { badge?: Badge }) {
 }
 
 // mostraAccesso: nella rosa segnala chi non ha ancora fatto l'accesso all'app.
-export function PlayerRow({ player, right, mostraAccesso = false }: { player: Player; right?: ReactNode; mostraAccesso?: boolean }) {
+// `prima`: accanto al voto, a sinistra (es. gol e MVP), così i voti restano allineati a destra.
+export function PlayerRow({
+  player,
+  prima,
+  right,
+  mostraAccesso = false,
+}: {
+  player: Player
+  prima?: ReactNode
+  right?: ReactNode
+  mostraAccesso?: boolean
+}) {
   return (
     <div className="flex items-center gap-3">
       <Avatar player={player} />
@@ -142,6 +153,7 @@ export function PlayerRow({ player, right, mostraAccesso = false }: { player: Pl
           </div>
         )}
       </Link>
+      {prima}
       <Overall player={player} />
       {right}
     </div>

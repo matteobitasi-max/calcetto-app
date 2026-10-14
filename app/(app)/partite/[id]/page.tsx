@@ -89,7 +89,7 @@ async function MatchDetail({ params }: { params: Promise<{ id: string }> }) {
 
       <KmCard match={match} me={player} rosa={rosa} />
 
-      {player.isAdmin && <AdminPanel match={match} whatsappUrl={await whatsappUrl(match, player.lega.nome)} />}
+      {player.isAdmin && match.stato !== 'giocata' && <AdminPanel match={match} whatsappUrl={await whatsappUrl(match, player.lega.nome)} />}
 
       {match.squadraA.length + match.squadraB.length > 0 && (
         <Squadre match={match} mioId={player._id} />
@@ -228,10 +228,7 @@ function Squadre({ match, mioId }: { match: Match; mioId: string }) {
               <ul className="space-y-2">
                 {players.map((p) => (
                   <li key={p._id}>
-                    <PlayerRow
-                      player={p}
-                      right={<Prestazione match={match} playerId={p._id} />}
-                    />
+                    <PlayerRow player={p} prima={<Prestazione match={match} playerId={p._id} />} />
                   </li>
                 ))}
               </ul>
