@@ -56,7 +56,7 @@ export async function ProfiloGiocatore({ id }: { id: string }) {
             <h1 className="break-words text-xl font-bold leading-tight">{displayName(player)}</h1>
             {player.soprannome && <p className="text-sm text-zinc-500">{fullName}</p>}
             <PlayerBadge badge={player.badge} />
-            <p className="text-sm capitalize leading-snug text-zinc-500">
+            <p className="text-sm leading-snug text-zinc-500 first-letter:uppercase">
               {[player.ruolo, player.piede && `piede ${player.piede}`, player.dataNascita && `${eta(player.dataNascita)} anni`, ...ruoli, player.attivo === false && 'non attivo']
                 .filter(Boolean)
                 .join(' · ')}
