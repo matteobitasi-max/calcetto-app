@@ -2,6 +2,7 @@
 
 import { Capacitor } from '@capacitor/core'
 import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 
 const STRATTONE = 22 // variazione di accelerazione (m/s²) tra due letture per contare uno strattone
 const STRATTONI = 3 // strattoni ravvicinati che fanno una "scossa"
@@ -75,7 +76,9 @@ export function ScuotiFoto({ urls }: { urls: string[] }) {
   }, [chiave])
 
   if (!aperta) return null
-  return (
+  // Direttamente nel body: dentro l'intestazione (che ha la sfocatura) "fixed" resterebbe
+  // chiuso nell'intestazione invece di coprire tutto lo schermo.
+  return createPortal(
     <div
       role="dialog"
       aria-label="Foto sorpresa"
@@ -85,6 +88,7 @@ export function ScuotiFoto({ urls }: { urls: string[] }) {
       {/* eslint-disable-next-line @next/next/no-img-element -- immagine dal CDN di Sanity */}
       <img src={aperta} alt="Foto sorpresa" className="h-full w-full object-cover" />
       <span className="absolute inset-x-0 bottom-[max(1.5rem,env(safe-area-inset-bottom))] text-center text-sm text-white drop-shadow">Tocca per chiudere</span>
-    </div>
+    </div>,
+    document.body,
   )
 }
