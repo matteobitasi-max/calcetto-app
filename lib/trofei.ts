@@ -7,7 +7,6 @@ export const TROFEI = {
   presente: { emoji: '🔥', nome: 'Sempre presente', descrizione: 'Gioca 10 partite di fila della lega, senza saltarne una.' },
   peperone: { emoji: '🫑', nome: "Peperone d'oro", descrizione: 'Vinci il premio MVP 🫑 per 3 volte.' },
   maratoneta: { emoji: '🏃', nome: 'Maratoneta', descrizione: 'Corri più di 7 km in una partita (km presi da Apple Salute o Health Connect).' },
-  puntuale: { emoji: '💶', nome: 'Puntuale', descrizione: 'Paga la quota prima che la partita inizi.' },
   muro: { emoji: '🧱', nome: 'Muro', descrizione: 'Finisci una partita senza subire gol con la tua squadra.' },
 } as const
 export type IdTrofeo = keyof typeof TROFEI
@@ -23,7 +22,6 @@ type Giocata = {
   golB?: number
   marcatori?: { id: string; gol: number }[]
   mvp?: string
-  pagamenti?: { id: string; il?: string }[]
   distanze?: { id: string; km: number }[]
 }
 
@@ -32,7 +30,7 @@ export async function trofeiLega(legaId: string): Promise<Map<string, Sbloccati>
     `*[_type == "match" && lega._ref == $legaId && stato == "giocata" && defined(risultato.golA)] | order(data asc){
       data, "a": squadraA[]._ref, "b": squadraB[]._ref, "golA": risultato.golA, "golB": risultato.golB,
       "marcatori": marcatori[]{"id": giocatore._ref, gol}, "mvp": mvp._ref,
-      "pagamenti": pagamenti[]{"id": giocatore._ref, il}, "distanze": distanze[]{"id": giocatore._ref, km}
+      "distanze": distanze[]{"id": giocatore._ref, km}
     }`,
     { legaId },
   )
@@ -55,7 +53,6 @@ export async function trofeiLega(legaId: string): Promise<Map<string, Sbloccati>
       else if (n > 3 && n % 3 === 0) segna(p.mvp, 'peperone', p.data) // ogni 3 MVP un altro peperone
     }
     for (const d of p.distanze ?? []) if (d.km > 7) segna(d.id, 'maratoneta', p.data)
-    for (const pg of p.pagamenti ?? []) if (pg.il && pg.il < p.data && inCampo.has(pg.id)) segna(pg.id, 'puntuale', p.data)
     if (p.golB === 0) for (const id of p.a ?? []) segna(id, 'muro', p.data)
     if (p.golA === 0) for (const id of p.b ?? []) segna(id, 'muro', p.data)
     // presenze di fila: chi non ha giocato questa partita riparte da zero
