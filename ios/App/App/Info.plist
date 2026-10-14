@@ -76,5 +76,16 @@
 	<string>Per scattare la foto del profilo o il logo della lega.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Per scegliere la foto del profilo o il logo della lega dalla libreria.</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>com.matteobitasi.thecap</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>thecap</string>
+			</array>
+		</dict>
+	</array>
 </dict>
 </plist>
