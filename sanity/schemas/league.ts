@@ -32,6 +32,16 @@ export const league = defineType({
     }),
     // prima versione, con una sola foto: letta ancora insieme a fotoSorprese
     defineField({ name: 'fotoSorpresa', title: 'Foto sorpresa (vecchia)', type: 'image', hidden: true }),
+    defineField({
+      name: 'citta',
+      title: 'Città (per il meteo)',
+      type: 'object',
+      fields: [
+        defineField({ name: 'nome', type: 'string' }),
+        defineField({ name: 'lat', type: 'number' }),
+        defineField({ name: 'lon', type: 'number' }),
+      ],
+    }),
     defineField({ name: 'creataDa', title: 'Creata da (Clerk user ID)', type: 'string', readOnly: true }),
   ],
   preview: {

@@ -9,6 +9,7 @@ import { BADGE, CATEGORIE_NOTIFICHE, COOKIE_LEGA, eta, normalizzaTelefono, PIEDI
 import { assegnaPosti, finestra, getMatch, orarioPartita, presenti, risultatoDa, type FonteKm, type Match, type Risposta, type Stato } from '@/lib/matches'
 import { kmStrava, scollega, stravaConfigurato, urlCollegamento } from '@/lib/strava'
 import { baseUrl } from '@/lib/url'
+import { cercaCitta } from '@/lib/meteo'
 import { MAX_GIOCATORI, MAX_ISCRITTI, formatoDaIscritti } from '@/lib/limiti'
 import { riscriviPartita, type MatchDaUnire } from '@/lib/unisci'
 import { daysBetween, formatData, romeLocalToISO } from '@/lib/dates'
@@ -704,8 +705,14 @@ export async function salvaLega(legaId: string, _prev: FormState, formData: Form
   if (nome.length < 2 || nome.length > 40) return { error: 'Il nome deve avere tra 2 e 40 caratteri.' }
   const upload = await uploadFoto(formData.get('logo'))
   if (upload && 'error' in upload) return upload
-  const patch = sanity.patch(legaId).set({ nome, ...(upload && { logo: upload.foto }) })
+  // Città per il meteo delle partite: si cerca solo se è cambiata.
+  const cittaScritta = str(formData, 'citta')
+  const attuale = await sanity.fetch<string | null>(`*[_id == $legaId][0].citta.nome`, { legaId })
+  const citta = cittaScritta && cittaScritta !== attuale ? await cercaCitta(cittaScritta) : undefined
+  if (cittaScritta && cittaScritta !== attuale && !citta) return { error: `Non trovo la città “${cittaScritta}”: prova a scriverla in un altro modo.` }
+  const patch = sanity.patch(legaId).set({ nome, ...(upload && { logo: upload.foto }), ...(citta && { citta }) })
   if (!upload && formData.get('rimuoviFoto') === 'on') patch.unset(['logo'])
+  if (!cittaScritta) patch.unset(['citta'])
   await patch.commit()
   refresh()
   return {}

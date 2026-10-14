@@ -6,6 +6,7 @@ import { forza } from '@/lib/teams'
 import { finestra, formatoInCorso, getMatch, getPlayers, orarioPartita, ordinati, presenti, risultatoDa, type Match, type Risposta } from '@/lib/matches'
 import { getCollegamento, stravaConfigurato } from '@/lib/strava'
 import { KmPartita } from '@/components/km-partita'
+import { MeteoPartita } from '@/components/meteo-partita'
 import { formatData } from '@/lib/dates'
 import { aggiungiDaAttesa, allungaFinestra, apriConvocazioni, cambiaStato, scegliLega, rimettiInAttesa } from '@/app/actions'
 import { Countdown } from '@/components/countdown'
@@ -63,6 +64,11 @@ async function MatchDetail({ params }: { params: Promise<{ id: string }> }) {
           📍 {match.luogo}
           {match.quota != null && ` · ${match.quota} € a testa`}
         </p>
+        {match.stato !== 'giocata' && match.stato !== 'annullata' && (
+          <Suspense>
+            <MeteoPartita citta={player.lega.citta} data={match.data} />
+          </Suspense>
+        )}
         {match.note && <p className="whitespace-pre-line text-sm">{match.note}</p>}
         <FinestraInfo match={match} />
         {match.serieId && (

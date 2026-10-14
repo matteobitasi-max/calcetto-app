@@ -42,6 +42,9 @@ async function Impostazioni() {
           <Field label="Nome della lega">
             <input name="nome" required minLength={2} maxLength={40} defaultValue={lega.nome} className={inputClass} />
           </Field>
+          <Field label="Città (per il meteo delle partite)">
+            <input name="citta" maxLength={60} defaultValue={lega.citta?.nome ?? ''} placeholder="Es. Milano" className={inputClass} />
+          </Field>
           <PillSalva label="Salva nome e logo" />
         </ActionForm>
       </Card>

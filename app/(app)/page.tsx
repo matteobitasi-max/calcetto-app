@@ -12,6 +12,7 @@ import { Countdown } from '@/components/countdown'
 import { NotificheToggle } from '@/components/notifiche-toggle'
 import { RispostaButtons } from './partite/risposta-buttons'
 import { Tabellino } from './partite/tabellino'
+import { MeteoPartita } from '@/components/meteo-partita'
 
 export default function Home() {
   return (
@@ -45,7 +46,7 @@ async function Partite() {
 
       {/* In alto: la prossima partita con il conto alla rovescia delle convocazioni */}
       {prossima ? (
-        <ProssimaPartita match={prossima} player={player} />
+        <ProssimaPartita match={prossima} player={player} citta={player.lega.citta} />
       ) : (
         <Card className="text-center text-sm text-zinc-500">Nessuna partita in programma.</Card>
       )}
@@ -167,7 +168,15 @@ function ContoAllaRovescia({ match }: { match: Match }) {
   }
 }
 
-function ProssimaPartita({ match, player }: { match: Match; player: Player & { ospite?: boolean } }) {
+function ProssimaPartita({
+  match,
+  player,
+  citta,
+}: {
+  match: Match
+  player: Player & { ospite?: boolean }
+  citta?: { lat: number; lon: number }
+}) {
   const count = presenti(match).length
   const inAttesa = ordinati(match, 'riserva').length
   const formato = formatoInCorso(match)
@@ -185,6 +194,9 @@ function ProssimaPartita({ match, player }: { match: Match; player: Player & { o
             📍 {match.luogo}
             {match.quota != null && ` · ${match.quota} €`}
           </p>
+          <Suspense>
+            <MeteoPartita citta={citta} data={match.data} />
+          </Suspense>
         </Link>
 
         <ContoAllaRovescia match={match} />

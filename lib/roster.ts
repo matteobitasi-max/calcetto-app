@@ -43,7 +43,7 @@ export type CategoriaNotifica = keyof typeof CATEGORIE_NOTIFICHE
 
 export type SanityImage = { asset?: { _ref: string }; hotspot?: unknown; crop?: unknown }
 
-export type Lega = { _id: string; nome: string; logo?: SanityImage; codiceInvito?: string; satispayLink?: string; satispayQr?: SanityImage; fotoSorprese: (SanityImage & { _key: string })[] }
+export type Lega = { _id: string; nome: string; logo?: SanityImage; codiceInvito?: string; satispayLink?: string; satispayQr?: SanityImage; fotoSorprese: (SanityImage & { _key: string })[]; citta?: { nome: string; lat: number; lon: number } }
 
 export type Player = {
   _id: string
