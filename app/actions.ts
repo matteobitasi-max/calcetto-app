@@ -958,5 +958,5 @@ export async function eliminaAccount(): Promise<FormState> {
   const { clerkClient } = await import('@clerk/nextjs/server')
   await (await clerkClient()).users.deleteUser(utente.id)
   ;(await cookies()).delete(COOKIE_LEGA)
-  redirect('/sign-in')
+  redirect('/account-eliminato')
 }
