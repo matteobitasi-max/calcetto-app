@@ -184,9 +184,10 @@ function Gruppo({
               <PlayerRow
                 player={c.giocatore}
                 mio={c.giocatore?._id === mioId}
+                // pagamento a sinistra del voto: l'icona Satispay apre Satispay
+                prima={me && <PagamentoInLista match={match} me={me} playerId={c.giocatore._id} />}
                 right={
                   <>
-                    {me && <PagamentoInLista match={match} me={me} playerId={c.giocatore._id} />}
                     {c.aggiunto && risposta === 'presente' && (
                       <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-xs text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">aggiunto</span>
                     )}
