@@ -45,7 +45,7 @@ export function AccessoNativo() {
       <p className="text-sm text-zinc-500">
         {aperto
           ? 'Completa l’accesso nella finestra che si è aperta: poi torni qui da solo.'
-          : 'Con Google, Apple, email o telefono. Si apre una finestra sicura del browser.'}
+          : 'Con Google, Apple o email. Si apre una finestra sicura del browser.'}
       </p>
     </div>
   )
