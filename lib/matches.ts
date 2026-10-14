@@ -45,6 +45,16 @@ export type Match = {
   pagamenti: Pagamento[]
   pettorine?: 'A' | 'B'
   formazioniUfficialiIl?: string
+  distanze: Distanza[]
+}
+
+export type FonteKm = 'strava' | 'salute' | 'manuale'
+export type Distanza = { giocatoreId: string; km: number; fonte?: FonteKm }
+
+// Inizio e fine della partita (per cercare i km registrati in quell'orario).
+export const orarioPartita = (m: Pick<Match, 'data' | 'durataMinuti'>) => {
+  const inizio = new Date(m.data)
+  return { inizio, fine: new Date(inizio.getTime() + (m.durataMinuti ?? 60) * 60_000) }
 }
 
 export type Pagamento = { giocatoreId: string; stato: 'dichiarato' | 'confermato'; metodo?: 'satispay' | 'contanti'; il?: string }
@@ -60,7 +70,8 @@ const matchFields = `
   "marcatori": coalesce(marcatori[]{"giocatoreId": giocatore._ref, gol}, []),
   "mvpId": mvp._ref,
   "pagamenti": coalesce(pagamenti[]{"giocatoreId": giocatore._ref, stato, metodo, il}, []),
-  pettorine, formazioniUfficialiIl
+  pettorine, formazioniUfficialiIl,
+  "distanze": coalesce(distanze[]{"giocatoreId": giocatore._ref, km, fonte}, [])
 `
 
 export function getUpcomingMatches(legaId: string) {
@@ -218,4 +229,20 @@ export function formatoInCorso(m: Match) {
   if (!m.postiAutomatici || m.stato !== 'aperta') return null
   const iscritti = m.convocazioni.filter((c) => c.risposta !== 'assente' && c.giocatore).length
   return { iscritti, ...formatoDaIscritti(iscritti) }
+}
+
+// Km totali di ogni giocatore nelle partite giocate della lega.
+export async function getKmTotali(legaId: string) {
+  const partite = await sanity.fetch<{ d: { id: string; km: number }[] }[]>(
+    `*[_type == "match" && lega._ref == $legaId && stato == "giocata" && count(distanze) > 0]{"d": distanze[]{"id": giocatore._ref, km}}`,
+    { legaId },
+  )
+  const totali = new Map<string, { km: number; partite: number }>()
+  for (const { d } of partite) {
+    for (const { id, km } of d) {
+      const t = totali.get(id) ?? { km: 0, partite: 0 }
+      totali.set(id, { km: t.km + km, partite: t.partite + 1 })
+    }
+  }
+  return totali
 }

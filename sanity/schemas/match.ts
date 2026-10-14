@@ -228,6 +228,27 @@ export const match = defineType({
         }),
       ],
     }),
+    defineField({
+      name: 'distanze',
+      title: 'Km percorsi',
+      description: 'Inseriti da ogni giocatore, a mano o presi da Strava / Apple Salute',
+      type: 'array',
+      of: [
+        defineArrayMember({
+          type: 'object',
+          name: 'distanza',
+          fields: [
+            defineField({ name: 'giocatore', type: 'reference', to: [{ type: 'player' }], validation: (r) => r.required() }),
+            defineField({ name: 'km', type: 'number', validation: (r) => r.required().min(0) }),
+            defineField({ name: 'fonte', type: 'string', options: { list: ['strava', 'salute', 'manuale'] } }),
+          ],
+          preview: {
+            select: { nome: 'giocatore.nome', km: 'km', fonte: 'fonte' },
+            prepare: ({ nome, km, fonte }) => ({ title: `${nome} · ${km} km`, subtitle: fonte }),
+          },
+        }),
+      ],
+    }),
   ],
   orderings: [{ title: 'Data', name: 'dataDesc', by: [{ field: 'data', direction: 'desc' }] }],
   preview: {

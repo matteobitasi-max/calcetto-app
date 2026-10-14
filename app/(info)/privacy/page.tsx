@@ -31,6 +31,12 @@ export default function PrivacyPage() {
           <b>Notifiche</b>: un identificativo tecnico del dispositivo, se attivi le notifiche, e le tue preferenze sulle notifiche.
         </li>
         <li>
+          <b>Km percorsi</b>: i km di ogni partita, visibili ai membri della lega. Li scrivi tu oppure, solo se lo scegli, li prendiamo
+          da <b>Apple Salute</b> (la distanza camminata/corsa registrata durante l&apos;orario della partita, nient&apos;altro; i dati di
+          Salute non vengono usati per pubblicità né venduti) o da <b>Strava</b> (la distanza dell&apos;attività fatta durante la partita).
+          Per Strava conserviamo il collegamento al tuo account, che puoi togliere quando vuoi da &ldquo;Il mio account&rdquo;.
+        </li>
+        <li>
           <b>Cookie tecnici</b>: per mantenere l&apos;accesso e ricordare la lega attiva. Nessun cookie di profilazione o pubblicità.
         </li>
       </ul>
@@ -45,7 +51,8 @@ export default function PrivacyPage() {
       <ul>
         <li>
           <b>Clerk</b> (accesso e account) · <b>Sanity</b> (archivio dei dati) · <b>Vercel</b> (server dell&apos;app) ·{' '}
-          <b>Google Firebase</b> e i servizi di notifica di <b>Apple</b> e <b>Google</b> (notifiche).
+          <b>Google Firebase</b> e i servizi di notifica di <b>Apple</b> e <b>Google</b> (notifiche) · <b>Strava</b> (solo se lo
+          colleghi, per i km).
         </li>
         <li>Alcuni di questi fornitori possono trattare i dati fuori dall&apos;UE, con le garanzie previste dal GDPR.</li>
       </ul>

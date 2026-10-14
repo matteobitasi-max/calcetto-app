@@ -1,9 +1,11 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { Suspense } from 'react'
-import { canEnterResults, getCurrentPlayer, membroDi, type Membro, type Player } from '@/lib/player'
+import { canEnterResults, displayName, getCurrentPlayer, getUtente, membroDi, type Membro, type Player } from '@/lib/player'
 import { forza } from '@/lib/teams'
-import { finestra, formatoInCorso, getMatch, getPlayers, ordinati, presenti, risultatoDa, type Match, type Risposta } from '@/lib/matches'
+import { finestra, formatoInCorso, getMatch, getPlayers, orarioPartita, ordinati, presenti, risultatoDa, type Match, type Risposta } from '@/lib/matches'
+import { getCollegamento, stravaConfigurato } from '@/lib/strava'
+import { KmPartita } from '@/components/km-partita'
 import { formatData } from '@/lib/dates'
 import { aggiungiDaAttesa, allungaFinestra, apriConvocazioni, cambiaStato, scegliLega, rimettiInAttesa } from '@/app/actions'
 import { Countdown } from '@/components/countdown'
@@ -84,6 +86,8 @@ async function MatchDetail({ params }: { params: Promise<{ id: string }> }) {
       </Card>
 
       <MiaQuota match={match} me={player} />
+
+      <KmCard match={match} me={player} rosa={rosa} />
 
       {player.isAdmin && <AdminPanel match={match} whatsappUrl={await whatsappUrl(match, player.lega.nome)} />}
 
@@ -332,6 +336,49 @@ function AdminPanel({ match, whatsappUrl }: { match: Match; whatsappUrl: string 
           ? statoForm('aperta', 'Ripristina partita', 'secondary')
           : match.stato !== 'giocata' && statoForm('annullata', 'Annulla partita', 'danger', 'Annullare la partita?')}
       </div>
+    </Card>
+  )
+}
+
+// Km percorsi: i miei (da aggiungere a partita finita) e la classifica della partita.
+async function KmCard({ match, me, rosa }: { match: Match; me: Membro; rosa: Player[] }) {
+  const { inizio, fine } = orarioPartita(match)
+  const inLista = presenti(match).some((c) => c.giocatore._id === me._id)
+  const mostroMiei = match.stato !== 'annullata' && inLista && !me.ospite && new Date() >= fine
+  if (!mostroMiei && match.distanze.length === 0) return null
+  const utente = mostroMiei ? await getUtente() : null
+  const collegato = !!(utente && stravaConfigurato() && (await getCollegamento(utente.id)))
+  const nomi = new Map([...rosa, ...presenti(match).map((c) => c.giocatore)].map((p) => [p._id, displayName(p)]))
+  const classifica = [...match.distanze].sort((a, b) => b.km - a.km)
+
+  return (
+    <Card className="space-y-4">
+      {mostroMiei && (
+        <KmPartita
+          matchId={match._id}
+          miei={match.distanze.find((d) => d.giocatoreId === me._id)}
+          inizio={inizio.getTime()}
+          fine={fine.getTime()}
+          stravaAttivo={stravaConfigurato()}
+          stravaCollegato={collegato}
+        />
+      )}
+      {classifica.length > 0 && (
+        <div className={mostroMiei ? 'border-t border-zinc-200 pt-3 dark:border-zinc-800' : ''}>
+          <h2 className="mb-2 font-semibold">🏃 Km percorsi</h2>
+          <ol className="space-y-1 text-sm">
+            {classifica.map((d, i) => (
+              <li key={d.giocatoreId} className={`flex justify-between ${d.giocatoreId === me._id ? 'font-bold' : ''}`}>
+                <span>
+                  <span className="mr-2 tabular-nums text-zinc-400">{i + 1}</span>
+                  {nomi.get(d.giocatoreId) ?? 'Giocatore'}
+                </span>
+                <span className="tabular-nums">{d.km.toLocaleString('it-IT', { maximumFractionDigits: 2 })} km</span>
+              </li>
+            ))}
+          </ol>
+        </div>
+      )}
     </Card>
   )
 }

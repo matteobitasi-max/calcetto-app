@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { Suspense } from 'react'
 import { displayName, requirePlayer, type Player } from '@/lib/player'
-import { getAllStats, getPartitePunteggio, getPlayers, type PlayerStats } from '@/lib/matches'
+import { getAllStats, getKmTotali, getPartitePunteggio, getPlayers, type PlayerStats } from '@/lib/matches'
 import { PUNTI, classifica, type RigaClassifica } from '@/lib/punteggio'
 import { Avatar, Card, Loading, PageTitle, PlayerBadge } from '@/components/ui'
 
@@ -20,7 +20,12 @@ type Riga = { player: Player; s: PlayerStats }
 
 async function Classifiche() {
   const me = await requirePlayer()
-  const [players, stats, partite] = await Promise.all([getPlayers(me.lega._id), getAllStats(me.lega._id), getPartitePunteggio(me.lega._id)])
+  const [players, stats, partite, km] = await Promise.all([
+    getPlayers(me.lega._id),
+    getAllStats(me.lega._id),
+    getPartitePunteggio(me.lega._id),
+    getKmTotali(me.lega._id),
+  ])
   const righe: Riga[] = players.flatMap((player) => {
     const s = stats.get(player._id)
     return s && s.giocate > 0 ? [{ player, s }] : []
@@ -59,6 +64,7 @@ async function Classifiche() {
         valore={(s) => `${perc(s)}%`}
         dettaglio={(s) => `${s.vinte}V ${s.pari}P ${s.perse}S`}
       />
+      <KmPercorsi km={km} giocatori={giocatori} mioId={me._id} />
       <Tabella
         mioId={me._id}
         titolo="🧱 Meno gol subiti"
@@ -102,6 +108,36 @@ function Tabella({
             <span className="text-lg font-bold tabular-nums">{valore(s)}</span>
           </li>
         ))}
+      </ol>
+    </Card>
+  )
+}
+
+// Km totali corsi nelle partite (inseriti a mano o presi da Strava / Apple Salute).
+function KmPercorsi({ km, giocatori, mioId }: { km: Map<string, { km: number; partite: number }>; giocatori: Map<string, Player>; mioId: string }) {
+  const righe = [...km.entries()].filter(([id]) => giocatori.has(id)).sort((a, b) => b[1].km - a[1].km)
+  if (righe.length === 0) return null
+  const fmt = (n: number) => n.toLocaleString('it-IT', { maximumFractionDigits: 1 })
+  return (
+    <Card>
+      <h2 className="mb-3 font-semibold">🏃 Km percorsi</h2>
+      <ol className="space-y-2">
+        {righe.slice(0, 10).map(([id, t], i) => {
+          const player = giocatori.get(id)!
+          return (
+            <li key={id} className={`flex items-center gap-3 rounded-lg px-1 py-1 ${id === mioId ? 'bg-green-50 dark:bg-green-950' : ''}`}>
+              <span className="w-5 text-right text-sm tabular-nums text-zinc-400">{i + 1}</span>
+              <Avatar player={player} size={32} />
+              <Link href={`/giocatori/${id}`} className="min-w-0 flex-1 hover:underline">
+                <span className={`block truncate text-sm ${id === mioId ? 'font-extrabold' : 'font-medium'}`}>{displayName(player)}</span>
+                <span className="block text-xs text-zinc-500">
+                  {fmt(t.km / t.partite)} km a partita · {t.partite} partit{t.partite === 1 ? 'a' : 'e'}
+                </span>
+              </Link>
+              <span className="text-lg font-bold tabular-nums">{fmt(t.km)}</span>
+            </li>
+          )
+        })}
       </ol>
     </Card>
   )

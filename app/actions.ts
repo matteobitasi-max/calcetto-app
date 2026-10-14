@@ -6,7 +6,9 @@ import { refresh } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { sanity } from '@/lib/sanity'
 import { BADGE, CATEGORIE_NOTIFICHE, COOKIE_LEGA, eta, normalizzaTelefono, PIEDI, RUOLI, SKILLS, displayName, requirePlayer, getUtente, getMemberships, isTitolare, membroDi, soloGiocatore, requireAdmin, requireForDoc, requireIn, type Player, type Skill } from '@/lib/player'
-import { assegnaPosti, finestra, getMatch, presenti, risultatoDa, type Match, type Risposta, type Stato } from '@/lib/matches'
+import { assegnaPosti, finestra, getMatch, orarioPartita, presenti, risultatoDa, type FonteKm, type Match, type Risposta, type Stato } from '@/lib/matches'
+import { kmStrava, scollega, stravaConfigurato, urlCollegamento } from '@/lib/strava'
+import { baseUrl } from '@/lib/url'
 import { MAX_GIOCATORI, MAX_ISCRITTI, formatoDaIscritti } from '@/lib/limiti'
 import { riscriviPartita, type MatchDaUnire } from '@/lib/unisci'
 import { daysBetween, formatData, romeLocalToISO } from '@/lib/dates'
@@ -842,6 +844,74 @@ export async function sollecitaPagamenti(matchId: string): Promise<AvvisoState> 
     url: `/partite/${matchId}`,
     tag: `quota-${matchId}`,
   })
+}
+
+// ---------- Km percorsi (a mano, da Strava o da Apple Salute) ----------
+
+// I km si aggiungono a partita finita, solo da chi era in lista.
+async function partitaPerKm(matchId: string) {
+  const me = soloGiocatore(await requireForDoc(matchId))
+  const match = await getMatch(matchId)
+  if (!match) throw new Error('Partita non trovata')
+  if (!inLista(match, me._id)) throw new Error('Non eri in lista per questa partita')
+  if (new Date() < orarioPartita(match).fine) throw new Error('I km si aggiungono a partita finita')
+  return { me, match }
+}
+
+async function scriviKm(matchId: string, playerId: string, km: number | null, fonte: FonteKm) {
+  const tx = sanity.transaction().patch(matchId, (p) => p.setIfMissing({ distanze: [] }).unset([`distanze[_key=="${playerId}"]`]))
+  if (km != null) {
+    tx.patch(matchId, (p) =>
+      p.append('distanze', [{ _key: playerId, _type: 'distanza', giocatore: { _type: 'reference', _ref: playerId }, km, fonte }]),
+    )
+  }
+  await tx.commit()
+  refresh()
+}
+
+export async function salvaKm(matchId: string, km: number, fonte: 'salute' | 'manuale'): Promise<{ error?: string }> {
+  const { me } = await partitaPerKm(matchId)
+  if (!Number.isFinite(km) || km <= 0 || km > 30) return { error: 'Inserisci un numero di km valido (es. 5,2).' }
+  await scriviKm(matchId, me._id, Math.round(km * 100) / 100, fonte)
+  return {}
+}
+
+export async function togliKm(matchId: string) {
+  const { me } = await partitaPerKm(matchId)
+  await scriviKm(matchId, me._id, null, 'manuale')
+}
+
+export type EsitoStrava = { km?: number; attivita?: string; error?: string; daCollegare?: boolean }
+
+// Cerca su Strava l'attività fatta durante la partita e ne salva i km.
+export async function kmDaStrava(matchId: string): Promise<EsitoStrava> {
+  if (!stravaConfigurato()) return { error: 'Strava non è ancora attivo su The Cap.' }
+  const { me, match } = await partitaPerKm(matchId)
+  const utente = await getUtente()
+  if (!utente) return { error: 'Accesso richiesto.' }
+  const { inizio, fine } = orarioPartita(match)
+  const r = await kmStrava(utente.id, inizio, fine).catch(() => null)
+  if (!r) return { error: 'Strava non risponde: riprova tra poco.' }
+  if (!r.collegato) return { daCollegare: true }
+  if (!r.attivita) return { error: 'Su Strava non c\u2019è un\u2019attività durante l\u2019orario della partita.' }
+  const km = Math.round(r.attivita.km * 100) / 100
+  await scriviKm(matchId, me._id, km, 'strava')
+  return { km, attivita: r.attivita.nome }
+}
+
+// Indirizzo per collegare Strava (aperto nel browser di sistema dall'app, o nella stessa pagina dal computer).
+export async function collegaStrava(app: boolean, torna: string) {
+  if (!stravaConfigurato()) throw new Error('Strava non è ancora attivo su The Cap.')
+  const utente = await getUtente()
+  if (!utente) throw new Error('Accesso richiesto')
+  return urlCollegamento(utente.id, app, torna.startsWith('/') ? torna : '/', await baseUrl())
+}
+
+export async function scollegaStrava() {
+  const utente = await getUtente()
+  if (!utente) throw new Error('Accesso richiesto')
+  await scollega(utente.id)
+  refresh()
 }
 
 // ---------- Preferenze notifiche e comunicazioni ----------

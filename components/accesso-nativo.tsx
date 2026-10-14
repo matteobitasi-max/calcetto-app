@@ -51,13 +51,22 @@ export function AccessoNativo() {
   )
 }
 
-// Ritorno dal browser con thecap://accesso?ticket=...: chiude la finestra e fa entrare l'app.
+// Ritorno dal browser: thecap://accesso?ticket=... (chiude la finestra e fa entrare l'app)
+// e thecap://strava (collegamento a Strava fatto).
 export function RitornoAccesso() {
   useEffect(() => {
     if (!accessoNelBrowser()) return
     const listener = App.addListener('appUrlOpen', ({ url }) => {
       const link = new URL(url)
-      if (link.protocol !== 'thecap:' || link.host !== 'accesso') return
+      if (link.protocol !== 'thecap:') return
+      // ritorno da "Collega Strava": si ricarica la pagina di partenza (che poi prende i km)
+      if (link.host === 'strava') {
+        Browser.close().catch(() => undefined)
+        const torna = link.searchParams.get('torna') ?? '/'
+        window.location.replace(torna.startsWith('/') ? torna : '/')
+        return
+      }
+      if (link.host !== 'accesso') return
       const ticket = link.searchParams.get('ticket')
       if (!ticket) return
       Browser.close().catch(() => undefined)
