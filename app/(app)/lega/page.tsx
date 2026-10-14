@@ -7,9 +7,10 @@ import { baseUrl } from '@/lib/url'
 import { ActionForm } from '@/components/action-form'
 import { InvitoLink } from '@/components/invito-link'
 import { PhotoInput } from '@/components/photo-input'
+import { PillSalva } from '@/components/pill-salva'
 import { SatispaySetup } from '@/components/satispay-setup'
 import { SubmitButton } from '@/components/submit-button'
-import { Card, Field, Loading, PageTitle, buttonClass, inputClass } from '@/components/ui'
+import { Card, Field, Loading, PageTitle, inputClass } from '@/components/ui'
 
 export default function LegaPage() {
   return (
@@ -41,9 +42,7 @@ async function Impostazioni() {
           <Field label="Nome della lega">
             <input name="nome" required minLength={2} maxLength={40} defaultValue={lega.nome} className={inputClass} />
           </Field>
-          <SubmitButton className={buttonClass('primary')} pendingText="Salvo…">
-            Salva
-          </SubmitButton>
+          <PillSalva label="Salva nome e logo" />
         </ActionForm>
       </Card>
 
@@ -73,9 +72,7 @@ async function Impostazioni() {
             <p className="text-sm text-zinc-500">Le quote delle partite arrivano a chi riceve su questo Satispay.</p>
           </div>
           <SatispaySetup link={lega.satispayLink} qrUrl={immagineUrl(lega.satispayQr, 400)} />
-          <SubmitButton className={buttonClass('primary')} pendingText="Salvo…">
-            Salva pagamenti
-          </SubmitButton>
+          <PillSalva label="Salva pagamenti" />
         </ActionForm>
       </Card>
 

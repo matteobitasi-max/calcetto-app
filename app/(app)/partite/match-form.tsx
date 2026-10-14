@@ -1,5 +1,6 @@
 import type { FormState } from '@/app/actions'
 import { ActionForm } from '@/components/action-form'
+import { PillSalva } from '@/components/pill-salva'
 import { PostiInput } from '@/components/posti-input'
 import { SubmitButton } from '@/components/submit-button'
 import { Card, Field, buttonClass, inputClass } from '@/components/ui'
@@ -58,9 +59,14 @@ export function MatchForm({
         </Field>
       </Card>
 
-      <SubmitButton className={buttonClass('primary')} pendingText="Salvo…">
-        {submitLabel}
-      </SubmitButton>
+      {/* Modifica: la pillola "Salva" compare quando cambi qualcosa. Nuova partita: pulsante in fondo. */}
+      {match ? (
+        <PillSalva label={submitLabel} />
+      ) : (
+        <SubmitButton className={buttonClass('primary')} pendingText="Salvo…">
+          {submitLabel}
+        </SubmitButton>
+      )}
     </ActionForm>
   )
 }

@@ -1,6 +1,6 @@
 'use client'
 
-import { useActionState, useRef, useState, type ComponentProps } from 'react'
+import { createContext, useActionState, useRef, useState, type ComponentProps } from 'react'
 import type { FormState } from '@/app/actions'
 
 // Nomi leggibili dei campi, per dire cosa manca.
@@ -19,6 +19,9 @@ const ETICHETTE: Record<string, string> = {
   aperturaOra: 'ora di inizio convocazioni',
   aperturaGiorniPrima: 'giorni prima',
 }
+
+// L'esito dell'ultimo invio del modulo (per PillSalva: sparire solo se è andato bene).
+export const EsitoModulo = createContext<FormState>(undefined)
 
 // Form collegato a una Server Action che può restituire un messaggio d'errore.
 // Se mancano campi obbligatori lo dice esplicitamente (su iPhone il browser non mostra avvisi).
@@ -52,7 +55,7 @@ export function ActionForm({
       }}
       {...props}
     >
-      {children}
+      <EsitoModulo value={state}>{children}</EsitoModulo>
       {mancanti.length > 0 && (
         <p ref={avviso} role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">
           Manca: {mancanti.join(', ')}.

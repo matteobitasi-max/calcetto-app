@@ -1,28 +1,81 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useContext, useEffect, useId, useRef, useState, useSyncExternalStore } from 'react'
 import { useFormStatus } from 'react-dom'
+import { EsitoModulo } from './action-form'
 
-// Pillola "Salva" fissa in basso a destra (come "+ Nuova partita"): compare appena si
-// cambia qualcosa nel modulo che la contiene, e resta finché il salvataggio è in corso.
+// Pillole visibili nella pagina, in ordine: se più moduli sono modificati, si impilano.
+let visibili: string[] = []
+const ascoltatori = new Set<() => void>()
+const pilaCambiata = () => ascoltatori.forEach((f) => f())
+const iscriviti = (f: () => void) => {
+  ascoltatori.add(f)
+  return () => ascoltatori.delete(f)
+}
+const nessuna: string[] = []
+
+// Il contenuto del modulo, per capire se è diverso da com'era (le foto per nome e peso).
+const firma = (form: HTMLFormElement) =>
+  JSON.stringify([...new FormData(form)].map(([k, v]) => [k, typeof v === 'string' ? v : `${v.name}:${v.size}`]))
+
+// Pillola "Salva" fissa in basso a destra (come "+ Nuova partita"): compare quando il modulo
+// che la contiene è diverso da com'era, sparisce se si torna come prima o dopo un salvataggio
+// riuscito. Confronta il contenuto dopo ogni tocco, così vede anche calendari e selettori.
 export function PillSalva({ label = 'Salva' }: { label?: string }) {
+  const id = useId()
   const segnaposto = useRef<HTMLSpanElement>(null)
+  const iniziale = useRef<string | null>(null)
   const [modificato, setModificato] = useState(false)
   const { pending } = useFormStatus()
+  const esito = useContext(EsitoModulo)
+  const eraInCorso = useRef(false)
 
   useEffect(() => {
     const form = segnaposto.current?.closest('form')
     if (!form) return
-    const segna = () => setModificato(true)
-    form.addEventListener('input', segna)
-    form.addEventListener('change', segna)
+    // il punto di partenza si prende quando i campi hanno finito di inizializzarsi
+    const avvio = setTimeout(() => (iniziale.current = firma(form)), 300)
+    let attesa: ReturnType<typeof setTimeout> | undefined
+    const controlla = () => {
+      clearTimeout(attesa)
+      attesa = setTimeout(() => iniziale.current != null && setModificato(firma(form) !== iniziale.current), 60)
+    }
+    const eventi = ['input', 'change', 'click', 'keyup'] as const
+    for (const e of eventi) form.addEventListener(e, controlla)
     return () => {
-      form.removeEventListener('input', segna)
-      form.removeEventListener('change', segna)
+      clearTimeout(avvio)
+      clearTimeout(attesa)
+      for (const e of eventi) form.removeEventListener(e, controlla)
     }
   }, [])
 
+  // Salvataggio finito senza errori: quello di adesso diventa il nuovo punto di partenza.
+  useEffect(() => {
+    if (pending) {
+      eraInCorso.current = true
+      return
+    }
+    if (!eraInCorso.current) return
+    eraInCorso.current = false
+    const form = segnaposto.current?.closest('form')
+    if (form && !esito?.error) {
+      iniziale.current = firma(form)
+      setModificato(false)
+    }
+  }, [pending, esito])
+
   const visibile = modificato || pending
+  useEffect(() => {
+    visibili = visibile ? [...visibili.filter((v) => v !== id), id] : visibili.filter((v) => v !== id)
+    pilaCambiata()
+    return () => {
+      visibili = visibili.filter((v) => v !== id)
+      pilaCambiata()
+    }
+  }, [visibile, id])
+  const pila = useSyncExternalStore(iscriviti, () => visibili, () => nessuna)
+  const posto = Math.max(0, pila.indexOf(id))
+
   return (
     <>
       <span ref={segnaposto} hidden />
@@ -31,6 +84,7 @@ export function PillSalva({ label = 'Salva' }: { label?: string }) {
         disabled={pending}
         aria-hidden={!visibile}
         tabIndex={visibile ? 0 : -1}
+        style={{ marginBottom: posto * 60 }}
         className={`fixed right-4 z-20 inline-flex items-center gap-1.5 rounded-full bg-green-600 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-green-900/20 transition-all duration-300 hover:bg-green-700 disabled:opacity-80 bottom-[max(1.25rem,calc(var(--safe-area-inset-bottom,env(safe-area-inset-bottom))_+_0.75rem))] ${
           visibile ? 'translate-y-0 opacity-100' : 'pointer-events-none translate-y-24 opacity-0'
         }`}
