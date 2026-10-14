@@ -22,6 +22,11 @@ export default function AccountPage() {
 async function Account() {
   const [utente, leghe] = await Promise.all([getUtente(), getMemberships()])
   if (!utente) redirect('/sign-in')
+  // Se non li ho ancora scelti qui, si parte da quelli della mia scheda (es. messi dall'organizzatore).
+  const scheda = leghe[0]
+  const telefono = utente.telefono ?? scheda?.telefono ?? ''
+  const ruolo = utente.ruolo ?? scheda?.ruolo ?? ''
+  const piede = utente.piede ?? scheda?.piede ?? ''
 
   return (
     <div className="space-y-4">
@@ -48,7 +53,7 @@ async function Account() {
               name="telefono"
               type="tel"
               inputMode="tel"
-              defaultValue={utente.telefono ?? ''}
+              defaultValue={telefono}
               placeholder="333 1234567"
               autoComplete="tel"
               className={inputClass}
@@ -56,7 +61,7 @@ async function Account() {
           </Field>
           <div className="grid grid-cols-2 gap-4">
             <Field label="Ruolo">
-              <select name="ruolo" defaultValue={utente.ruolo ?? ''} className={`${inputClass} capitalize`}>
+              <select name="ruolo" defaultValue={ruolo} className={`${inputClass} capitalize`}>
                 <option value="">—</option>
                 {RUOLI.map((r) => (
                   <option key={r} value={r}>
@@ -66,7 +71,7 @@ async function Account() {
               </select>
             </Field>
             <Field label="Piede">
-              <select name="piede" defaultValue={utente.piede ?? ''} className={`${inputClass} capitalize`}>
+              <select name="piede" defaultValue={piede} className={`${inputClass} capitalize`}>
                 <option value="">—</option>
                 {PIEDI.map((p) => (
                   <option key={p} value={p}>
