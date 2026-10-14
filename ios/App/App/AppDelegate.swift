@@ -83,7 +83,7 @@ class MainViewController: CAPBridgeViewController {
             guard let self, let a = dati?.acceleration else { return }
             // a riposo vale circa 1 g (la gravità): uno strattone si stacca molto da 1
             let forza = sqrt(a.x * a.x + a.y * a.y + a.z * a.z)
-            guard abs(forza - 1) > 1.2 else { return }
+            guard abs(forza - 1) > 1.0 else { return }
             let ora = Date()
             guard ora > self.ferma else { return }
             self.strattoni = self.strattoni.filter { ora.timeIntervalSince($0) < 1.2 } + [ora]

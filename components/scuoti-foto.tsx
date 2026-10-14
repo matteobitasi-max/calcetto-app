@@ -80,11 +80,11 @@ export function ScuotiFoto({ urls }: { urls: string[] }) {
       role="dialog"
       aria-label="Foto sorpresa"
       onClick={() => setAperta(null)}
-      className="fixed inset-0 z-[60] flex animate-[zoom_150ms_ease-out] items-center justify-center bg-black/85 p-4 backdrop-blur-sm"
+      className="fixed inset-0 z-[60] animate-[zoom_150ms_ease-out] bg-black"
     >
       {/* eslint-disable-next-line @next/next/no-img-element -- immagine dal CDN di Sanity */}
-      <img src={aperta} alt="Foto sorpresa" className="max-h-[85vh] w-auto max-w-full rounded-3xl object-contain shadow-2xl ring-4 ring-white" />
-      <span className="absolute bottom-[max(1.5rem,env(safe-area-inset-bottom))] text-sm text-white/70">Tocca per chiudere</span>
+      <img src={aperta} alt="Foto sorpresa" className="h-full w-full object-cover" />
+      <span className="absolute inset-x-0 bottom-[max(1.5rem,env(safe-area-inset-bottom))] text-center text-sm text-white drop-shadow">Tocca per chiudere</span>
     </div>
   )
 }
