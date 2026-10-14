@@ -8,6 +8,11 @@ export const TROFEI = {
   peperone: { emoji: '🫑', nome: "Peperone d'oro", descrizione: 'Vinci il premio MVP 🫑 per 3 volte.' },
   maratoneta: { emoji: '🏃', nome: 'Maratoneta', descrizione: 'Corri più di 7 km in una partita (km presi da Apple Salute o Health Connect).' },
   muro: { emoji: '🧱', nome: 'Muro', descrizione: 'Finisci una partita senza subire gol con la tua squadra.' },
+  freddoloso: {
+    emoji: '🥶',
+    nome: 'Freddoloso',
+    descrizione: 'Salta più di 3 partite della lega in un inverno (dicembre, gennaio e febbraio). Non è un complimento!',
+  },
 } as const
 export type IdTrofeo = keyof typeof TROFEI
 
@@ -25,7 +30,21 @@ type Giocata = {
   distanze?: { id: string; km: number }[]
 }
 
+// L'inverno di una data (dicembre, gennaio, febbraio): l'anno in cui comincia, es. "2026" per dic 2026 – feb 2027.
+function inverno(iso: string) {
+  const mese = Number(iso.slice(5, 7))
+  const anno = Number(iso.slice(0, 4))
+  if (mese === 12) return anno
+  if (mese <= 2) return anno - 1
+  return null
+}
+
 export async function trofeiLega(legaId: string): Promise<Map<string, Sbloccati>> {
+  // giocatori attivi e da quando sono nella lega (per il Freddoloso contano solo le partite dopo)
+  const rosa = await sanity.fetch<{ _id: string; dal: string }[]>(
+    `*[_type == "player" && lega._ref == $legaId && attivo != false]{_id, "dal": _createdAt}`,
+    { legaId },
+  )
   const partite = await sanity.fetch<Giocata[]>(
     `*[_type == "match" && lega._ref == $legaId && stato == "giocata" && defined(risultato.golA)] | order(data asc){
       data, "a": squadraA[]._ref, "b": squadraB[]._ref, "golA": risultato.golA, "golB": risultato.golB,
@@ -42,6 +61,7 @@ export async function trofeiLega(legaId: string): Promise<Map<string, Sbloccati>
   }
   const mvp = new Map<string, number>()
   const serie = new Map<string, number>()
+  const saltateInverno = new Map<string, number>() // "giocatore|inverno" → partite saltate
 
   for (const p of partite) {
     const inCampo = new Set([...(p.a ?? []), ...(p.b ?? [])])
@@ -55,6 +75,17 @@ export async function trofeiLega(legaId: string): Promise<Map<string, Sbloccati>
     for (const d of p.distanze ?? []) if (d.km > 7) segna(d.id, 'maratoneta', p.data)
     if (p.golB === 0) for (const id of p.a ?? []) segna(id, 'muro', p.data)
     if (p.golA === 0) for (const id of p.b ?? []) segna(id, 'muro', p.data)
+    // Freddoloso: partite d'inverno saltate (la quarta sblocca il trofeo per quell'inverno)
+    const stagione = inverno(p.data)
+    if (stagione != null) {
+      for (const g of rosa) {
+        if (inCampo.has(g._id) || g.dal > p.data) continue
+        const chiave = `${g._id}|${stagione}`
+        const n = (saltateInverno.get(chiave) ?? 0) + 1
+        saltateInverno.set(chiave, n)
+        if (n === 4) segna(g._id, 'freddoloso', p.data)
+      }
+    }
     // presenze di fila: chi non ha giocato questa partita riparte da zero
     for (const id of new Set([...serie.keys(), ...inCampo])) {
       const n = inCampo.has(id) ? (serie.get(id) ?? 0) + 1 : 0
