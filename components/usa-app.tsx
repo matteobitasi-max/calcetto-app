@@ -12,11 +12,11 @@ export function SchermataUsaApp() {
   return (
     <div className="fixed inset-0 z-[70] flex flex-col items-center justify-center gap-5 bg-white p-6 text-center dark:bg-zinc-950">
       {/* eslint-disable-next-line @next/next/no-img-element -- logo statico */}
-      <img src="/logo.png" alt="" width={96} height={96} className="rounded-full shadow-lg ring-4 ring-white" />
+      <img src="/icon-512.png" alt="" width={96} height={96} className="rounded-[22%] shadow-lg" />
       <div className="space-y-2">
-        <h1 className="text-2xl font-bold">Usa l&apos;app TheCap</h1>
+        <h1 className="text-2xl font-bold">Usa l&apos;app The Cap</h1>
         <p className="max-w-xs text-zinc-600 dark:text-zinc-400">
-          Dal browser del telefono TheCap non funziona bene: aprila dall&apos;app, così ricevi le notifiche e resti collegato.
+          Dal browser del telefono The Cap non funziona bene: aprila dall&apos;app, così ricevi le notifiche e resti collegato.
         </p>
       </div>
       <a href="thecap://" className="w-full max-w-xs rounded-xl bg-green-600 px-6 py-4 text-lg font-semibold text-white shadow hover:bg-green-700">
