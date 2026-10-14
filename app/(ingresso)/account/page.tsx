@@ -27,6 +27,7 @@ async function Account() {
   const telefono = utente.telefono ?? scheda?.telefono ?? ''
   const ruolo = utente.ruolo ?? scheda?.ruolo ?? ''
   const piede = utente.piede ?? scheda?.piede ?? ''
+  const dataNascita = utente.dataNascita ?? scheda?.dataNascita ?? ''
 
   return (
     <div className="space-y-4">
@@ -58,6 +59,9 @@ async function Account() {
               autoComplete="tel"
               className={inputClass}
             />
+          </Field>
+          <Field label="Data di nascita (facoltativa)">
+            <input name="dataNascita" type="date" defaultValue={dataNascita} max={new Date().toISOString().slice(0, 10)} className={inputClass} />
           </Field>
           <div className="grid grid-cols-2 gap-4">
             <Field label="Ruolo">

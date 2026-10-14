@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { SignOutButton } from '@clerk/nextjs'
-import { displayName, membroDi } from '@/lib/player'
+import { displayName, eta, membroDi } from '@/lib/player'
 import { getPartitePunteggio, getPlayer, getPlayerStats, getStorico, type PartitaGiocata, type PlayerStats } from '@/lib/matches'
 import { classifica } from '@/lib/punteggio'
 import { formatData } from '@/lib/dates'
@@ -57,7 +57,7 @@ export async function ProfiloGiocatore({ id }: { id: string }) {
             {player.soprannome && <p className="text-sm text-zinc-500">{fullName}</p>}
             <PlayerBadge badge={player.badge} />
             <p className="text-sm capitalize leading-snug text-zinc-500">
-              {[player.ruolo, player.piede && `piede ${player.piede}`, ...ruoli, player.attivo === false && 'non attivo']
+              {[player.ruolo, player.piede && `piede ${player.piede}`, player.dataNascita && `${eta(player.dataNascita)} anni`, ...ruoli, player.attivo === false && 'non attivo']
                 .filter(Boolean)
                 .join(' · ')}
             </p>
@@ -104,7 +104,7 @@ export async function ProfiloGiocatore({ id }: { id: string }) {
           </Card>
           <Card className="divide-y divide-zinc-100 p-0! text-sm dark:divide-zinc-800">
             <Link href="/account" className="flex items-center justify-between px-4 py-3 hover:bg-zinc-50 dark:hover:bg-zinc-800">
-              👤 Il mio account (nome, telefono, ruolo, piede) <span className="text-zinc-400">›</span>
+              👤 Il mio account (nome, telefono, nascita, ruolo, piede) <span className="text-zinc-400">›</span>
             </Link>
             <Link href="/privacy" className="flex items-center justify-between px-4 py-3 hover:bg-zinc-50 dark:hover:bg-zinc-800">
               🔒 Privacy policy <span className="text-zinc-400">›</span>

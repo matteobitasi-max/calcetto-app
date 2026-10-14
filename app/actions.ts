@@ -5,7 +5,7 @@ import { cookies } from 'next/headers'
 import { refresh } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { sanity } from '@/lib/sanity'
-import { BADGE, CATEGORIE_NOTIFICHE, COOKIE_LEGA, normalizzaTelefono, PIEDI, RUOLI, SKILLS, displayName, requirePlayer, getUtente, getMemberships, isTitolare, membroDi, soloGiocatore, requireAdmin, requireForDoc, requireIn, type Player, type Skill } from '@/lib/player'
+import { BADGE, CATEGORIE_NOTIFICHE, COOKIE_LEGA, eta, normalizzaTelefono, PIEDI, RUOLI, SKILLS, displayName, requirePlayer, getUtente, getMemberships, isTitolare, membroDi, soloGiocatore, requireAdmin, requireForDoc, requireIn, type Player, type Skill } from '@/lib/player'
 import { assegnaPosti, finestra, getMatch, presenti, risultatoDa, type Match, type Risposta, type Stato } from '@/lib/matches'
 import { MAX_GIOCATORI, MAX_ISCRITTI, formatoDaIscritti } from '@/lib/limiti'
 import { riscriviPartita, type MatchDaUnire } from '@/lib/unisci'
@@ -621,6 +621,7 @@ async function nuovaScheda(legaId: string, utente: NonNullable<Awaited<ReturnTyp
     ...((utente.telefono || utente.telefoni[0]) && { telefono: utente.telefono || utente.telefoni[0] }),
     ...(utente.ruolo && { ruolo: utente.ruolo }),
     ...(utente.piede && { piede: utente.piede }),
+    ...(utente.dataNascita && { dataNascita: utente.dataNascita }),
     clerkUserId: utente.id,
     isAdmin,
     attivo: true,
@@ -916,7 +917,12 @@ export async function salvaAccount(_prev: FormState, formData: FormData): Promis
   const telefono = telefonoScritto ? normalizzaTelefono(telefonoScritto) : ''
   const ruolo = (RUOLI as readonly string[]).includes(str(formData, 'ruolo')) ? str(formData, 'ruolo') : ''
   const piede = (PIEDI as readonly string[]).includes(str(formData, 'piede')) ? str(formData, 'piede') : ''
+  const dataNascita = str(formData, 'dataNascita')
   if (!nome) return { error: 'Il nome è obbligatorio.' }
+  if (dataNascita) {
+    const anni = /^\d{4}-\d{2}-\d{2}$/.test(dataNascita) ? eta(dataNascita) : NaN
+    if (!(anni >= 5 && anni <= 100)) return { error: 'La data di nascita non sembra valida.' }
+  }
   if (nome.length > 40 || cognome.length > 40) return { error: 'Nome e cognome: massimo 40 caratteri.' }
   if (telefonoScritto && !/^\+?\d{6,15}$/.test(telefono)) return { error: 'Il numero di telefono non sembra valido.' }
 
@@ -924,12 +930,12 @@ export async function salvaAccount(_prev: FormState, formData: FormData): Promis
   const clerk = await clerkClient()
   await clerk.users.updateUser(utente.id, { firstName: nome, lastName: cognome })
   await clerk.users.updateUserMetadata(utente.id, {
-    privateMetadata: { telefono: telefono || null, ruolo: ruolo || null, piede: piede || null },
+    privateMetadata: { telefono: telefono || null, ruolo: ruolo || null, piede: piede || null, dataNascita: dataNascita || null },
   })
 
   const schede = await sanity.fetch<string[]>(`*[_type == "player" && clerkUserId == $id]._id`, { id: utente.id })
   if (schede.length) {
-    const valori = { cognome, telefono, ruolo, piede }
+    const valori = { cognome, telefono, ruolo, piede, dataNascita }
     const tx = sanity.transaction()
     for (const id of schede) {
       tx.patch(id, (p) =>

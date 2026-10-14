@@ -54,6 +54,8 @@ export type Player = {
   email?: string
   /** Formato internazionale, es. +393331234567. */
   telefono?: string
+  /** AAAA-MM-GG, facoltativa (dal profilo personale). */
+  dataNascita?: string
   foto?: SanityImage
   ruolo?: string
   piede?: string
@@ -67,11 +69,18 @@ export type Player = {
   caratteristiche?: Partial<Record<Skill, number>>
 }
 
-export const playerFields = `_id, "legaId": lega._ref, nome, cognome, soprannome, email, telefono, foto, ruolo, piede, badge, notifiche, isAdmin, puoInserireRisultati, attivo, "collegato": defined(clerkUserId), caratteristiche`
+export const playerFields = `_id, "legaId": lega._ref, nome, cognome, soprannome, email, telefono, dataNascita, foto, ruolo, piede, badge, notifiche, isAdmin, puoInserireRisultati, attivo, "collegato": defined(clerkUserId), caratteristiche`
 
 
 // Chi può segnare risultato, marcatori e MVP.
 export const canEnterResults = (p: Pick<Player, 'isAdmin' | 'puoInserireRisultati'>) => !!(p.isAdmin || p.puoInserireRisultati)
+
+// Anni compiuti da una data di nascita AAAA-MM-GG.
+export function eta(dataNascita: string, oggi = new Date()) {
+  const [a, m, g] = dataNascita.split('-').map(Number)
+  const compiuti = oggi.getMonth() + 1 > m || (oggi.getMonth() + 1 === m && oggi.getDate() >= g)
+  return oggi.getFullYear() - a - (compiuti ? 0 : 1)
+}
 
 // Numero di telefono in formato internazionale (+39…): così combacia con quello verificato da Clerk.
 export function normalizzaTelefono(input: string) {

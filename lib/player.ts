@@ -29,7 +29,7 @@ export const getUtente = cache(async () => {
     .map((e) => e.emailAddress.toLowerCase())
   const telefoni = user.phoneNumbers.filter((p) => p.verification?.status === 'verified').map((p) => p.phoneNumber)
   // Dati del profilo scelti nella pagina "Il mio account" (finiscono anche nelle schede giocatore).
-  const profilo = (user.privateMetadata ?? {}) as { telefono?: string; ruolo?: string; piede?: string }
+  const profilo = (user.privateMetadata ?? {}) as { telefono?: string; ruolo?: string; piede?: string; dataNascita?: string }
   return {
     id: user.id,
     nome: user.firstName,
@@ -40,6 +40,7 @@ export const getUtente = cache(async () => {
     telefono: profilo.telefono,
     ruolo: profilo.ruolo,
     piede: profilo.piede,
+    dataNascita: profilo.dataNascita,
   }
 })
 
