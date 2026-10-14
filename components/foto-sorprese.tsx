@@ -64,6 +64,16 @@ export function FotoSorpreseEditor({
         </button>
       </div>
       {state?.error && <p className="mt-2 text-sm text-red-600">{state.error}</p>}
+      {foto.length > 0 && (
+        <button
+          type="button"
+          // stessa cosa che succede scuotendo il telefono (dopo aver salvato, le foto nuove ci sono)
+          onClick={() => window.dispatchEvent(new Event('scossa'))}
+          className="mt-3 text-sm font-medium text-green-700 hover:underline dark:text-green-500"
+        >
+          📳 Prova: mostra una foto a caso
+        </button>
+      )}
       {scelta.menu}
     </div>
   )

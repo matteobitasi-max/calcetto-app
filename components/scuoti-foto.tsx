@@ -1,5 +1,6 @@
 'use client'
 
+import { Capacitor } from '@capacitor/core'
 import { useEffect, useState } from 'react'
 
 const STRATTONE = 22 // variazione di accelerazione (m/s²) tra due letture per contare uno strattone
@@ -11,7 +12,9 @@ type ConPermesso = typeof DeviceMotionEvent & { requestPermission?: () => Promis
 
 // Scuotendo il telefono compare a tutto schermo una foto sorpresa della lega, a caso
 // (mai la stessa due volte di fila); un tocco la chiude.
-// Su iPhone i sensori di movimento vanno chiesti dopo un tocco: lo fa al primo tocco sulla pagina.
+// Nell'app per iPhone la scossa la riconosce la parte nativa (MainViewController, con
+// l'accelerometro) e la segnala con l'evento "scossa"; altrove si usano i sensori del browser,
+// che su iPhone vanno chiesti dopo un tocco: lo fa al primo tocco sulla pagina.
 export function ScuotiFoto({ urls }: { urls: string[] }) {
   const [aperta, setAperta] = useState<string | null>(null)
   const chiave = urls.join(' ')
@@ -26,6 +29,17 @@ export function ScuotiFoto({ urls }: { urls: string[] }) {
     let strattoni: number[] = []
     let ferma = 0
 
+    const mostra = () => {
+      const ora = Date.now()
+      if (ora < ferma) return
+      ferma = ora + PAUSA
+      navigator.vibrate?.(150)
+      let i = Math.floor(Math.random() * foto.length)
+      if (foto.length > 1 && i === precedente) i = (i + 1) % foto.length
+      precedente = i
+      setAperta(foto[i])
+    }
+
     const movimento = (e: DeviceMotionEvent) => {
       const a = e.accelerationIncludingGravity
       if (a?.x == null || a.y == null || a.z == null) return
@@ -36,12 +50,7 @@ export function ScuotiFoto({ urls }: { urls: string[] }) {
           strattoni = [...strattoni.filter((t) => ora - t < FINESTRA), ora]
           if (strattoni.length >= STRATTONI) {
             strattoni = []
-            ferma = ora + PAUSA
-            navigator.vibrate?.(150)
-            let i = Math.floor(Math.random() * foto.length)
-            if (foto.length > 1 && i === precedente) i = (i + 1) % foto.length
-            precedente = i
-            setAperta(foto[i])
+            mostra()
           }
         }
       }
@@ -52,11 +61,14 @@ export function ScuotiFoto({ urls }: { urls: string[] }) {
       ;(DeviceMotionEvent as ConPermesso).requestPermission?.().catch(() => undefined)
     }
 
-    window.addEventListener('devicemotion', movimento)
-    if (typeof DeviceMotionEvent !== 'undefined' && (DeviceMotionEvent as ConPermesso).requestPermission) {
+    window.addEventListener('scossa', mostra)
+    const nativa = Capacitor.getPlatform() === 'ios'
+    if (!nativa) window.addEventListener('devicemotion', movimento)
+    if (!nativa && typeof DeviceMotionEvent !== 'undefined' && (DeviceMotionEvent as ConPermesso).requestPermission) {
       document.addEventListener('touchend', chiediPermesso, { once: true })
     }
     return () => {
+      window.removeEventListener('scossa', mostra)
       window.removeEventListener('devicemotion', movimento)
       document.removeEventListener('touchend', chiediPermesso)
     }

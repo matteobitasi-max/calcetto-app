@@ -1,5 +1,6 @@
 import UIKit
 import Capacitor
+import CoreMotion
 
 @UIApplicationMain
 class AppDelegate: UIResponder, UIApplicationDelegate {
@@ -61,9 +62,37 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 // La vista dell'app: come quella di Capacitor. Il gesto dal bordo lo gestisce la pagina
 // (components/swipe-indietro.tsx), che passa da una sezione all'altra del menu: il gesto
 // nativo del browser va spento, altrimenti salterebbe alla pagina visitata prima.
+//
+// La scossa del telefono la riconosce qui l'accelerometro e la segnala alla pagina con
+// l'evento "scossa" (components/scuoti-foto.tsx mostra una foto sorpresa).
 class MainViewController: CAPBridgeViewController {
+    private let movimento = CMMotionManager()
+    private var strattoni: [Date] = []
+    private var ferma = Date.distantPast
+
     override func capacitorDidLoad() {
         super.capacitorDidLoad()
         webView?.allowsBackForwardNavigationGestures = false
+        avviaScossa()
+    }
+
+    private func avviaScossa() {
+        guard movimento.isAccelerometerAvailable else { return }
+        movimento.accelerometerUpdateInterval = 1.0 / 30
+        movimento.startAccelerometerUpdates(to: .main) { [weak self] dati, _ in
+            guard let self, let a = dati?.acceleration else { return }
+            // a riposo vale circa 1 g (la gravità): uno strattone si stacca molto da 1
+            let forza = sqrt(a.x * a.x + a.y * a.y + a.z * a.z)
+            guard abs(forza - 1) > 1.2 else { return }
+            let ora = Date()
+            guard ora > self.ferma else { return }
+            self.strattoni = self.strattoni.filter { ora.timeIntervalSince($0) < 1.2 } + [ora]
+            if self.strattoni.count >= 3 {
+                self.strattoni = []
+                self.ferma = ora.addingTimeInterval(2)
+                UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                self.webView?.evaluateJavaScript("window.dispatchEvent(new Event('scossa'))")
+            }
+        }
     }
 }
