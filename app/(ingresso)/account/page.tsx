@@ -8,6 +8,7 @@ import { ActionForm } from '@/components/action-form'
 import { EliminaAccount } from '@/components/elimina-account'
 import { PillSalva } from '@/components/pill-salva'
 import { StravaAccount } from '@/components/strava-account'
+import { SaluteAccount } from '@/components/salute-account'
 import { getCollegamento, stravaConfigurato } from '@/lib/strava'
 import { Card, Field, Loading, buttonClass, inputClass } from '@/components/ui'
 
@@ -92,11 +93,10 @@ async function Account() {
         <PillSalva />
       </ActionForm>
 
-      {stravaConfigurato() && (
-        <Card className="p-0!">
-          <StravaAccount collegato={!!strava} atleta={strava?.atleta} />
-        </Card>
-      )}
+      <Card className="divide-y divide-zinc-100 p-0! empty:hidden dark:divide-zinc-800">
+        <SaluteAccount />
+        {stravaConfigurato() && <StravaAccount collegato={!!strava} atleta={strava?.atleta} />}
+      </Card>
 
       <Card className="divide-y divide-zinc-100 p-0! text-sm dark:divide-zinc-800">
         <Link href="/privacy" className="flex items-center justify-between px-4 py-3 hover:bg-zinc-50 dark:hover:bg-zinc-800">

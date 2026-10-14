@@ -878,6 +878,29 @@ export async function salvaKm(matchId: string, km: number, fonte: 'salute'): Pro
   return {}
 }
 
+// Le mie partite finite negli ultimi 7 giorni, in cui ero in lista e mancano i miei km:
+// l'app per iPhone le completa da sola con Apple Salute (components/km-automatici.tsx).
+export async function partiteSenzaKm(): Promise<{ matchId: string; inizio: number; fine: number }[]> {
+  const mie = (await getMemberships()).map((m) => m._id)
+  if (mie.length === 0) return []
+  const ora = Date.now()
+  const partite = await sanity.fetch<{ _id: string; data: string; durataMinuti?: number; io: string }[]>(
+    `*[_type == "match" && coalesce(stato, "aperta") in ["chiusa", "giocata"] && data > $da && data < $a
+      && count(convocazioni[risposta == "presente" && giocatore._ref in $mie]) > 0]{
+      _id, data, durataMinuti,
+      "io": convocazioni[risposta == "presente" && giocatore._ref in $mie][0].giocatore._ref,
+      "fatti": distanze[]._key
+    }[!(io in coalesce(fatti, []))]`,
+    { mie, da: new Date(ora - 7 * 86400_000).toISOString(), a: new Date(ora).toISOString() },
+  )
+  return partite
+    .map((p) => {
+      const { inizio, fine } = orarioPartita({ data: p.data, durataMinuti: p.durataMinuti ?? 60 })
+      return { matchId: p._id, inizio: inizio.getTime(), fine: fine.getTime() }
+    })
+    .filter((p) => p.fine <= ora)
+}
+
 export async function togliKm(matchId: string) {
   const { me } = await partitaPerKm(matchId)
   await scriviKm(matchId, me._id, null, 'manuale')

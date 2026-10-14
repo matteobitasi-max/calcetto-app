@@ -1,13 +1,12 @@
 'use client'
 
 import { Browser } from '@capacitor/browser'
-import { Capacitor, registerPlugin } from '@capacitor/core'
+import { Capacitor } from '@capacitor/core'
 import { useEffect, useState, useTransition } from 'react'
 import { collegaStrava, kmDaStrava, salvaKm, togliKm } from '@/app/actions'
 import type { Distanza } from '@/lib/matches'
+import { Salute, escludiPartita, impostaKmAutomatici, saluteDisponibile } from '@/lib/salute'
 
-// Apple Salute: plugin nativo dell'app per iPhone (SalutePlugin in AppDelegate.swift).
-const Salute = registerPlugin<{ distanza(o: { inizio: number; fine: number }): Promise<{ metri: number }> }>('Salute')
 const DOPO_STRAVA = 'km-dopo-strava'
 
 const FONTI: Record<string, string> = { strava: 'da Strava', salute: 'da Apple Salute', manuale: 'inseriti a mano' }
@@ -55,7 +54,7 @@ export function KmPartita({
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- dipende dal dispositivo: noto solo nell'app
-    setSalute(Capacitor.getPlatform() === 'ios' && Capacitor.isPluginAvailable('Salute'))
+    setSalute(saluteDisponibile())
     let dopo: string | null = null
     try {
       dopo = sessionStorage.getItem(DOPO_STRAVA)
@@ -69,6 +68,8 @@ export function KmPartita({
     startTransition(async () => {
       try {
         const { metri } = await Salute.distanza({ inizio, fine })
+        // permesso chiesto: da ora i km delle partite si prendono da soli all'apertura dell'app
+        impostaKmAutomatici(true)
         if (metri < 50) {
           setMessaggio({
             testo: 'In Salute non ci sono km registrati durante la partita (controlla anche di aver dato il permesso in Salute → Condivisione).',
@@ -94,7 +95,13 @@ export function KmPartita({
         <p className="text-sm">
           <b className="text-2xl tabular-nums">{formatoKm(miei.km)}</b> km
           {miei.fonte && <span className="text-zinc-500"> · {FONTI[miei.fonte]}</span>}
-          <button type="button" disabled={pending} onClick={() => startTransition(() => togliKm(matchId))} className="ml-3 text-xs text-zinc-500 underline">
+          <button type="button" disabled={pending} onClick={() =>
+              startTransition(async () => {
+                // tolti a mano: i km automatici non li rimettono
+                escludiPartita(matchId)
+                await togliKm(matchId)
+              })
+            } className="ml-3 text-xs text-zinc-500 underline">
             togli
           </button>
         </p>
