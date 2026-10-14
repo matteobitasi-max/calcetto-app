@@ -5,7 +5,7 @@ import { isTitolare, requireAdmin } from '@/lib/player'
 import { avatarUrl, immagineUrl } from '@/lib/image'
 import { baseUrl } from '@/lib/url'
 import { ActionForm } from '@/components/action-form'
-import { InvitoLink } from '@/components/invito-link'
+import { CodiceInvito, InvitoLink } from '@/components/invito-link'
 import { PhotoInput } from '@/components/photo-input'
 import { PillSalva } from '@/components/pill-salva'
 import { SatispaySetup } from '@/components/satispay-setup'
@@ -55,9 +55,7 @@ async function Impostazioni() {
           Chi apre il link e fa l&apos;accesso entra subito nella rosa. Poi puoi assegnargli caratteristiche e permessi.
         </p>
         <InvitoLink url={url} nomeLega={lega.nome} />
-        <p className="text-sm">
-          Codice: <b className="font-mono tracking-widest">{lega.codiceInvito}</b>
-        </p>
+        <CodiceInvito codice={lega.codiceInvito ?? ''} />
         <form action={rigeneraInvito.bind(null, lega._id)}>
           <SubmitButton
             className="text-sm text-red-600 hover:underline"
