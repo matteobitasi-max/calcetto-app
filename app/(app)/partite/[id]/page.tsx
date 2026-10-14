@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { Suspense } from 'react'
-import { canEnterResults, displayName, getCurrentPlayer, getUtente, membroDi, type Membro, type Player } from '@/lib/player'
+import { canEnterResults, displayName, getCurrentPlayer, getUtente, membroDi, mioInCima, type Membro, type Player } from '@/lib/player'
 import { forza } from '@/lib/teams'
 import { finestra, formatoInCorso, getMatch, getPlayers, orarioPartita, ordinati, presenti, risultatoDa, type Match, type Risposta } from '@/lib/matches'
 import { getCollegamento, stravaConfigurato } from '@/lib/strava'
@@ -16,7 +16,7 @@ import { SubmitButton } from '@/components/submit-button'
 import { ButtonLink, Card, Loading, PlayerRow, StatoBadge, buttonClass } from '@/components/ui'
 import { FinestraInfo } from '../finestra-info'
 import { RispostaButtons } from '../risposta-buttons'
-import { Cassa, MiaQuota, PagamentoInLista } from './cassa'
+import { Cassa, PagamentoInLista } from './cassa'
 import { Tabellino } from '../tabellino'
 
 export default function MatchPage({ params }: PageProps<'/partite/[id]'>) {
@@ -95,8 +95,6 @@ async function MatchDetail({ params }: { params: Promise<{ id: string }> }) {
         </div>
       </Card>
 
-      <MiaQuota match={match} me={player} />
-
       <KmCard match={match} me={player} rosa={rosa} />
 
       {player.isAdmin && match.stato !== 'giocata' && <AdminPanel match={match} whatsappUrl={await whatsappUrl(match, player.lega.nome)} />}
@@ -105,7 +103,7 @@ async function MatchDetail({ params }: { params: Promise<{ id: string }> }) {
         <Squadre match={match} mioId={player._id} />
       )}
 
-      {player.isAdmin && <Cassa match={match} />}
+      {player.isAdmin && <Cassa match={match} mioId={player._id} />}
 
       <Card>
         <h2 className="mb-3 font-semibold">
@@ -124,9 +122,9 @@ async function MatchDetail({ params }: { params: Promise<{ id: string }> }) {
             📋 Numero in base alle convocazioni: <TestoFormato f={formato} />
           </p>
         )}
-        <Gruppo titolo="In lista" match={match} risposta="presente" numerati gestisci={gestisci} me={player} />
-        <Gruppo titolo="Lista d'attesa" match={match} risposta="riserva" numerati gestisci={gestisci} />
-        <Gruppo titolo="Non ci sono" match={match} risposta="assente" />
+        <Gruppo titolo="In lista" match={match} risposta="presente" numerati gestisci={gestisci} me={player} mioId={player._id} />
+        <Gruppo titolo="Lista d'attesa" match={match} risposta="riserva" numerati gestisci={gestisci} mioId={player._id} />
+        <Gruppo titolo="Non ci sono" match={match} risposta="assente" mioId={player._id} />
         {mancanti.length > 0 && (
           <div>
             <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-zinc-500">
@@ -154,6 +152,7 @@ function Gruppo({
   numerati,
   gestisci,
   me,
+  mioId,
 }: {
   titolo: string
   match: Match
@@ -163,8 +162,14 @@ function Gruppo({
   gestisci?: boolean
   /** Per mostrare accanto ai nomi in lista chi ha pagato la quota (e l'icona per pagare). */
   me?: Membro
+  /** Il mio nome va in cima e in grassetto (il numero resta la mia posizione in lista). */
+  mioId?: string
 }) {
-  const items = ordinati(match, risposta)
+  const items = mioInCima(
+    ordinati(match, risposta).map((c, i) => ({ ...c, posizione: i + 1 })),
+    mioId,
+    (c) => c.giocatore?._id,
+  )
   if (items.length === 0) return null
   return (
     <div className="mb-4">
@@ -172,12 +177,13 @@ function Gruppo({
         {titolo} ({items.length})
       </h3>
       <ul className="space-y-2">
-        {items.map((c, i) => (
+        {items.map((c) => (
           <li key={c._key} className="flex items-center gap-2">
-            {numerati && <span className="w-5 text-right text-xs tabular-nums text-zinc-400">{i + 1}</span>}
+            {numerati && <span className="w-5 text-right text-xs tabular-nums text-zinc-400">{c.posizione}</span>}
             <div className="min-w-0 flex-1">
               <PlayerRow
                 player={c.giocatore}
+                mio={c.giocatore?._id === mioId}
                 right={
                   <>
                     {me && <PagamentoInLista match={match} me={me} playerId={c.giocatore._id} />}
@@ -236,9 +242,9 @@ function Squadre({ match, mioId }: { match: Match; mioId: string }) {
                 <span className="text-sm font-normal text-zinc-500">forza {totale.toFixed(1)}</span>
               </h2>
               <ul className="space-y-2">
-                {players.map((p) => (
+                {mioInCima(players, mioId, (p) => p._id).map((p) => (
                   <li key={p._id}>
-                    <PlayerRow player={p} prima={<Prestazione match={match} playerId={p._id} />} />
+                    <PlayerRow player={p} mio={p._id === mioId} prima={<Prestazione match={match} playerId={p._id} />} />
                   </li>
                 ))}
               </ul>

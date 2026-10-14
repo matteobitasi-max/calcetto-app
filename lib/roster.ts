@@ -75,6 +75,12 @@ export const playerFields = `_id, "legaId": lega._ref, nome, cognome, soprannome
 // Chi può segnare risultato, marcatori e MVP.
 export const canEnterResults = (p: Pick<Player, 'isAdmin' | 'puoInserireRisultati'>) => !!(p.isAdmin || p.puoInserireRisultati)
 
+// Negli elenchi il mio nome va sempre in cima (gli altri restano nel loro ordine).
+export function mioInCima<T>(lista: T[], mioId: string | undefined, id: (x: T) => string | undefined) {
+  if (!mioId) return lista
+  return [...lista.filter((x) => id(x) === mioId), ...lista.filter((x) => id(x) !== mioId)]
+}
+
 // Anni compiuti da una data di nascita AAAA-MM-GG.
 export function eta(dataNascita: string, oggi = new Date()) {
   const [a, m, g] = dataNascita.split('-').map(Number)

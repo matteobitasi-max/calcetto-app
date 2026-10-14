@@ -146,18 +146,21 @@ export function PlayerRow({
   prima,
   right,
   mostraAccesso = false,
+  mio = false,
 }: {
   player: Player
   prima?: ReactNode
   right?: ReactNode
   mostraAccesso?: boolean
+  /** La mia riga: nome in grassetto e sfondo evidenziato. */
+  mio?: boolean
 }) {
   return (
-    <div className="flex items-center gap-3">
+    <div className={`flex items-center gap-3 ${mio ? '-mx-1.5 rounded-lg bg-green-50 px-1.5 py-1 dark:bg-green-950/50' : ''}`}>
       <Avatar player={player} />
       <Link href={`/giocatori/${player._id}`} className="min-w-0 flex-1 hover:underline">
         <div className="flex min-w-0 items-center gap-1.5">
-          <span className="truncate font-medium">{displayName(player)}</span>
+          <span className={`truncate ${mio ? 'font-extrabold' : 'font-medium'}`}>{displayName(player)}</span>
           <PlayerBadge badge={player.badge} />
         </div>
         {(player.ruolo || (mostraAccesso && player.collegato === false)) && (

@@ -3,69 +3,37 @@ import { PagaSatispay } from '@/components/paga-satispay'
 import { SollecitaButton } from '@/components/sollecita-button'
 import { SubmitButton } from '@/components/submit-button'
 import { Card, PlayerRow } from '@/components/ui'
-import { immagineUrl } from '@/lib/image'
 import { presenti, type Match } from '@/lib/matches'
-import type { Membro } from '@/lib/player'
+import { mioInCima, type Membro } from '@/lib/player'
 
 const euro = (n: number) => new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(n)
 const piccolo = 'rounded px-2 py-1 text-xs font-medium hover:bg-zinc-100 dark:hover:bg-zinc-800'
 
 export const haPagato = (match: Match, playerId: string) => match.pagamenti.some((p) => p.giocatoreId === playerId)
 
-// Accanto al mio nome nella lista: icona Satispay se devo ancora pagare, ✅ se ho pagato.
+// Accanto al mio nome nella lista: icona Satispay se devo ancora pagare, ✅ se ho pagato
+// (con ↩ per annullare se l'ho segnato per errore).
 export function PagamentoInLista({ match, me, playerId }: { match: Match; me: Membro; playerId: string }) {
   if (match.quota == null || match.stato === 'annullata') return null
-  if (haPagato(match, playerId)) return <span title="Quota pagata">✅</span>
+  if (haPagato(match, playerId)) {
+    if (playerId !== me._id) return <span title="Quota pagata">✅</span>
+    return (
+      <span className="flex shrink-0 items-center">
+        <span title="Quota pagata">✅</span>
+        <form action={annullaPagamento.bind(null, match._id, undefined)}>
+          <SubmitButton className={`${piccolo} text-zinc-400`} title="L'ho segnata per errore" confirm="Segnare di nuovo come da pagare?">
+            ↩
+          </SubmitButton>
+        </form>
+      </span>
+    )
+  }
   if (playerId !== me._id) return null
   return <PagaSatispay link={me.lega.satispayLink} quota={match.quota} segnaPagato={dichiaraPagamento.bind(null, match._id)} variante="icona" />
 }
 
-// La mia quota: pagamento con il link Satispay della lega.
-export function MiaQuota({ match, me }: { match: Match; me: Membro }) {
-  if (match.quota == null || match.stato === 'annullata') return null
-  if (!presenti(match).some((c) => c.giocatore._id === me._id)) return null
-  const pagato = haPagato(match, me._id)
-  const qr = immagineUrl(me.lega.satispayQr, 600)
-
-  return (
-    <Card className="space-y-3">
-      <div className="flex items-center justify-between gap-2">
-        <h2 className="font-semibold">💶 La tua quota: {euro(match.quota)}</h2>
-        {pagato ? (
-          <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs text-green-800 dark:bg-green-950 dark:text-green-300">✅ pagata</span>
-        ) : (
-          <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs text-red-800 dark:bg-red-950 dark:text-red-300">da pagare</span>
-        )}
-      </div>
-      {pagato ? (
-        <form action={annullaPagamento.bind(null, match._id, undefined)} className="text-right">
-          <SubmitButton className={`${piccolo} text-zinc-400`} confirm="Segnare di nuovo come da pagare?">
-            L&apos;ho segnata per errore
-          </SubmitButton>
-        </form>
-      ) : (
-        <>
-          <PagaSatispay link={me.lega.satispayLink} quota={match.quota} segnaPagato={dichiaraPagamento.bind(null, match._id)} variante="pulsante" />
-          <p className="text-xs text-zinc-500">
-            {me.lega.satispayLink
-              ? `Si apre Satispay: inserisci ${euro(match.quota)} e conferma il pagamento.`
-              : "Paga come d'accordo con l'organizzatore e tocca \"Paga\"."}
-          </p>
-          {qr && (
-            <details className="text-sm">
-              <summary className="cursor-pointer text-zinc-500">Mostra il QR (per pagare al campo da un altro telefono)</summary>
-              {/* eslint-disable-next-line @next/next/no-img-element -- immagine dal CDN di Sanity */}
-              <img src={qr} alt="QR Satispay" className="mx-auto mt-3 max-h-80 rounded-xl" />
-            </details>
-          )}
-        </>
-      )}
-    </Card>
-  )
-}
-
 // La cassa dell'organizzatore: chi ha pagato e chi manca.
-export function Cassa({ match }: { match: Match }) {
+export function Cassa({ match, mioId }: { match: Match; mioId?: string }) {
   if (match.quota == null || match.stato === 'annullata') return null
   const lista = presenti(match)
   if (lista.length === 0) return null
@@ -100,12 +68,13 @@ export function Cassa({ match }: { match: Match }) {
 
         <div className="space-y-4 border-t border-zinc-200 p-4 dark:border-zinc-800">
           <ul className="space-y-2">
-            {lista.map(({ giocatore }) => {
+            {mioInCima(lista, mioId, (c) => c.giocatore._id).map(({ giocatore }) => {
               const pagato = haPagato(match, giocatore._id)
               return (
                 <li key={giocatore._id}>
                   <PlayerRow
                     player={giocatore}
+                    mio={giocatore._id === mioId}
                     right={
                       <span className="flex shrink-0 items-center gap-1 text-xs">
                         {pagato ? (

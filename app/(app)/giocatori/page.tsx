@@ -1,5 +1,5 @@
 import { Suspense } from 'react'
-import { overall, requirePlayer } from '@/lib/player'
+import { mioInCima, overall, requirePlayer } from '@/lib/player'
 import { getPlayers } from '@/lib/matches'
 import { ButtonLink, Card, Loading, PageTitle, PlayerRow } from '@/components/ui'
 
@@ -24,10 +24,11 @@ async function Rosa() {
       </PageTitle>
       <Card>
         <ul className="space-y-3">
-          {attivi.map((p) => (
+          {mioInCima(attivi, me._id, (p) => p._id).map((p) => (
             <li key={p._id}>
               <PlayerRow
                 player={p}
+                mio={p._id === me._id}
                 mostraAccesso
                 right={
                   p.isAdmin ? (
