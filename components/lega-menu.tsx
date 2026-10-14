@@ -21,7 +21,20 @@ function Stemma({ lega, size = 28 }: { lega: LegaVoce; size?: number }) {
 }
 
 // Nome della lega attiva nell'intestazione: toccandolo si cambia lega o se ne aggiunge una.
-export function LegaMenu({ corrente, altre, organizzatore }: { corrente: LegaVoce; altre: LegaVoce[]; organizzatore: boolean }) {
+// Il titolare dell'app (super admin) ha anche "Tutte le leghe"; `ospite` = è in una lega non sua.
+export function LegaMenu({
+  corrente,
+  altre,
+  organizzatore,
+  titolare = false,
+  ospite = false,
+}: {
+  corrente: LegaVoce
+  altre: LegaVoce[]
+  organizzatore: boolean
+  titolare?: boolean
+  ospite?: boolean
+}) {
   const [open, setOpen] = useState(false)
   const [pending, startTransition] = useTransition()
   const box = useRef<HTMLDivElement>(null)
@@ -55,6 +68,11 @@ export function LegaMenu({ corrente, altre, organizzatore }: { corrente: LegaVoc
           ▾
         </span>
       </button>
+      {ospite && (
+        <span className="ml-1 inline-block rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-800 dark:bg-amber-900/50 dark:text-amber-300">
+          👑 Super admin
+        </span>
+      )}
 
       {open && (
         <div role="menu" className="absolute left-0 z-30 mt-1 w-72 rounded-xl border border-zinc-200 bg-white p-2 shadow-lg dark:border-zinc-700 dark:bg-zinc-900">
@@ -82,6 +100,11 @@ export function LegaMenu({ corrente, altre, organizzatore }: { corrente: LegaVoc
           {organizzatore && (
             <Link href="/lega" role="menuitem" className={voce} onClick={() => setOpen(false)}>
               ⚙️ Impostazioni e inviti
+            </Link>
+          )}
+          {titolare && (
+            <Link href="/leghe" role="menuitem" className={voce} onClick={() => setOpen(false)}>
+              👑 Tutte le leghe
             </Link>
           )}
           <Link href="/benvenuto" role="menuitem" className={voce} onClick={() => setOpen(false)}>

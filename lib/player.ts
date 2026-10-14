@@ -13,10 +13,13 @@ export * from './roster'
 export const COOKIE_LEGA = 'lega'
 
 // La mia scheda giocatore in una lega, con i dati della lega.
-export type Membro = Player & { lega: Lega }
+// `ospite`: il titolare dell'app in una lega di cui non fa parte (super admin): ha i poteri
+// dell'organizzatore ma non è un giocatore (niente scheda, convocazioni, pagamenti).
+export type Membro = Player & { lega: Lega; ospite?: boolean }
 
-const membroFields = `${playerFields}, "lega": lega->{_id, nome, logo, codiceInvito, satispayLink, satispayQr,
-  "fotoSorprese": coalesce(fotoSorprese, []) + select(defined(fotoSorpresa) => [fotoSorpresa{..., "_key": "vecchia"}], [])}`
+const legaFields = `_id, nome, logo, codiceInvito, satispayLink, satispayQr,
+  "fotoSorprese": coalesce(fotoSorprese, []) + select(defined(fotoSorpresa) => [fotoSorpresa{..., "_key": "vecchia"}], [])`
+const membroFields = `${playerFields}, "lega": lega->{${legaFields}}`
 
 export const getUtente = cache(async () => {
   const user = await currentUser()
@@ -59,17 +62,48 @@ export const getMemberships = cache(async (): Promise<Membro[]> => {
   return list.filter((m) => !viste.has(m.lega._id) && viste.add(m.lega._id))
 })
 
-// La mia scheda nella lega attiva (scelta su questo dispositivo, altrimenti la prima).
-export const getCurrentPlayer = cache(async (): Promise<Membro | null> => {
-  const list = await getMemberships()
-  if (list.length === 0) return null
-  const scelta = (await cookies()).get(COOKIE_LEGA)?.value
-  return list.find((m) => m.lega._id === scelta) ?? list[0]
+// Super admin: il titolare dell'app entra in una lega di cui non fa parte come "ospite".
+const getOspite = cache(async (legaId: string): Promise<Membro | null> => {
+  if (!(await isTitolare())) return null
+  const lega = await sanity.fetch<Lega | null>(`*[_type == "league" && _id == $legaId][0]{${legaFields}}`, { legaId })
+  if (!lega) return null
+  return { _id: `ospite-${lega._id}`, nome: 'Super admin', isAdmin: true, puoInserireRisultati: true, ospite: true, lega }
 })
 
+// Tutte le leghe dell'app, per il super admin.
+export async function getTutteLeLeghe() {
+  if (!(await isTitolare())) return []
+  return sanity.fetch<{ _id: string; nome: string; logo?: Lega['logo']; giocatori: number; partite: number }[]>(
+    `*[_type == "league"] | order(lower(nome) asc){_id, nome, logo,
+      "giocatori": count(*[_type == "player" && lega._ref == ^._id && attivo != false]),
+      "partite": count(*[_type == "match" && lega._ref == ^._id])}`,
+  )
+}
+
+// La mia scheda nella lega attiva (scelta su questo dispositivo, altrimenti la prima).
+// Il titolare può avere come lega attiva anche una lega di cui non fa parte (ospite).
+export const getCurrentPlayer = cache(async (): Promise<Membro | null> => {
+  const list = await getMemberships()
+  const scelta = (await cookies()).get(COOKIE_LEGA)?.value
+  const mia = list.find((m) => m.lega._id === scelta)
+  if (mia) return mia
+  if (scelta) {
+    const ospite = await getOspite(scelta)
+    if (ospite) return ospite
+  }
+  return list[0] ?? null
+})
+
+// La mia scheda in una lega (per il titolare, se non ne fa parte, l'accesso da ospite).
 export async function membroDi(legaId: string | null | undefined) {
   if (!legaId) return null
-  return (await getMemberships()).find((m) => m.lega._id === legaId) ?? null
+  return (await getMemberships()).find((m) => m.lega._id === legaId) ?? (await getOspite(legaId))
+}
+
+// Per le azioni da giocatore (rispondere, pagare, preferenze): l'ospite non è un giocatore.
+export function soloGiocatore<M extends Membro>(m: M) {
+  if (m.ospite) throw new Error('Come super admin non sei un giocatore di questa lega')
+  return m
 }
 
 type Permesso = 'giocatore' | 'organizzatore' | 'refertatore'

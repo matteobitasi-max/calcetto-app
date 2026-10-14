@@ -5,7 +5,7 @@ import { cookies } from 'next/headers'
 import { refresh } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { sanity } from '@/lib/sanity'
-import { BADGE, CATEGORIE_NOTIFICHE, COOKIE_LEGA, normalizzaTelefono, PIEDI, RUOLI, SKILLS, displayName, requirePlayer, getUtente, isTitolare, membroDi, requireAdmin, requireForDoc, requireIn, type Player, type Skill } from '@/lib/player'
+import { BADGE, CATEGORIE_NOTIFICHE, COOKIE_LEGA, normalizzaTelefono, PIEDI, RUOLI, SKILLS, displayName, requirePlayer, getUtente, getMemberships, isTitolare, membroDi, soloGiocatore, requireAdmin, requireForDoc, requireIn, type Player, type Skill } from '@/lib/player'
 import { assegnaPosti, finestra, getMatch, presenti, risultatoDa, type Match, type Risposta, type Stato } from '@/lib/matches'
 import { MAX_GIOCATORI, MAX_ISCRITTI, formatoDaIscritti } from '@/lib/limiti'
 import { riscriviPartita, type MatchDaUnire } from '@/lib/unisci'
@@ -28,7 +28,7 @@ type RawConvocazione = { _key: string; giocatore: { _ref: string }; risposta: Ri
 
 export async function rispondi(matchId: string, risposta: 'presente' | 'assente') {
   // La mia scheda nella lega della partita.
-  const player = await requireForDoc(matchId)
+  const player = soloGiocatore(await requireForDoc(matchId))
 
   // Lettura-modifica-scrittura con controllo di revisione: se due giocatori
   // rispondono nello stesso istante, il secondo riprova sui dati aggiornati.
@@ -646,7 +646,8 @@ export async function uniscitiConInvito(codice: string) {
   })
   if (!lega) throw new Error('Invito non valido o scaduto')
 
-  if (!(await membroDi(lega._id))) {
+  // (non basta membroDi: per il titolare risponde anche da ospite, ma qui deve diventare giocatore)
+  if (!(await getMemberships()).some((m) => m.lega._id === lega._id)) {
     // Chi era stato tolto dalla rosa e riceve di nuovo l'invito, rientra con la sua scheda.
     const vecchia = await sanity.fetch<string | null>(
       `*[_type == "player" && lega._ref == $lega && clerkUserId == $id][0]._id`,
@@ -789,7 +790,7 @@ const inLista = (match: Match, playerId: string) => presenti(match).some((c) => 
 
 // Il giocatore paga con Satispay e lo segna: da quel momento risulta pagato.
 export async function dichiaraPagamento(matchId: string) {
-  const me = await requireForDoc(matchId)
+  const me = soloGiocatore(await requireForDoc(matchId))
   const match = await partitaConQuota(matchId)
   if (!inLista(match, me._id)) throw new Error('Non sei in lista per questa partita')
   if (match.pagamenti.some((p) => p.giocatoreId === me._id)) return
@@ -799,7 +800,7 @@ export async function dichiaraPagamento(matchId: string) {
 // Annullare un pagamento segnato per errore: il giocatore il suo, l'organizzatore quello di chiunque.
 export async function annullaPagamento(matchId: string, playerId?: string) {
   const me = await requireForDoc(matchId)
-  const chi = playerId ?? me._id
+  const chi = playerId ?? soloGiocatore(me)._id
   if (chi !== me._id && !me.isAdmin) throw new Error('Solo gli organizzatori possono farlo')
   await segnaPagamento(matchId, chi, null)
 }
@@ -825,7 +826,7 @@ export async function sollecitaPagamenti(matchId: string): Promise<AvvisoState> 
 
 // Il giocatore sceglie quali notifiche ricevere (per la lega attiva).
 export async function salvaPreferenzaNotifica(chiave: string, attiva: boolean) {
-  const me = await requirePlayer()
+  const me = soloGiocatore(await requirePlayer())
   if (!(chiave in CATEGORIE_NOTIFICHE)) throw new Error('Tipo di notifica non valido')
   await sanity.patch(me._id).setIfMissing({ notifiche: {} }).set({ [`notifiche.${chiave}`]: !!attiva }).commit()
 }

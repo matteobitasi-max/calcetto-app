@@ -20,7 +20,8 @@ export default function PrivacyPage() {
         </li>
         <li>
           <b>Scheda giocatore</b>: nome, soprannome, foto, ruolo, piede, badge e caratteristiche tecniche, inseriti da te o dagli
-          organizzatori della tua lega e visibili solo ai membri della lega.
+          organizzatori della tua lega e visibili solo ai membri della lega. Il titolare dell&apos;app può accedere ai dati di una lega
+          solo per assistenza e moderazione (ad esempio per correggere un errore o aiutare un organizzatore).
         </li>
         <li>
           <b>Attività nella lega</b>: risposte alle convocazioni, squadre, gol, MVP, statistiche e lo stato di pagamento delle quote.

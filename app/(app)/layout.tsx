@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { Suspense } from 'react'
 import { UserButton } from '@clerk/nextjs'
-import { getCurrentPlayer, getMemberships } from '@/lib/player'
+import { getCurrentPlayer, getMemberships, isTitolare } from '@/lib/player'
 import { avatarUrl, immagineUrl } from '@/lib/image'
 import { Avatar } from '@/components/ui'
 import { LegaZoom } from '@/components/logo-zoom'
@@ -47,7 +47,7 @@ export default function AppLayout({ children }: LayoutProps<'/'>) {
 
 // La lega attiva (con il menu per cambiarla) e la mia foto, che apre il mio profilo.
 async function LegaEUtente() {
-  const [me, leghe] = await Promise.all([getCurrentPlayer(), getMemberships()])
+  const [me, leghe, titolare] = await Promise.all([getCurrentPlayer(), getMemberships(), isTitolare()])
   // Chi non è (ancora) in nessuna lega ha comunque bisogno del menu Clerk per uscire.
   if (!me) {
     return (
@@ -68,7 +68,13 @@ async function LegaEUtente() {
       />
       {me.lega.fotoSorprese.length > 0 && <ScuotiFoto urls={me.lega.fotoSorprese.map((f) => immagineUrl(f, 1200)!)} />}
       <div className="min-w-0 flex-1">
-        <LegaMenu corrente={voce(me)} altre={leghe.filter((m) => m.lega._id !== me.lega._id).map(voce)} organizzatore={!!me.isAdmin} />
+        <LegaMenu
+          corrente={voce(me)}
+          altre={leghe.filter((m) => m.lega._id !== me.lega._id).map(voce)}
+          organizzatore={!!me.isAdmin}
+          titolare={titolare}
+          ospite={!!me.ospite}
+        />
       </div>
       <Link
         href="/profilo"

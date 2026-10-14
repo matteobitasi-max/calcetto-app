@@ -79,7 +79,7 @@ async function MatchDetail({ params }: { params: Promise<{ id: string }> }) {
         {match.stato === 'giocata' && match.risultato?.golA != null && <Tabellino match={match} />}
         {canEnterResults(player) && <RisultatoAzione match={match} />}
         <div className="border-t border-zinc-200 pt-3 empty:hidden dark:border-zinc-800">
-          <RispostaButtons match={match} playerId={player._id} />
+          {!player.ospite && <RispostaButtons match={match} playerId={player._id} />}
         </div>
       </Card>
 

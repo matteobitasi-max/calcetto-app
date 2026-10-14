@@ -167,7 +167,7 @@ function ContoAllaRovescia({ match }: { match: Match }) {
   }
 }
 
-function ProssimaPartita({ match, player }: { match: Match; player: Player }) {
+function ProssimaPartita({ match, player }: { match: Match; player: Player & { ospite?: boolean } }) {
   const count = presenti(match).length
   const inAttesa = ordinati(match, 'riserva').length
   const formato = formatoInCorso(match)
@@ -218,7 +218,7 @@ function ProssimaPartita({ match, player }: { match: Match; player: Player }) {
           )}
         </div>
 
-        <RispostaButtons match={match} playerId={player._id} />
+        {!player.ospite && <RispostaButtons match={match} playerId={player._id} />}
 
         <Link href={`/partite/${match._id}`} className="block text-center text-sm text-green-700 hover:underline dark:text-green-400">
           Lista, squadre e dettagli →
