@@ -14,6 +14,8 @@ export function PhotoInput({ currentUrl, name = 'foto' }: { currentUrl?: string 
       const dt = new DataTransfer()
       dt.items.add(foto)
       input.current!.files = dt.files
+      // il modulo deve accorgersi della modifica (es. per mostrare "Salva")
+      input.current!.dispatchEvent(new Event('change', { bubbles: true }))
       setPreview(URL.createObjectURL(foto))
     },
   })

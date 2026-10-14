@@ -3,6 +3,7 @@ import { BADGE, PIEDI, RUOLI, SKILLS, SKILL_DESCRIPTIONS, type Player, type Skil
 import { avatarUrl } from '@/lib/image'
 import { ActionForm } from '@/components/action-form'
 import { PhotoInput } from '@/components/photo-input'
+import { PillSalva } from '@/components/pill-salva'
 import { RatingInput } from '@/components/rating-input'
 import { SubmitButton } from '@/components/submit-button'
 import { Card, Field, buttonClass, inputClass } from '@/components/ui'
@@ -102,9 +103,14 @@ export function PlayerForm({
         ))}
       </Card>
 
-      <SubmitButton className={buttonClass('primary')} pendingText="Salvo…">
-        {submitLabel}
-      </SubmitButton>
+      {/* Modifica: la pillola "Salva" compare quando cambi qualcosa. Nuovo giocatore: pulsante in fondo. */}
+      {player ? (
+        <PillSalva label={submitLabel} />
+      ) : (
+        <SubmitButton className={buttonClass('primary')} pendingText="Salvo…">
+          {submitLabel}
+        </SubmitButton>
+      )}
     </ActionForm>
   )
 }
