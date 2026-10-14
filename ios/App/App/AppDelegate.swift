@@ -7,7 +7,9 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     var window: UIWindow?
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
-        // Override point for customization after application launch.
+        // Scuotere il telefono mostra la foto sorpresa (components/scuoti-foto.tsx),
+        // non il messaggio di iOS "Annulla digitazione".
+        application.applicationSupportsShakeToEdit = false
         return true
     }
 

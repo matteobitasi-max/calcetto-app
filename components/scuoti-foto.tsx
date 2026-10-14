@@ -2,9 +2,9 @@
 
 import { useEffect, useState } from 'react'
 
-const STRATTONE = 30 // variazione di accelerazione (m/s²) tra due letture per contare uno strattone
+const STRATTONE = 22 // variazione di accelerazione (m/s²) tra due letture per contare uno strattone
 const STRATTONI = 3 // strattoni ravvicinati che fanno una "scossa"
-const FINESTRA = 1000 // ms entro cui devono arrivare gli strattoni
+const FINESTRA = 1200 // ms entro cui devono arrivare gli strattoni
 const PAUSA = 2000 // ms dopo una scossa prima di riconoscerne un'altra
 
 type ConPermesso = typeof DeviceMotionEvent & { requestPermission?: () => Promise<'granted' | 'denied'> }
