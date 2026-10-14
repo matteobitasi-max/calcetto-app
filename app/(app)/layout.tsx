@@ -85,7 +85,7 @@ async function LegaEUtente() {
         title="Il mio profilo"
         className="shrink-0 rounded-full ring-2 ring-green-600 ring-offset-2 ring-offset-white dark:ring-offset-zinc-900"
       >
-        <Avatar player={me} size={34} />
+        <Avatar player={me} size={34} zoom={false} />
       </Link>
     </>
   )

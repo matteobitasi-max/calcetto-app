@@ -5,6 +5,7 @@ import { displayName, eta, membroDi } from '@/lib/player'
 import { getKmTotali, getPartitePunteggio, getPlayer, getPlayerStats, getStorico, type PartitaGiocata, type PlayerStats } from '@/lib/matches'
 import { classifica } from '@/lib/punteggio'
 import { formatData } from '@/lib/dates'
+import { immagineUrl } from '@/lib/image'
 import { caricaFoto } from '@/app/actions'
 import { AvatarUpload } from '@/components/avatar-upload'
 import { NotificheToggle } from '@/components/notifiche-toggle'
@@ -51,8 +52,8 @@ export async function ProfiloGiocatore({ id }: { id: string }) {
         )}
         <div className="flex items-center gap-4 pr-8">
           {cambiaFoto ? (
-            <AvatarUpload action={caricaFoto.bind(null, player._id)} size={72}>
-              <Avatar player={player} size={72} />
+            <AvatarUpload action={caricaFoto.bind(null, player._id)} size={72} grande={immagineUrl(player.foto, 1024)} nome={displayName(player)}>
+              <Avatar player={player} size={72} zoom={false} />
             </AvatarUpload>
           ) : (
             <Avatar player={player} size={72} />

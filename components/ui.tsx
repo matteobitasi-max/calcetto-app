@@ -4,7 +4,8 @@ import type { ComponentProps, ReactNode } from 'react'
 import { BADGE, SKILLS, displayName, iniziali, overall, type Badge, type Player, type Skill } from '@/lib/roster'
 import type { Risposta, Stato } from '@/lib/matches'
 import { finestra } from '@/lib/finestra'
-import { avatarUrl } from '@/lib/image'
+import { avatarUrl, immagineUrl } from '@/lib/image'
+import { FotoZoom } from './foto-zoom'
 import { buttonClass, inputClass } from './ui-classes'
 
 export { buttonClass, inputClass }
@@ -79,9 +80,12 @@ export function Overall({ player, grande = false }: { player: Player; grande?: b
   )
 }
 
-export function Avatar({ player, size = 40 }: { player: Player; size?: number }) {
+// Foto profilo (o iniziali). Con `zoom` (di base sì) toccandola si apre ingrandita.
+export function Avatar({ player, size = 40, zoom = true }: { player: Player; size?: number; zoom?: boolean }) {
   const url = avatarUrl(player.foto, size * 2)
   const initials = iniziali(displayName(player))
+  const grande = zoom && url ? immagineUrl(player.foto, 1024) : null
+  if (url && grande) return <FotoZoom piccola={url} grande={grande} nome={displayName(player)} size={size} />
   return url ? (
     <Image src={url} alt="" width={size} height={size} unoptimized className="shrink-0 rounded-full object-cover" style={{ width: size, height: size }} />
   ) : (

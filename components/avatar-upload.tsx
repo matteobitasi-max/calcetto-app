@@ -2,18 +2,25 @@
 
 import { startTransition, useActionState, useState, type ReactNode } from 'react'
 import type { FormState } from '@/app/actions'
-import { useSceltaFoto } from './scelta-foto'
+import { FotoIngrandita } from './foto-zoom'
+import { useSceltaFoto, voceMenuFoto } from './scelta-foto'
 
 // Avatar cliccabile: scatta o scegli una foto e viene caricata subito.
 export function AvatarUpload({
   action,
   size,
+  grande,
+  nome = '',
   children,
 }: {
   action: (prev: FormState, fd: FormData) => Promise<FormState>
   size: number
+  /** Foto attuale in grande: nel menu compare "Vedi ingrandita". */
+  grande?: string | null
+  nome?: string
   children: ReactNode
 }) {
+  const [zoom, setZoom] = useState(false)
   const [state, formAction, pending] = useActionState(action, undefined)
   const [preview, setPreview] = useState<string | null>(null)
   const scelta = useSceltaFoto({
@@ -24,6 +31,18 @@ export function AvatarUpload({
       fd.set('foto', foto)
       startTransition(() => formAction(fd))
     },
+    altro: grande && !preview && (
+      <button
+        type="button"
+        className={voceMenuFoto}
+        onClick={(e) => {
+          e.currentTarget.closest('dialog')?.close()
+          setZoom(true)
+        }}
+      >
+        🔍 Vedi ingrandita
+      </button>
+    ),
   })
 
   return (
@@ -50,6 +69,7 @@ export function AvatarUpload({
         ✎
       </span>
       {scelta.menu}
+      {zoom && grande && <FotoIngrandita url={grande} nome={nome} chiudi={() => setZoom(false)} />}
       {state?.error && <p className="mt-1 max-w-40 text-xs text-red-600">{state.error}</p>}
     </div>
   )
