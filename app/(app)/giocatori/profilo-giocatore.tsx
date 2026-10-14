@@ -22,9 +22,10 @@ export async function ProfiloGiocatore({ id }: { id: string }) {
   const inClassifica = classifica(partite).find((r) => r.id === player._id)
 
   const fullName = [player.nome, player.cognome].filter(Boolean).join(' ')
-  // Modifica, foto e unione dei doppioni: solo per gli organizzatori.
+  // Modifica e unione dei doppioni: solo per gli organizzatori. La foto: anche ognuno la sua.
   const canEdit = !!me.isAdmin
   const mio = me._id === player._id
+  const cambiaFoto = canEdit || mio
   const ruoli = [
     player.isAdmin && 'organizzatore',
     !player.isAdmin && player.puoInserireRisultati && 'refertatore',
@@ -44,7 +45,7 @@ export async function ProfiloGiocatore({ id }: { id: string }) {
           </Link>
         )}
         <div className="flex items-center gap-4 pr-8">
-          {canEdit ? (
+          {cambiaFoto ? (
             <AvatarUpload action={caricaFoto.bind(null, player._id)} size={72}>
               <Avatar player={player} size={72} />
             </AvatarUpload>

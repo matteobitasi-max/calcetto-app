@@ -449,9 +449,10 @@ const caratteristicheFromForm = (formData: FormData) =>
     (Object.keys(SKILLS) as Skill[]).map((k) => [k, Math.min(10, Math.max(1, Math.round(num(formData, k) ?? 5)))]),
   )
 
-// Cambio rapido della foto cliccando sull'avatar.
+// Cambio rapido della foto cliccando sull'avatar: ognuno la sua, gli organizzatori quella di tutti.
 export async function caricaFoto(playerId: string, _prev: FormState, formData: FormData): Promise<FormState> {
-  await requireForDoc(playerId, 'organizzatore')
+  const me = await requireForDoc(playerId)
+  if (me._id !== playerId && !me.isAdmin) return { error: 'Puoi cambiare solo la tua foto.' }
   const upload = await uploadFoto(formData.get('foto'))
   if (!upload) return { error: 'Nessuna foto selezionata.' }
   if ('error' in upload) return upload
