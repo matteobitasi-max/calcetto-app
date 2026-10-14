@@ -29,6 +29,6 @@ async function Accesso() {
     return <SignIn routing="hash" forceRedirectUrl="/accesso-app" signUpForceRedirectUrl="/accesso-app" />
   }
   const client = await clerkClient()
-  const { token } = await client.signInTokens.createSignInToken({ userId, expiresInSeconds: 300 })
+  const { token } = await client.signInTokens.createSignInToken({ userId, expiresInSeconds: 60 })
   return <TornaNellApp url={`thecap://accesso?ticket=${encodeURIComponent(token)}`} />
 }

@@ -791,7 +791,7 @@ type StatoPagamento = 'dichiarato' | 'confermato'
 
 // Scrive (o toglie) il pagamento di un giocatore: una voce per giocatore, con chiave il suo ID.
 async function segnaPagamento(matchId: string, playerId: string, voce: { stato: StatoPagamento; metodo: 'satispay' | 'contanti' } | null) {
-  const tx = sanity.transaction().patch(matchId, (p) => p.setIfMissing({ pagamenti: [] }).unset([`pagamenti[_key=="${playerId}"]`]))
+  const tx = sanity.transaction().patch(matchId, (p) => p.setIfMissing({ pagamenti: [] }).unset([`pagamenti[_key == ${JSON.stringify(playerId)}]`]))
   if (voce) {
     tx.patch(matchId, (p) =>
       p.append('pagamenti', [
@@ -859,7 +859,7 @@ async function partitaPerKm(matchId: string) {
 }
 
 async function scriviKm(matchId: string, playerId: string, km: number | null, fonte: FonteKm) {
-  const tx = sanity.transaction().patch(matchId, (p) => p.setIfMissing({ distanze: [] }).unset([`distanze[_key=="${playerId}"]`]))
+  const tx = sanity.transaction().patch(matchId, (p) => p.setIfMissing({ distanze: [] }).unset([`distanze[_key == ${JSON.stringify(playerId)}]`]))
   if (km != null) {
     tx.patch(matchId, (p) =>
       p.append('distanze', [{ _key: playerId, _type: 'distanza', giocatore: { _type: 'reference', _ref: playerId }, km, fonte }]),
