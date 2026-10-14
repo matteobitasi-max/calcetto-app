@@ -65,15 +65,7 @@ export async function ProfiloGiocatore({ id }: { id: string }) {
           <div className="min-w-0 flex-1 space-y-1">
             <h1 className="break-words text-xl font-bold leading-tight">{displayName(player)}</h1>
             {player.soprannome && <p className="text-sm text-zinc-500">{fullName}</p>}
-            <div className="flex flex-wrap items-center gap-1.5">
-              <PlayerBadge badge={player.badge} />
-              {/* i trofei sbloccati, accanto al badge: toccandoli si vede cosa sono */}
-              {(Object.keys(TROFEI) as IdTrofeo[])
-                .filter((t) => trofei[t])
-                .map((t) => (
-                  <Trofeo key={t} id={t} sbloccato={trofei[t]} piccolo />
-                ))}
-            </div>
+            <PlayerBadge badge={player.badge} />
             <p className="text-sm leading-snug text-zinc-500 first-letter:uppercase">
               {[player.ruolo, player.piede && `piede ${player.piede}`, player.dataNascita && `${eta(player.dataNascita)} anni`, ...ruoli, player.attivo === false && 'non attivo']
                 .filter(Boolean)
@@ -274,19 +266,11 @@ function Storico({ partite, mio }: { partite: PartitaGiocata[]; mio: boolean }) 
 }
 
 // Un trofeo: sbloccato a colori (con quante volte), da sbloccare in grigio. Toccandolo si apre la spiegazione.
-function Trofeo({ id, sbloccato, piccolo = false }: { id: IdTrofeo; sbloccato?: { il: string; volte: number }; piccolo?: boolean }) {
+function Trofeo({ id, sbloccato }: { id: IdTrofeo; sbloccato?: { il: string; volte: number } }) {
   const t = TROFEI[id]
   const dettaglio = sbloccato
     ? `Sbloccato il ${formatData(sbloccato.il, { day: 'numeric', month: 'long', year: 'numeric' })}${sbloccato.volte > 1 ? ` · ${sbloccato.volte} volte` : ''}`
     : '🔒 Ancora da sbloccare'
-  if (piccolo) {
-    return (
-      <Medaglia emoji={t.emoji} titolo={t.nome} testo={t.descrizione} dettaglio={dettaglio} className="text-lg leading-none">
-        {t.emoji}
-        {sbloccato && sbloccato.volte > 1 && <sub className="text-[10px] font-semibold text-zinc-500">{sbloccato.volte}</sub>}
-      </Medaglia>
-    )
-  }
   return (
     <Medaglia
       emoji={t.emoji}
