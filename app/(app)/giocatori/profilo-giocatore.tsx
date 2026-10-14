@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { SignOutButton } from '@clerk/nextjs'
 import { displayName, eta, membroDi } from '@/lib/player'
-import { getPartitePunteggio, getPlayer, getPlayerStats, getStorico, type PartitaGiocata, type PlayerStats } from '@/lib/matches'
+import { getKmTotali, getPartitePunteggio, getPlayer, getPlayerStats, getStorico, type PartitaGiocata, type PlayerStats } from '@/lib/matches'
 import { classifica } from '@/lib/punteggio'
 import { formatData } from '@/lib/dates'
 import { caricaFoto } from '@/app/actions'
@@ -18,7 +18,12 @@ export async function ProfiloGiocatore({ id }: { id: string }) {
   // Le schede si vedono solo tra membri della stessa lega.
   const me = await membroDi(player?.legaId)
   if (!player || !me) notFound()
-  const [stats, storico, partite] = await Promise.all([getPlayerStats(id, me.lega._id), getStorico(id), getPartitePunteggio(me.lega._id)])
+  const [stats, storico, partite, kmTotali] = await Promise.all([
+    getPlayerStats(id, me.lega._id),
+    getStorico(id),
+    getPartitePunteggio(me.lega._id),
+    getKmTotali(me.lega._id),
+  ])
   const inClassifica = classifica(partite).find((r) => r.id === player._id)
 
   const fullName = [player.nome, player.cognome].filter(Boolean).join(' ')
@@ -83,7 +88,7 @@ export async function ProfiloGiocatore({ id }: { id: string }) {
         )}
       </Card>
 
-      <Statistiche stats={stats} />
+      <Statistiche stats={stats} km={kmTotali.get(id)} />
 
       <Card>
         <h2 className="mb-3 font-semibold">Caratteristiche</h2>
@@ -123,7 +128,7 @@ export async function ProfiloGiocatore({ id }: { id: string }) {
   )
 }
 
-function Statistiche({ stats: s }: { stats: PlayerStats }) {
+function Statistiche({ stats: s, km }: { stats: PlayerStats; km?: { km: number; partite: number } }) {
   if (s.giocate === 0) {
     return <Card className="text-sm text-zinc-500">Le statistiche compariranno dopo la prima partita con il risultato.</Card>
   }
@@ -169,6 +174,13 @@ function Statistiche({ stats: s }: { stats: PlayerStats }) {
             ['Gol a partita', media(s.gol)],
             ['Gol subiti', s.gs],
             ['Subiti a partita', media(s.gs)],
+            // km solo se ce ne sono (da Apple Salute): la media è sulle partite con i km
+            ...(km
+              ? ([
+                  ['🏃 Km totali', km.km.toLocaleString('it-IT', { maximumFractionDigits: 1 })],
+                  ['Km a partita', (km.km / km.partite).toLocaleString('it-IT', { maximumFractionDigits: 1 })],
+                ] as const)
+              : []),
           ] as const
         ).map(([label, value]) => (
           <div key={label} className="flex justify-between gap-2 border-b border-zinc-100 pb-1 dark:border-zinc-800">
