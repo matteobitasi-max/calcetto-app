@@ -11,7 +11,7 @@ import { buttonClass, inputClass } from './ui-classes'
 export { buttonClass, inputClass }
 
 export function Card({ className = '', ...props }: ComponentProps<'section'>) {
-  return <section className={`rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900 ${className}`} {...props} />
+  return <section className={`rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-700 dark:bg-zinc-900 dark:shadow-lg dark:shadow-black/40 ${className}`} {...props} />
 }
 
 export function PageTitle({ children, action }: { children: ReactNode; action?: ReactNode }) {
