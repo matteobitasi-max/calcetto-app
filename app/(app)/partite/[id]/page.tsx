@@ -7,7 +7,7 @@ import { finestra, formatoInCorso, getMatch, getPlayers, orarioPartita, ordinati
 import { getCollegamento, stravaConfigurato } from '@/lib/strava'
 import { KmPartita } from '@/components/km-partita'
 import { MeteoPartita } from '@/components/meteo-partita'
-import { formatData } from '@/lib/dates'
+import { formatData, giornoPartita, oraPartita } from '@/lib/dates'
 import { aggiungiDaAttesa, allungaFinestra, apriConvocazioni, cambiaStato, scegliLega, rimettiInAttesa } from '@/app/actions'
 import { Countdown } from '@/components/countdown'
 import { ApriConvocazioni } from '@/components/apri-convocazioni'
@@ -57,18 +57,22 @@ async function MatchDetail({ params }: { params: Promise<{ id: string }> }) {
       )}
       <Card className="space-y-2">
         <div className="flex items-start justify-between gap-2">
-          <h1 className="text-lg font-bold capitalize">{formatData(match.data)}</h1>
+          <h1 className="text-lg font-bold leading-tight">
+            <span className="block capitalize">{giornoPartita(match.data)}</span>
+            <span className="block">
+              Inizio {oraPartita(match.data)}
+              <Suspense>
+                <MeteoPartita citta={player.lega.citta} data={match.data} compatto />
+              </Suspense>
+            </span>
+          </h1>
           <StatoBadge match={match} />
         </div>
         <p className="text-sm text-zinc-500">
           📍 {match.luogo}
           {match.quota != null && ` · ${match.quota} € a testa`}
         </p>
-        {match.stato !== 'giocata' && match.stato !== 'annullata' && (
-          <Suspense>
-            <MeteoPartita citta={player.lega.citta} data={match.data} />
-          </Suspense>
-        )}
+
         {match.note && <p className="whitespace-pre-line text-sm">{match.note}</p>}
         <FinestraInfo match={match} />
         {match.serieId && (

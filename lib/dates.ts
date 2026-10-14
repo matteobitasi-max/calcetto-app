@@ -6,6 +6,10 @@ export function formatData(iso: string, opts: Intl.DateTimeFormatOptions = { dat
   return new Intl.DateTimeFormat('it-IT', { ...opts, timeZone: TZ }).format(new Date(iso))
 }
 
+// "mercoledì 21 ottobre" e "21:30", per il titolo della partita su due righe (senza anno).
+export const giornoPartita = (iso: string) => formatData(iso, { weekday: 'long', day: 'numeric', month: 'long' })
+export const oraPartita = (iso: string) => formatData(iso, { hour: '2-digit', minute: '2-digit' })
+
 const romeFormat = new Intl.DateTimeFormat('en-US', {
   timeZone: TZ,
   hourCycle: 'h23',

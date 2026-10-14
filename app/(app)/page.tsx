@@ -3,7 +3,7 @@ import { Suspense, type ReactNode } from 'react'
 import { redirect } from 'next/navigation'
 import { getCurrentPlayer, type Player } from '@/lib/player'
 import { finestra, formatoInCorso, getPastMatches, getUpcomingMatches, ordinati, presenti, type Match } from '@/lib/matches'
-import { formatData } from '@/lib/dates'
+import { formatData, giornoPartita, oraPartita } from '@/lib/dates'
 import { assicuraRicorrenze } from '@/lib/series'
 import { Card, Loading, StatoBadge } from '@/components/ui'
 import { PillNuovaPartita } from '@/components/pill-nuova-partita'
@@ -189,14 +189,19 @@ function ProssimaPartita({
       <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">Prossima partita</h2>
       <Card className="space-y-4 border-2 border-green-600">
         <Link href={`/partite/${match._id}`} className="block space-y-1">
-          <h3 className="text-xl font-bold capitalize">{formatData(match.data)}</h3>
+          <h3 className="text-xl font-bold leading-tight">
+            <span className="block capitalize">{giornoPartita(match.data)}</span>
+            <span className="block">
+              Inizio {oraPartita(match.data)}
+              <Suspense>
+                <MeteoPartita citta={citta} data={match.data} compatto />
+              </Suspense>
+            </span>
+          </h3>
           <p className="text-sm text-zinc-500">
             📍 {match.luogo}
             {match.quota != null && ` · ${match.quota} €`}
           </p>
-          <Suspense>
-            <MeteoPartita citta={citta} data={match.data} />
-          </Suspense>
         </Link>
 
         <ContoAllaRovescia match={match} />
