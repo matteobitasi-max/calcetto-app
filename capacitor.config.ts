@@ -2,11 +2,12 @@
 import type { CapacitorConfig } from '@capacitor/cli'
 
 // L'app nativa mostra il sito pubblicato. L'indirizzo viene scritto nei progetti
-// iOS/Android a ogni `npx cap sync`, quindi va impostato prima:
-//   in sviluppo:  npm run dev  +  npx cap sync           (simulatore iPhone → localhost)
-//   emulatore Android in sviluppo:  CAP_SERVER_URL=http://10.0.2.2:3000 npx cap sync android
-//   produzione:  npm run app:online   (https://calcetto-app-brown.vercel.app)
-const url = process.env.CAP_SERVER_URL ?? 'http://localhost:3000'
+// iOS/Android a ogni `npx cap sync`. Di base è il sito online, così le build per gli
+// store non puntano mai per errore a un server locale. Solo per lo sviluppo:
+//   simulatore iPhone:  npm run dev  +  npm run app:ios       (→ localhost)
+//   emulatore Android:  npm run dev  +  npm run app:android   (→ 10.0.2.2)
+//   prima di una build per gli store:  npm run app:online
+const url = process.env.CAP_SERVER_URL ?? 'https://calcetto-app-brown.vercel.app'
 
 const config: CapacitorConfig = {
   appId: 'com.matteobitasi.thecap',

@@ -9,7 +9,7 @@
     "lint": "eslint",
     "app:sync": "cap sync",
     "app:android": "CAP_SERVER_URL=http://10.0.2.2:3000 cap sync android && cap open android",
-    "app:ios": "cap sync ios && cap open ios",
+    "app:ios": "CAP_SERVER_URL=http://localhost:3000 cap sync ios && cap open ios",
     "app:online": "CAP_SERVER_URL=https://calcetto-app-brown.vercel.app cap sync"
   },
   "dependencies": {
