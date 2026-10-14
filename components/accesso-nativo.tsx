@@ -5,24 +5,28 @@ import { Browser } from '@capacitor/browser'
 import { Capacitor } from '@capacitor/core'
 import { SignIn } from '@clerk/nextjs'
 import { useEffect, useState } from 'react'
+import { SchermataUsaApp, browserDelTelefono } from './usa-app'
 
 // Nelle app con il plugin Browser l'accesso si fa in una finestra del browser sopra l'app
 // (Google e Apple non lo permettono dentro l'app); le versioni vecchie usano ancora SignIn.
 const accessoNelBrowser = () => Capacitor.isNativePlatform() && Capacitor.isPluginAvailable('Browser')
 
+// La pagina di accesso: nell'app il pulsante "Accedi" (finestra del browser), dal browser del
+// telefono l'invito ad aprire l'app, dal computer (o di ritorno con il codice) il login di Clerk.
 export function AccessoNativo() {
-  const [nativo, setNativo] = useState<boolean | null>(null)
+  const [modo, setModo] = useState<'app' | 'telefono' | 'clerk' | null>(null)
   const [aperto, setAperto] = useState(false)
 
-  // Di ritorno dal browser (?__clerk_ticket=...) serve SignIn, che con il codice fa entrare.
-  useEffect(
+  useEffect(() => {
+    // Di ritorno dal browser (?__clerk_ticket=...) serve SignIn, che con il codice fa entrare.
+    const ticket = new URLSearchParams(window.location.search).has('__clerk_ticket')
     // eslint-disable-next-line react-hooks/set-state-in-effect -- dipende dal dispositivo: noto solo nel browser
-    () => setNativo(accessoNelBrowser() && !new URLSearchParams(window.location.search).has('__clerk_ticket')),
-    [],
-  )
+    setModo(ticket ? 'clerk' : accessoNelBrowser() ? 'app' : browserDelTelefono() ? 'telefono' : 'clerk')
+  }, [])
 
-  if (nativo === null) return null
-  if (!nativo) return <SignIn />
+  if (modo === null) return null
+  if (modo === 'telefono') return <SchermataUsaApp />
+  if (modo === 'clerk') return <SignIn />
 
   const apri = async () => {
     setAperto(true)

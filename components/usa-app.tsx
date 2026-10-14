@@ -4,19 +4,11 @@ import { Capacitor } from '@capacitor/core'
 import { useClerk } from '@clerk/nextjs'
 import { useEffect, useState } from 'react'
 
-// Dal browser del telefono l'app non si usa: si chiede di aprire l'app TheCap
-// (lì accesso, notifiche, fotocamera e scossa funzionano). Dal computer il sito resta usabile.
-export function UsaApp() {
-  const [blocca, setBlocca] = useState(false)
-  const { signOut } = useClerk()
+// Browser del telefono (non l'app TheCap): lì l'app non si usa.
+export const browserDelTelefono = () => /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) && !Capacitor.isNativePlatform()
 
-  useEffect(() => {
-    const telefono = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- dipende dal dispositivo: noto solo nel browser
-    setBlocca(telefono && !Capacitor.isNativePlatform())
-  }, [])
-
-  if (!blocca) return null
+// L'invito ad aprire l'app TheCap, al posto dell'app o della pagina di accesso.
+export function SchermataUsaApp() {
   return (
     <div className="fixed inset-0 z-[70] flex flex-col items-center justify-center gap-5 bg-white p-6 text-center dark:bg-zinc-950">
       {/* eslint-disable-next-line @next/next/no-img-element -- logo statico */}
@@ -33,9 +25,23 @@ export function UsaApp() {
       <p className="max-w-xs text-sm text-zinc-500">
         Non hai ancora l&apos;app? Chiedi il link per scaricarla all&apos;organizzatore della tua lega. Poi aprila e premi <b>Accedi</b>.
       </p>
-      <button type="button" onClick={() => signOut({ redirectUrl: '/sign-in' })} className="text-sm text-zinc-500 underline">
-        Esci da questo browser
-      </button>
     </div>
   )
+}
+
+// Nelle pagine dell'app: dal browser del telefono si esce subito (la sessione rimasta lì si
+// chiude) e si finisce sulla pagina di accesso, che mostra l'invito ad aprire l'app.
+// Dal computer il sito resta usabile.
+export function UsaApp() {
+  const [blocca, setBlocca] = useState(false)
+  const { signOut } = useClerk()
+
+  useEffect(() => {
+    if (!browserDelTelefono()) return
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- dipende dal dispositivo: noto solo nel browser
+    setBlocca(true)
+    signOut({ redirectUrl: '/sign-in' }).catch(() => undefined)
+  }, [signOut])
+
+  return blocca ? <SchermataUsaApp /> : null
 }
