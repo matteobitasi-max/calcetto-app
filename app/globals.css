@@ -12,10 +12,24 @@
   --font-mono: var(--font-geist-mono);
 }
 
+/* Versione notturna: niente nero puro (stanca la vista), ma un verde-ardesia scuro e morbido.
+   Ridefinisce i grigi "zinc" di Tailwind, usati in tutta l'app, così i riquadri si staccano
+   dallo sfondo e il testo (bianco caldo, non bianco puro) si legge bene a lungo. */
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: #111a16;
+    --foreground: #e4ebe7;
+    --color-zinc-50: #f4f7f5;
+    --color-zinc-100: #e9eeeb;
+    --color-zinc-200: #d6ded9;
+    --color-zinc-300: #c2cdc7;
+    --color-zinc-400: #a7b4ad;
+    --color-zinc-500: #8d9b94;
+    --color-zinc-600: #66756d;
+    --color-zinc-700: #3f4c45;
+    --color-zinc-800: #2c3832;
+    --color-zinc-900: #1f2925;
+    --color-zinc-950: #161f1b;
   }
 }
 
@@ -62,7 +76,7 @@ body {
 }
 @media (prefers-color-scheme: dark) {
   .campo {
-    --erba-chiara: #0d1910;
-    --erba-scura: #14261a;
+    --erba-chiara: #111a16;
+    --erba-scura: #15201b;
   }
 }
