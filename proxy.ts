@@ -1,7 +1,8 @@
 import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server'
 
-// Lo Studio ha il suo login Sanity, quindi non passa da Clerk.
-const isPublicRoute = createRouteMatcher(['/sign-in(.*)', '/studio(.*)'])
+// Lo Studio ha il suo login Sanity, quindi non passa da Clerk. /accesso-app gestisce da sé
+// chi non ha ancora fatto l'accesso (login delle app nel browser).
+const isPublicRoute = createRouteMatcher(['/sign-in(.*)', '/accesso-app(.*)', '/studio(.*)'])
 
 export default clerkMiddleware(async (auth, req) => {
   if (!isPublicRoute(req)) await auth.protect()

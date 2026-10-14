@@ -1,0 +1,33 @@
+import Image from 'next/image'
+import { Suspense } from 'react'
+import { SignIn } from '@clerk/nextjs'
+import { auth, clerkClient } from '@clerk/nextjs/server'
+import { TornaNellApp } from './torna-nell-app'
+
+// Accesso per le app iPhone/Android. Google (e Apple) non permettono l'accesso dentro l'app,
+// quindi l'app apre questa pagina in una finestra del browser (components/accesso-nativo.tsx).
+// Fatto l'accesso, qui si crea un codice monouso e si torna nell'app con thecap://accesso,
+// dove il codice fa entrare anche l'app.
+export default function AccessoAppPage() {
+  return (
+    <main className="flex flex-1 flex-col items-center justify-center gap-6 p-4">
+      <div className="flex flex-col items-center gap-2">
+        <Image src="/logo.png" alt="" width={96} height={96} className="rounded-full shadow-lg ring-4 ring-white" priority />
+        <h1 className="text-2xl font-bold">TheCap</h1>
+      </div>
+      <Suspense>
+        <Accesso />
+      </Suspense>
+    </main>
+  )
+}
+
+async function Accesso() {
+  const { userId } = await auth()
+  if (!userId) {
+    return <SignIn routing="hash" forceRedirectUrl="/accesso-app" signUpForceRedirectUrl="/accesso-app" />
+  }
+  const client = await clerkClient()
+  const { token } = await client.signInTokens.createSignInToken({ userId, expiresInSeconds: 300 })
+  return <TornaNellApp url={`thecap://accesso?ticket=${encodeURIComponent(token)}`} />
+}
