@@ -1,5 +1,5 @@
 import { Suspense } from 'react'
-import { rigeneraInvito, salvaLega, salvaPagamentiLega } from '@/app/actions'
+import { rigeneraInvito, salvaFotoSorpresa, salvaLega, salvaPagamentiLega } from '@/app/actions'
 import { requireAdmin } from '@/lib/player'
 import { avatarUrl, immagineUrl } from '@/lib/image'
 import { baseUrl } from '@/lib/url'
@@ -71,6 +71,19 @@ async function Impostazioni() {
           <SatispaySetup link={lega.satispayLink} qrUrl={immagineUrl(lega.satispayQr, 400)} />
           <SubmitButton className={buttonClass('primary')} pendingText="Salvo…">
             Salva pagamenti
+          </SubmitButton>
+        </ActionForm>
+      </Card>
+
+      <Card>
+        <ActionForm action={salvaFotoSorpresa.bind(null, lega._id)} className="space-y-4">
+          <div>
+            <h2 className="font-semibold">📳 Foto sorpresa</h2>
+            <p className="text-sm text-zinc-500">Quando qualcuno della lega scuote il telefono, questa foto compare a tutto schermo.</p>
+          </div>
+          <PhotoInput currentUrl={avatarUrl(lega.fotoSorpresa, 160)} name="fotoSorpresa" />
+          <SubmitButton className={buttonClass('primary')} pendingText="Salvo…">
+            Salva foto sorpresa
           </SubmitButton>
         </ActionForm>
       </Card>

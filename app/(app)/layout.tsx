@@ -10,6 +10,7 @@ import { MenuSezioni } from '@/components/menu-sezioni'
 import { SEZIONI, barraClass, pillClass } from '@/components/sezioni'
 import { NotificheNativeListener } from '@/components/notifiche-native'
 import { caricaLogoLega } from '@/app/actions'
+import { ScuotiFoto } from '@/components/scuoti-foto'
 
 
 export default function AppLayout({ children }: LayoutProps<'/'>) {
@@ -65,6 +66,7 @@ async function LegaEUtente() {
         grande={immagineUrl(me.lega.logo, 1024)}
         cambia={me.isAdmin ? caricaLogoLega.bind(null, me.lega._id) : undefined}
       />
+      {me.lega.fotoSorpresa && <ScuotiFoto url={immagineUrl(me.lega.fotoSorpresa, 1200)!} />}
       <div className="min-w-0 flex-1">
         <LegaMenu corrente={voce(me)} altre={leghe.filter((m) => m.lega._id !== me.lega._id).map(voce)} organizzatore={!!me.isAdmin} />
       </div>

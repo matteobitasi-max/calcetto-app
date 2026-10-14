@@ -23,6 +23,12 @@ export const league = defineType({
       validation: (r) => r.uri({ scheme: ['https'] }),
     }),
     defineField({ name: 'satispayQr', title: 'QR Satispay', description: 'Da mostrare al campo', type: 'image' }),
+    defineField({
+      name: 'fotoSorpresa',
+      title: 'Foto sorpresa',
+      description: 'Compare a tutto schermo quando un giocatore scuote il telefono',
+      type: 'image',
+    }),
     defineField({ name: 'creataDa', title: 'Creata da (Clerk user ID)', type: 'string', readOnly: true }),
   ],
   preview: {

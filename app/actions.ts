@@ -697,6 +697,18 @@ export async function caricaLogoLega(legaId: string, _prev: FormState, formData:
   return {}
 }
 
+// Foto che compare a tutto schermo quando si scuote il telefono.
+export async function salvaFotoSorpresa(legaId: string, _prev: FormState, formData: FormData): Promise<FormState> {
+  await requireIn(legaId, 'organizzatore')
+  const upload = await uploadFoto(formData.get('fotoSorpresa'))
+  if (upload && 'error' in upload) return upload
+  if (upload) await sanity.patch(legaId).set({ fotoSorpresa: upload.foto }).commit()
+  else if (formData.get('rimuoviFoto') === 'on') await sanity.patch(legaId).unset(['fotoSorpresa']).commit()
+  else return { error: 'Scatta o scegli una foto.' }
+  refresh()
+  return {}
+}
+
 // Nuovo codice: i link d'invito già mandati smettono di funzionare.
 export async function rigeneraInvito(legaId: string) {
   await requireIn(legaId, 'organizzatore')

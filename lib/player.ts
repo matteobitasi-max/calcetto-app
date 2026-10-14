@@ -14,7 +14,7 @@ export const COOKIE_LEGA = 'lega'
 // La mia scheda giocatore in una lega, con i dati della lega.
 export type Membro = Player & { lega: Lega }
 
-const membroFields = `${playerFields}, "lega": lega->{_id, nome, logo, codiceInvito, satispayLink, satispayQr}`
+const membroFields = `${playerFields}, "lega": lega->{_id, nome, logo, codiceInvito, satispayLink, satispayQr, fotoSorpresa}`
 
 export const getUtente = cache(async () => {
   const user = await currentUser()
