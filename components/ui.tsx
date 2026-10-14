@@ -70,11 +70,22 @@ export const StatoBadge = ({ match }: { match: { stato: Stato; aperturaConvocazi
   return <Badge label={label} className={cls} />
 }
 
+// Colore del voto: da 8,5 viola, da 6,5 verde, da 5 giallo, da 2 rosso, sotto il 2 nero
+// (sul voto arrotondato a un decimale, quello che si vede).
+export function coloreVoto(voto: number) {
+  const v = Math.round(voto * 10) / 10
+  if (v >= 8.5) return 'bg-violet-600 text-white'
+  if (v >= 6.5) return 'bg-green-600 text-white'
+  if (v >= 5) return 'bg-yellow-400 text-zinc-900'
+  if (v >= 2) return 'bg-red-600 text-white'
+  return 'bg-black text-white ring-1 ring-white/30'
+}
+
 export function Overall({ player, grande = false }: { player: Player; grande?: boolean }) {
   const value = overall(player)
-  const color = value >= 7.5 ? 'bg-green-600' : value >= 5.5 ? 'bg-amber-500' : 'bg-zinc-500'
+  const color = coloreVoto(value)
   return (
-    <span className={`inline-flex shrink-0 items-center justify-center rounded-lg font-bold tabular-nums text-white ${grande ? 'h-12 w-16 text-2xl' : 'h-8 w-9 text-sm'} ${color}`}>
+    <span className={`inline-flex shrink-0 items-center justify-center rounded-lg font-bold tabular-nums ${grande ? 'h-12 w-16 text-2xl' : 'h-8 w-9 text-sm'} ${color}`}>
       {value.toFixed(1)}
     </span>
   )
