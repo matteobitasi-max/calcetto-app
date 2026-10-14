@@ -66,7 +66,7 @@ async function LegaEUtente() {
         grande={immagineUrl(me.lega.logo, 1024)}
         cambia={me.isAdmin ? caricaLogoLega.bind(null, me.lega._id) : undefined}
       />
-      {me.lega.fotoSorpresa && <ScuotiFoto url={immagineUrl(me.lega.fotoSorpresa, 1200)!} />}
+      {me.lega.fotoSorprese.length > 0 && <ScuotiFoto urls={me.lega.fotoSorprese.map((f) => immagineUrl(f, 1200)!)} />}
       <div className="min-w-0 flex-1">
         <LegaMenu corrente={voce(me)} altre={leghe.filter((m) => m.lega._id !== me.lega._id).map(voce)} organizzatore={!!me.isAdmin} />
       </div>

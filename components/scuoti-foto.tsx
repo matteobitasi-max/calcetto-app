@@ -9,14 +9,18 @@ const PAUSA = 2000 // ms dopo una scossa prima di riconoscerne un'altra
 
 type ConPermesso = typeof DeviceMotionEvent & { requestPermission?: () => Promise<'granted' | 'denied'> }
 
-// Scuotendo il telefono compare a tutto schermo la foto sorpresa della lega; un tocco la chiude.
+// Scuotendo il telefono compare a tutto schermo una foto sorpresa della lega, a caso
+// (mai la stessa due volte di fila); un tocco la chiude.
 // Su iPhone i sensori di movimento vanno chiesti dopo un tocco: lo fa al primo tocco sulla pagina.
-export function ScuotiFoto({ url }: { url: string }) {
-  const [aperta, setAperta] = useState(false)
+export function ScuotiFoto({ urls }: { urls: string[] }) {
+  const [aperta, setAperta] = useState<string | null>(null)
+  const chiave = urls.join(' ')
 
   useEffect(() => {
-    // la carica subito, così alla scossa compare senza attesa
-    new Image().src = url
+    const foto = chiave.split(' ')
+    // le carica subito, così alla scossa compaiono senza attesa
+    for (const u of foto) new Image().src = u
+    let precedente = -1
 
     let ultima: { x: number; y: number; z: number } | null = null
     let strattoni: number[] = []
@@ -34,7 +38,10 @@ export function ScuotiFoto({ url }: { url: string }) {
             strattoni = []
             ferma = ora + PAUSA
             navigator.vibrate?.(150)
-            setAperta(true)
+            let i = Math.floor(Math.random() * foto.length)
+            if (foto.length > 1 && i === precedente) i = (i + 1) % foto.length
+            precedente = i
+            setAperta(foto[i])
           }
         }
       }
@@ -53,18 +60,18 @@ export function ScuotiFoto({ url }: { url: string }) {
       window.removeEventListener('devicemotion', movimento)
       document.removeEventListener('touchend', chiediPermesso)
     }
-  }, [url])
+  }, [chiave])
 
   if (!aperta) return null
   return (
     <div
       role="dialog"
       aria-label="Foto sorpresa"
-      onClick={() => setAperta(false)}
+      onClick={() => setAperta(null)}
       className="fixed inset-0 z-[60] flex animate-[zoom_150ms_ease-out] items-center justify-center bg-black/85 p-4 backdrop-blur-sm"
     >
       {/* eslint-disable-next-line @next/next/no-img-element -- immagine dal CDN di Sanity */}
-      <img src={url} alt="Foto sorpresa" className="max-h-[85vh] w-auto max-w-full rounded-3xl object-contain shadow-2xl ring-4 ring-white" />
+      <img src={aperta} alt="Foto sorpresa" className="max-h-[85vh] w-auto max-w-full rounded-3xl object-contain shadow-2xl ring-4 ring-white" />
       <span className="absolute bottom-[max(1.5rem,env(safe-area-inset-bottom))] text-sm text-white/70">Tocca per chiudere</span>
     </div>
   )

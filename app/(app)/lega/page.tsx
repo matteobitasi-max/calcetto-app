@@ -1,5 +1,6 @@
 import { Suspense } from 'react'
-import { rigeneraInvito, salvaFotoSorpresa, salvaLega, salvaPagamentiLega } from '@/app/actions'
+import { aggiungiFotoSorpresa, rigeneraInvito, rimuoviFotoSorpresa, salvaLega, salvaPagamentiLega } from '@/app/actions'
+import { FotoSorpreseEditor } from '@/components/foto-sorprese'
 import { isTitolare, requireAdmin } from '@/lib/player'
 import { avatarUrl, immagineUrl } from '@/lib/image'
 import { baseUrl } from '@/lib/url'
@@ -80,16 +81,13 @@ async function Impostazioni() {
 
       {titolare && (
         <Card>
-          <ActionForm action={salvaFotoSorpresa.bind(null, lega._id)} className="space-y-4">
-            <div>
-              <h2 className="font-semibold">📳 Foto sorpresa</h2>
-              <p className="text-sm text-zinc-500">Quando qualcuno della lega scuote il telefono, questa foto compare a tutto schermo.</p>
-            </div>
-            <PhotoInput currentUrl={avatarUrl(lega.fotoSorpresa, 160)} name="fotoSorpresa" />
-            <SubmitButton className={buttonClass('primary')} pendingText="Salvo…">
-              Salva foto sorpresa
-            </SubmitButton>
-          </ActionForm>
+          <h2 className="font-semibold">📳 Foto sorpresa</h2>
+          <p className="mb-3 text-sm text-zinc-500">Quando qualcuno della lega scuote il telefono, compare a tutto schermo una di queste foto, a caso.</p>
+          <FotoSorpreseEditor
+            foto={lega.fotoSorprese.map((f) => ({ key: f._key, url: avatarUrl(f, 200)! }))}
+            aggiungi={aggiungiFotoSorpresa.bind(null, lega._id)}
+            rimuovi={rimuoviFotoSorpresa.bind(null, lega._id)}
+          />
         </Card>
       )}
     </div>

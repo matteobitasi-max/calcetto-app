@@ -24,11 +24,14 @@ export const league = defineType({
     }),
     defineField({ name: 'satispayQr', title: 'QR Satispay', description: 'Da mostrare al campo', type: 'image' }),
     defineField({
-      name: 'fotoSorpresa',
+      name: 'fotoSorprese',
       title: 'Foto sorpresa',
-      description: 'Compare a tutto schermo quando un giocatore scuote il telefono',
-      type: 'image',
+      description: 'Scuotendo il telefono ne compare una a caso, a tutto schermo',
+      type: 'array',
+      of: [{ type: 'image' }],
     }),
+    // prima versione, con una sola foto: letta ancora insieme a fotoSorprese
+    defineField({ name: 'fotoSorpresa', title: 'Foto sorpresa (vecchia)', type: 'image', hidden: true }),
     defineField({ name: 'creataDa', title: 'Creata da (Clerk user ID)', type: 'string', readOnly: true }),
   ],
   preview: {

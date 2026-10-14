@@ -697,18 +697,36 @@ export async function caricaLogoLega(legaId: string, _prev: FormState, formData:
   return {}
 }
 
-// Foto che compare a tutto schermo quando si scuote il telefono.
-// Solo il titolare dell'app può impostarla.
-export async function salvaFotoSorpresa(legaId: string, _prev: FormState, formData: FormData): Promise<FormState> {
+// Foto sorpresa: scuotendo il telefono ne compare una a caso, a tutto schermo.
+// Solo il titolare dell'app le gestisce.
+const MAX_FOTO_SORPRESA = 30
+
+export async function aggiungiFotoSorpresa(legaId: string, _prev: FormState, formData: FormData): Promise<FormState> {
   await requireIn(legaId, 'giocatore')
-  if (!(await isTitolare())) return { error: 'Solo il titolare dell\u2019app può impostare la foto sorpresa.' }
-  const upload = await uploadFoto(formData.get('fotoSorpresa'))
-  if (upload && 'error' in upload) return upload
-  if (upload) await sanity.patch(legaId).set({ fotoSorpresa: upload.foto }).commit()
-  else if (formData.get('rimuoviFoto') === 'on') await sanity.patch(legaId).unset(['fotoSorpresa']).commit()
-  else return { error: 'Scatta o scegli una foto.' }
+  if (!(await isTitolare())) return { error: 'Solo il titolare dell\u2019app può impostare le foto sorpresa.' }
+  const quante = await sanity.fetch<number>(`count(*[_id == $legaId][0].fotoSorprese)`, { legaId })
+  if (quante >= MAX_FOTO_SORPRESA) return { error: `Al massimo ${MAX_FOTO_SORPRESA} foto: togline qualcuna.` }
+  const upload = await uploadFoto(formData.get('foto'))
+  if (!upload) return { error: 'Scatta o scegli una foto.' }
+  if ('error' in upload) return upload
+  await sanity
+    .patch(legaId)
+    .setIfMissing({ fotoSorprese: [] })
+    .append('fotoSorprese', [{ ...upload.foto, _key: randomUUID() }])
+    .commit()
   refresh()
   return {}
+}
+
+export async function rimuoviFotoSorpresa(legaId: string, key: string) {
+  await requireIn(legaId, 'giocatore')
+  if (!(await isTitolare())) throw new Error('Solo il titolare dell\u2019app può impostare le foto sorpresa.')
+  // "vecchia" è la foto singola della prima versione
+  await sanity
+    .patch(legaId)
+    .unset([key === 'vecchia' ? 'fotoSorpresa' : `fotoSorprese[_key == ${JSON.stringify(key)}]`])
+    .commit()
+  refresh()
 }
 
 // Nuovo codice: i link d'invito già mandati smettono di funzionare.
