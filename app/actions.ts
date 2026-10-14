@@ -5,7 +5,7 @@ import { cookies } from 'next/headers'
 import { refresh } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { sanity } from '@/lib/sanity'
-import { BADGE, CATEGORIE_NOTIFICHE, COOKIE_LEGA, normalizzaTelefono, PIEDI, RUOLI, SKILLS, displayName, requirePlayer, getUtente, membroDi, requireAdmin, requireForDoc, requireIn, type Player, type Skill } from '@/lib/player'
+import { BADGE, CATEGORIE_NOTIFICHE, COOKIE_LEGA, normalizzaTelefono, PIEDI, RUOLI, SKILLS, displayName, requirePlayer, getUtente, isTitolare, membroDi, requireAdmin, requireForDoc, requireIn, type Player, type Skill } from '@/lib/player'
 import { assegnaPosti, finestra, getMatch, presenti, risultatoDa, type Match, type Risposta, type Stato } from '@/lib/matches'
 import { MAX_GIOCATORI, MAX_ISCRITTI, formatoDaIscritti } from '@/lib/limiti'
 import { riscriviPartita, type MatchDaUnire } from '@/lib/unisci'
@@ -698,8 +698,10 @@ export async function caricaLogoLega(legaId: string, _prev: FormState, formData:
 }
 
 // Foto che compare a tutto schermo quando si scuote il telefono.
+// Solo il titolare dell'app può impostarla.
 export async function salvaFotoSorpresa(legaId: string, _prev: FormState, formData: FormData): Promise<FormState> {
-  await requireIn(legaId, 'organizzatore')
+  await requireIn(legaId, 'giocatore')
+  if (!(await isTitolare())) return { error: 'Solo il titolare dell\u2019app può impostare la foto sorpresa.' }
   const upload = await uploadFoto(formData.get('fotoSorpresa'))
   if (upload && 'error' in upload) return upload
   if (upload) await sanity.patch(legaId).set({ fotoSorpresa: upload.foto }).commit()

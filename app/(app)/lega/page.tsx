@@ -1,6 +1,6 @@
 import { Suspense } from 'react'
 import { rigeneraInvito, salvaFotoSorpresa, salvaLega, salvaPagamentiLega } from '@/app/actions'
-import { requireAdmin } from '@/lib/player'
+import { isTitolare, requireAdmin } from '@/lib/player'
 import { avatarUrl, immagineUrl } from '@/lib/image'
 import { baseUrl } from '@/lib/url'
 import { ActionForm } from '@/components/action-form'
@@ -24,6 +24,7 @@ export default function LegaPage() {
 async function Impostazioni() {
   const admin = await requireAdmin()
   const { lega } = admin
+  const titolare = await isTitolare()
   const url = `${await baseUrl()}/invito/${lega.codiceInvito}`
 
   return (
@@ -47,7 +48,9 @@ async function Impostazioni() {
 
       <Card className="space-y-3">
         <h2 className="font-semibold">📨 Invita giocatori</h2>
-        <p className="text-sm text-zinc-500">Chi apre il link e fa l&apos;accesso entra subito nella rosa. Poi puoi assegnargli caratteristiche e permessi.</p>
+        <p className="text-sm text-zinc-500">
+          Chi apre il link e fa l&apos;accesso entra subito nella rosa. Poi puoi assegnargli caratteristiche e permessi.
+        </p>
         <InvitoLink url={url} nomeLega={lega.nome} />
         <p className="text-sm">
           Codice: <b className="font-mono tracking-widest">{lega.codiceInvito}</b>
@@ -75,18 +78,20 @@ async function Impostazioni() {
         </ActionForm>
       </Card>
 
-      <Card>
-        <ActionForm action={salvaFotoSorpresa.bind(null, lega._id)} className="space-y-4">
-          <div>
-            <h2 className="font-semibold">📳 Foto sorpresa</h2>
-            <p className="text-sm text-zinc-500">Quando qualcuno della lega scuote il telefono, questa foto compare a tutto schermo.</p>
-          </div>
-          <PhotoInput currentUrl={avatarUrl(lega.fotoSorpresa, 160)} name="fotoSorpresa" />
-          <SubmitButton className={buttonClass('primary')} pendingText="Salvo…">
-            Salva foto sorpresa
-          </SubmitButton>
-        </ActionForm>
-      </Card>
+      {titolare && (
+        <Card>
+          <ActionForm action={salvaFotoSorpresa.bind(null, lega._id)} className="space-y-4">
+            <div>
+              <h2 className="font-semibold">📳 Foto sorpresa</h2>
+              <p className="text-sm text-zinc-500">Quando qualcuno della lega scuote il telefono, questa foto compare a tutto schermo.</p>
+            </div>
+            <PhotoInput currentUrl={avatarUrl(lega.fotoSorpresa, 160)} name="fotoSorpresa" />
+            <SubmitButton className={buttonClass('primary')} pendingText="Salvo…">
+              Salva foto sorpresa
+            </SubmitButton>
+          </ActionForm>
+        </Card>
+      )}
     </div>
   )
 }
