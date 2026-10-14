@@ -7,7 +7,7 @@ import { partiteSenzaKm, salvaKm } from '@/app/actions'
 import { Salute, kmAutomatici, partiteEscluse, saluteDisponibile } from '@/lib/salute'
 
 // App per iPhone, con i km automatici attivi: all'apertura e quando l'app torna in primo piano
-// prende da Apple Salute i km delle mie partite finite (ultimi 7 giorni) a cui mancano.
+// prende da Apple Salute / Health Connect i km delle mie partite finite (ultimi 7 giorni) a cui mancano.
 // Apple permette di leggere Salute solo con l'app aperta: non si può fare a telefono in tasca.
 export function KmAutomatici() {
   const router = useRouter()

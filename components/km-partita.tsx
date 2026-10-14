@@ -5,14 +5,14 @@ import { Capacitor } from '@capacitor/core'
 import { useEffect, useState, useTransition } from 'react'
 import { collegaStrava, kmDaStrava, salvaKm, togliKm } from '@/app/actions'
 import type { Distanza } from '@/lib/matches'
-import { Salute, escludiPartita, impostaKmAutomatici, saluteDisponibile } from '@/lib/salute'
+import { Salute, escludiPartita, impostaKmAutomatici, nomeSalute, saluteDisponibile } from '@/lib/salute'
 
 const DOPO_STRAVA = 'km-dopo-strava'
 
-const FONTI: Record<string, string> = { strava: 'da Strava', salute: 'da Apple Salute', manuale: 'inseriti a mano' }
+const FONTI: Record<string, string> = { strava: 'da Strava', salute: 'dall\u2019app Salute del telefono', manuale: 'inseriti a mano' }
 const formatoKm = (km: number) => km.toLocaleString('it-IT', { maximumFractionDigits: 2 })
 
-// "I tuoi km" nella partita finita: da Apple Salute (app per iPhone) o da Strava (se attivo).
+// "I tuoi km" nella partita finita: da Apple Salute (iPhone) o Health Connect (Android), o da Strava (se attivo).
 // Dove nessuno dei due è disponibile e non ci sono km, non mostra niente.
 export function KmPartita({
   matchId,
@@ -32,6 +32,7 @@ export function KmPartita({
   const [pending, startTransition] = useTransition()
   const [messaggio, setMessaggio] = useState<{ testo: string; errore?: boolean } | null>(null)
   const [salute, setSalute] = useState(false)
+  const [nome, setNome] = useState('Apple Salute')
 
   const daStrava = () =>
     startTransition(async () => {
@@ -55,6 +56,7 @@ export function KmPartita({
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- dipende dal dispositivo: noto solo nell'app
     setSalute(saluteDisponibile())
+    setNome(nomeSalute())
     let dopo: string | null = null
     try {
       dopo = sessionStorage.getItem(DOPO_STRAVA)
@@ -72,15 +74,15 @@ export function KmPartita({
         impostaKmAutomatici(true)
         if (metri < 50) {
           setMessaggio({
-            testo: 'In Salute non ci sono km registrati durante la partita (controlla anche di aver dato il permesso in Salute → Condivisione).',
+            testo: `In ${nome} non ci sono km registrati durante la partita (controlla anche di aver dato il permesso di leggere la distanza).`,
             errore: true,
           })
           return
         }
         const r = await salvaKm(matchId, metri / 1000, 'salute')
-        setMessaggio(r.error ? { testo: r.error, errore: true } : { testo: `✅ ${formatoKm(metri / 1000)} km da Apple Salute` })
-      } catch {
-        setMessaggio({ testo: 'Non riesco a leggere Apple Salute.', errore: true })
+        setMessaggio(r.error ? { testo: r.error, errore: true } : { testo: `✅ ${formatoKm(metri / 1000)} km da ${nome}` })
+      } catch (e) {
+        setMessaggio({ testo: (e as { message?: string })?.message || `Non riesco a leggere ${nome}.`, errore: true })
       }
     })
 
@@ -112,7 +114,7 @@ export function KmPartita({
       <div className="flex flex-wrap gap-2">
         {salute && (
           <button type="button" disabled={pending} onClick={daSalute} className={`${pulsante} bg-rose-500 text-white hover:bg-rose-600`}>
-            ❤️ {miei ? 'Aggiorna' : 'Prendi'} da Apple Salute
+            ❤️ {miei ? 'Aggiorna' : 'Prendi'} da {nome}
           </button>
         )}
         {stravaAttivo && (

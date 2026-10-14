@@ -1,9 +1,13 @@
 import { Capacitor, registerPlugin } from '@capacitor/core'
 
-// Apple Salute: plugin nativo dell'app per iPhone (SalutePlugin in AppDelegate.swift).
+// Plugin nativo "Salute" dell'app: Apple Salute su iPhone (SalutePlugin in AppDelegate.swift),
+// Health Connect su Android (SalutePlugin.kt). Restituisce i metri percorsi tra inizio e fine.
 export const Salute = registerPlugin<{ distanza(o: { inizio: number; fine: number }): Promise<{ metri: number }> }>('Salute')
 
-export const saluteDisponibile = () => Capacitor.getPlatform() === 'ios' && Capacitor.isPluginAvailable('Salute')
+export const saluteDisponibile = () => Capacitor.isNativePlatform() && Capacitor.isPluginAvailable('Salute')
+
+// Il nome da mostrare: Apple Salute su iPhone, Health Connect su Android.
+export const nomeSalute = () => (Capacitor.getPlatform() === 'android' ? 'Health Connect' : 'Apple Salute')
 
 // Preferenze su questo telefono: km automatici attivi e partite da non ricompilare (km tolti a mano).
 const AUTO = 'km-salute-auto'

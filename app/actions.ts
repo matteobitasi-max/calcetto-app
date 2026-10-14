@@ -872,8 +872,8 @@ async function scriviKm(matchId: string, playerId: string, km: number | null, fo
 // Km letti da Apple Salute nell'app per iPhone (non si inseriscono a mano).
 export async function salvaKm(matchId: string, km: number, fonte: 'salute'): Promise<{ error?: string }> {
   const { me } = await partitaPerKm(matchId)
-  if (fonte !== 'salute') return { error: 'I km si prendono da Apple Salute.' }
-  if (!Number.isFinite(km) || km <= 0 || km > 30) return { error: 'Da Apple Salute arriva una distanza non valida.' }
+  if (fonte !== 'salute') return { error: 'I km si prendono dall\u2019app Salute del telefono.' }
+  if (!Number.isFinite(km) || km <= 0 || km > 30) return { error: 'Dall\u2019app Salute arriva una distanza non valida.' }
   await scriviKm(matchId, me._id, Math.round(km * 100) / 100, fonte)
   return {}
 }

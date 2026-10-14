@@ -1,18 +1,20 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Salute, impostaKmAutomatici, kmAutomatici, saluteDisponibile } from '@/lib/salute'
+import { Salute, impostaKmAutomatici, kmAutomatici, nomeSalute, saluteDisponibile } from '@/lib/salute'
 
-// Nel mio account (solo app per iPhone): km delle partite presi da soli da Apple Salute.
+// Nel mio account (solo nell'app): km delle partite presi da soli da Apple Salute / Health Connect.
 export function SaluteAccount() {
   const [disponibile, setDisponibile] = useState(false)
   const [attivi, setAttivi] = useState(false)
   const [pending, setPending] = useState(false)
+  const [nome, setNome] = useState('Apple Salute')
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- dipende dal dispositivo: noto solo nell'app
     setDisponibile(saluteDisponibile())
     setAttivi(kmAutomatici())
+    setNome(nomeSalute())
   }, [])
 
   if (!disponibile) return null
@@ -39,7 +41,7 @@ export function SaluteAccount() {
   return (
     <label className="flex cursor-pointer items-center justify-between gap-3 px-4 py-3 text-sm">
       <span>
-        <span className="font-semibold">❤️ Km automatici da Apple Salute</span>
+        <span className="font-semibold">❤️ Km automatici da {nome}</span>
         <span className="block text-xs text-zinc-500">
           Dopo ogni partita, aprendo l&apos;app, i km che hai corso compaiono da soli accanto al tuo nome.
         </span>
