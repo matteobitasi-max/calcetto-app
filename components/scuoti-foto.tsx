@@ -13,8 +13,8 @@ type ConPermesso = typeof DeviceMotionEvent & { requestPermission?: () => Promis
 
 // Scuotendo il telefono compare a tutto schermo una foto sorpresa della lega, a caso
 // (mai la stessa due volte di fila); un tocco la chiude.
-// Nell'app per iPhone la scossa la riconosce la parte nativa (MainViewController, con
-// l'accelerometro) e la segnala con l'evento "scossa"; altrove si usano i sensori del browser,
+// Nelle app per iPhone e Android la scossa la riconosce la parte nativa (MainViewController /
+// MainActivity, con l'accelerometro) e la segnala con l'evento "scossa"; nel browser si usano i sensori,
 // che su iPhone vanno chiesti dopo un tocco: lo fa al primo tocco sulla pagina.
 export function ScuotiFoto({ urls }: { urls: string[] }) {
   const [aperta, setAperta] = useState<string | null>(null)
@@ -22,6 +22,7 @@ export function ScuotiFoto({ urls }: { urls: string[] }) {
 
   useEffect(() => {
     const foto = chiave.split(' ')
+    const nativa = Capacitor.isNativePlatform()
     // le carica subito, così alla scossa compaiono senza attesa
     for (const u of foto) new Image().src = u
     let precedente = -1
@@ -34,7 +35,7 @@ export function ScuotiFoto({ urls }: { urls: string[] }) {
       const ora = Date.now()
       if (ora < ferma) return
       ferma = ora + PAUSA
-      navigator.vibrate?.(150)
+      if (!nativa) navigator.vibrate?.(150)
       let i = Math.floor(Math.random() * foto.length)
       if (foto.length > 1 && i === precedente) i = (i + 1) % foto.length
       precedente = i
@@ -63,7 +64,6 @@ export function ScuotiFoto({ urls }: { urls: string[] }) {
     }
 
     window.addEventListener('scossa', mostra)
-    const nativa = Capacitor.getPlatform() === 'ios'
     if (!nativa) window.addEventListener('devicemotion', movimento)
     if (!nativa && typeof DeviceMotionEvent !== 'undefined' && (DeviceMotionEvent as ConPermesso).requestPermission) {
       document.addEventListener('touchend', chiediPermesso, { once: true })
