@@ -293,13 +293,14 @@ function Trofeo({ id, sbloccato, piccolo = false }: { id: IdTrofeo; sbloccato?: 
       titolo={t.nome}
       testo={t.descrizione}
       dettaglio={dettaglio}
-      className={`flex flex-col items-center gap-1 rounded-xl p-2 text-center ${
+      // tutti i riquadri della stessa misura, anche con nomi su due righe o senza "×N"
+      className={`flex h-28 w-full flex-col items-center justify-center gap-1 rounded-xl p-2 text-center ${
         sbloccato ? 'bg-amber-50 ring-1 ring-amber-300 dark:bg-amber-950/40 dark:ring-amber-700' : 'bg-zinc-50 opacity-50 grayscale dark:bg-zinc-950'
       }`}
     >
       <span className="text-3xl">{t.emoji}</span>
-      <span className="text-xs font-semibold leading-tight">{t.nome}</span>
-      {sbloccato && sbloccato.volte > 1 && <span className="text-[11px] text-zinc-500">×{sbloccato.volte}</span>}
+      <span className="flex h-8 items-center text-xs font-semibold leading-tight">{t.nome}</span>
+      <span className={`text-[11px] text-zinc-500 ${sbloccato && sbloccato.volte > 1 ? '' : 'invisible'}`}>×{sbloccato?.volte ?? 1}</span>
     </Medaglia>
   )
 }
