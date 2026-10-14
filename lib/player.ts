@@ -28,7 +28,19 @@ export const getUtente = cache(async () => {
     .filter((e) => e.verification?.status === 'verified')
     .map((e) => e.emailAddress.toLowerCase())
   const telefoni = user.phoneNumbers.filter((p) => p.verification?.status === 'verified').map((p) => p.phoneNumber)
-  return { id: user.id, nome: user.firstName, cognome: user.lastName, emails, telefoni }
+  // Dati del profilo scelti nella pagina "Il mio account" (finiscono anche nelle schede giocatore).
+  const profilo = (user.privateMetadata ?? {}) as { telefono?: string; ruolo?: string; piede?: string }
+  return {
+    id: user.id,
+    nome: user.firstName,
+    cognome: user.lastName,
+    emails,
+    telefoni,
+    foto: user.hasImage ? user.imageUrl : null,
+    telefono: profilo.telefono,
+    ruolo: profilo.ruolo,
+    piede: profilo.piede,
+  }
 })
 
 // Il titolare dell'app (accesso con la sua email verificata): solo lui imposta la foto sorpresa.

@@ -1,6 +1,5 @@
 import Link from 'next/link'
 import { Suspense } from 'react'
-import { UserButton } from '@clerk/nextjs'
 import { creaLega, scegliLega, uniscitiConCodice } from '@/app/actions'
 import { getCurrentPlayer, getMemberships, getUtente } from '@/lib/player'
 import { ActionForm } from '@/components/action-form'
@@ -73,16 +72,11 @@ async function Benvenuto() {
         </ActionForm>
       </Card>
 
-      <div className="flex items-center justify-between text-sm">
-        {leghe.length > 0 ? (
-          <Link href="/" className="text-green-700 hover:underline dark:text-green-400">
-            ← Torna all&apos;app
-          </Link>
-        ) : (
-          <span />
-        )}
-        <UserButton />
-      </div>
+      {leghe.length > 0 && (
+        <Link href="/" className="block text-center text-sm text-green-700 hover:underline dark:text-green-400">
+          ← Torna all&apos;app
+        </Link>
+      )}
     </div>
   )
 }

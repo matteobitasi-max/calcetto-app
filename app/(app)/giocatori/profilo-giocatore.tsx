@@ -103,6 +103,9 @@ export async function ProfiloGiocatore({ id }: { id: string }) {
             </div>
           </Card>
           <Card className="divide-y divide-zinc-100 p-0! text-sm dark:divide-zinc-800">
+            <Link href="/account" className="flex items-center justify-between px-4 py-3 hover:bg-zinc-50 dark:hover:bg-zinc-800">
+              👤 Il mio account (nome, telefono, ruolo, piede) <span className="text-zinc-400">›</span>
+            </Link>
             <Link href="/privacy" className="flex items-center justify-between px-4 py-3 hover:bg-zinc-50 dark:hover:bg-zinc-800">
               🔒 Privacy policy <span className="text-zinc-400">›</span>
             </Link>

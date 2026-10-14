@@ -618,7 +618,9 @@ async function nuovaScheda(legaId: string, utente: NonNullable<Awaited<ReturnTyp
     nome: utente.nome || utente.emails[0]?.split('@')[0] || 'Giocatore',
     ...(utente.cognome && { cognome: utente.cognome }),
     ...(utente.emails[0] && { email: utente.emails[0] }),
-    ...(utente.telefoni[0] && { telefono: utente.telefoni[0] }),
+    ...((utente.telefono || utente.telefoni[0]) && { telefono: utente.telefono || utente.telefoni[0] }),
+    ...(utente.ruolo && { ruolo: utente.ruolo }),
+    ...(utente.piede && { piede: utente.piede }),
     clerkUserId: utente.id,
     isAdmin,
     attivo: true,
@@ -885,6 +887,45 @@ export async function unisciSchede(tieniId: string, togliId: string) {
 
 // Cancella l'account (Clerk) e i dati personali. Le schede restano nelle partite già giocate
 // come "Ex giocatore", senza nome, contatti né foto, così le statistiche degli altri restano giuste.
+// "Il mio account": nome, cognome, telefono, ruolo e piede. Si salvano nell'account e in tutte
+// le mie schede giocatore (e nelle leghe in cui entrerò dopo, vedi nuovaScheda).
+export async function salvaAccount(_prev: FormState, formData: FormData): Promise<FormState> {
+  const utente = await getUtente()
+  if (!utente) return { error: 'Accesso richiesto.' }
+  const nome = str(formData, 'nome')
+  const cognome = str(formData, 'cognome')
+  const telefonoScritto = str(formData, 'telefono')
+  const telefono = telefonoScritto ? normalizzaTelefono(telefonoScritto) : ''
+  const ruolo = (RUOLI as readonly string[]).includes(str(formData, 'ruolo')) ? str(formData, 'ruolo') : ''
+  const piede = (PIEDI as readonly string[]).includes(str(formData, 'piede')) ? str(formData, 'piede') : ''
+  if (!nome) return { error: 'Il nome è obbligatorio.' }
+  if (nome.length > 40 || cognome.length > 40) return { error: 'Nome e cognome: massimo 40 caratteri.' }
+  if (telefonoScritto && !/^\+?\d{6,15}$/.test(telefono)) return { error: 'Il numero di telefono non sembra valido.' }
+
+  const { clerkClient } = await import('@clerk/nextjs/server')
+  const clerk = await clerkClient()
+  await clerk.users.updateUser(utente.id, { firstName: nome, lastName: cognome })
+  await clerk.users.updateUserMetadata(utente.id, {
+    privateMetadata: { telefono: telefono || null, ruolo: ruolo || null, piede: piede || null },
+  })
+
+  const schede = await sanity.fetch<string[]>(`*[_type == "player" && clerkUserId == $id]._id`, { id: utente.id })
+  if (schede.length) {
+    const valori = { cognome, telefono, ruolo, piede }
+    const tx = sanity.transaction()
+    for (const id of schede) {
+      tx.patch(id, (p) =>
+        p
+          .set({ nome, ...Object.fromEntries(Object.entries(valori).filter(([, v]) => v)) })
+          .unset(Object.entries(valori).filter(([, v]) => !v).map(([k]) => k)),
+      )
+    }
+    await tx.commit()
+  }
+  refresh()
+  return {}
+}
+
 export async function eliminaAccount(): Promise<FormState> {
   const utente = await getUtente()
   if (!utente) return { error: 'Accesso richiesto.' }
