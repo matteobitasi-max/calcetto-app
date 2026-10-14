@@ -11,6 +11,7 @@ import { SEZIONI, barraClass, pillClass } from '@/components/sezioni'
 import { NotificheNativeListener } from '@/components/notifiche-native'
 import { caricaLogoLega } from '@/app/actions'
 import { ScuotiFoto } from '@/components/scuoti-foto'
+import { UsaApp } from '@/components/usa-app'
 
 
 export default function AppLayout({ children }: LayoutProps<'/'>) {
@@ -38,6 +39,7 @@ export default function AppLayout({ children }: LayoutProps<'/'>) {
         </div>
       </header>
       <NotificheNativeListener />
+      <UsaApp />
       <main className="mx-auto w-full max-w-2xl flex-1 p-4 pb-[max(1rem,var(--safe-area-inset-bottom,env(safe-area-inset-bottom)))]">
         {children}
       </main>
