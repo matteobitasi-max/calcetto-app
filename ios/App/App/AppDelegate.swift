@@ -1,6 +1,7 @@
 import UIKit
 import Capacitor
 import CoreMotion
+import HealthKit
 
 @UIApplicationMain
 class AppDelegate: UIResponder, UIApplicationDelegate {
@@ -73,6 +74,7 @@ class MainViewController: CAPBridgeViewController {
     override func capacitorDidLoad() {
         super.capacitorDidLoad()
         webView?.allowsBackForwardNavigationGestures = false
+        bridge?.registerPluginInstance(SalutePlugin())
         avviaScossa()
     }
 
@@ -93,6 +95,43 @@ class MainViewController: CAPBridgeViewController {
                 UIImpactFeedbackGenerator(style: .medium).impactOccurred()
                 self.webView?.evaluateJavaScript("window.dispatchEvent(new Event('scossa'))")
             }
+        }
+    }
+}
+
+// Apple Salute: i km camminati/corsi registrati (da iPhone, Apple Watch, Garmin...) tra l'inizio
+// e la fine della partita. Solo lettura; dalla pagina si usa come plugin "Salute"
+// (components/km-partita.tsx).
+@objc(SalutePlugin)
+public class SalutePlugin: CAPPlugin, CAPBridgedPlugin {
+    public let identifier = "SalutePlugin"
+    public let jsName = "Salute"
+    public let pluginMethods: [CAPPluginMethod] = [CAPPluginMethod(name: "distanza", returnType: CAPPluginReturnPromise)]
+    private let salute = HKHealthStore()
+
+    @objc func distanza(_ call: CAPPluginCall) {
+        guard HKHealthStore.isHealthDataAvailable(),
+              let tipo = HKQuantityType.quantityType(forIdentifier: .distanceWalkingRunning) else {
+            call.reject("Apple Salute non è disponibile su questo dispositivo")
+            return
+        }
+        guard let inizioMs = call.getDouble("inizio"), let fineMs = call.getDouble("fine") else {
+            call.reject("Orario della partita mancante")
+            return
+        }
+        let inizio = Date(timeIntervalSince1970: inizioMs / 1000)
+        let fine = Date(timeIntervalSince1970: fineMs / 1000)
+        salute.requestAuthorization(toShare: nil, read: [tipo]) { _, errore in
+            if let errore {
+                call.reject(errore.localizedDescription)
+                return
+            }
+            let filtro = HKQuery.predicateForSamples(withStart: inizio, end: fine, options: [])
+            let query = HKStatisticsQuery(quantityType: tipo, quantitySamplePredicate: filtro, options: .cumulativeSum) { _, statistiche, _ in
+                // senza permesso o senza dati Salute restituisce semplicemente 0
+                call.resolve(["metri": statistiche?.sumQuantity()?.doubleValue(for: .meter()) ?? 0])
+            }
+            self.salute.execute(query)
         }
     }
 }
