@@ -17,7 +17,7 @@
    dallo sfondo e il testo (bianco caldo, non bianco puro) si legge bene a lungo. */
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0c1510;
+    --background: #142a1b;
     --foreground: #eef3ef;
     --color-zinc-50: #f4f7f5;
     --color-zinc-100: #e9eeeb;
@@ -28,7 +28,7 @@
     --color-zinc-600: #6f7e76;
     --color-zinc-700: #4d5b54;
     --color-zinc-800: #3d4a44;
-    --color-zinc-900: #26312c;
+    --color-zinc-900: #2b3732;
     --color-zinc-950: #1c2621;
   }
 }
@@ -78,8 +78,8 @@ body {
    (appena sotto l'intestazione) e dai due in basso, sull'erba a strisce; i fari restano fermi. */
 @media (prefers-color-scheme: dark) {
   .campo {
-    --erba-chiara: #10261a;
-    --erba-scura: #143020;
+    --erba-chiara: #183621;
+    --erba-scura: #1e4129;
   }
   .campo::before {
     background:
