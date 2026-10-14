@@ -74,8 +74,8 @@ body {
   pointer-events: none;
   background: repeating-linear-gradient(to right, var(--erba-chiara) 0 48px, var(--erba-scura) 48px 96px);
 }
-/* Di sera: campo illuminato dai fari dello stadio. Luce calda dagli angoli in alto (appena sotto
-   l'intestazione, più forte) e in basso, sull'erba a strisce; i fari restano fermi sullo schermo. */
+/* Di sera: campo illuminato da quattro fari, come uno stadio. Luce calda dai due angoli in alto
+   (appena sotto l'intestazione) e dai due in basso, sull'erba a strisce; i fari restano fermi. */
 @media (prefers-color-scheme: dark) {
   .campo {
     --erba-chiara: #10261a;
@@ -87,8 +87,10 @@ body {
       radial-gradient(circle at 100% 9rem, rgba(255, 250, 225, 0.7) 0, rgba(255, 248, 214, 0.25) 1.6rem, rgba(255, 248, 214, 0) 4.5rem),
       radial-gradient(ellipse 95% 60% at 0% 9rem, rgba(255, 244, 200, 0.26), rgba(255, 244, 200, 0) 70%),
       radial-gradient(ellipse 95% 60% at 100% 9rem, rgba(255, 244, 200, 0.26), rgba(255, 244, 200, 0) 70%),
-      radial-gradient(ellipse 75% 45% at 0% 100%, rgba(255, 244, 200, 0.12), rgba(255, 244, 200, 0) 70%),
-      radial-gradient(ellipse 75% 45% at 100% 100%, rgba(255, 244, 200, 0.12), rgba(255, 244, 200, 0) 70%),
+      radial-gradient(circle at 0% calc(100% - 2rem), rgba(255, 250, 225, 0.7) 0, rgba(255, 248, 214, 0.25) 1.6rem, rgba(255, 248, 214, 0) 4.5rem),
+      radial-gradient(circle at 100% calc(100% - 2rem), rgba(255, 250, 225, 0.7) 0, rgba(255, 248, 214, 0.25) 1.6rem, rgba(255, 248, 214, 0) 4.5rem),
+      radial-gradient(ellipse 95% 60% at 0% calc(100% - 2rem), rgba(255, 244, 200, 0.26), rgba(255, 244, 200, 0) 70%),
+      radial-gradient(ellipse 95% 60% at 100% calc(100% - 2rem), rgba(255, 244, 200, 0.26), rgba(255, 244, 200, 0) 70%),
       repeating-linear-gradient(to right, var(--erba-chiara) 0 48px, var(--erba-scura) 48px 96px);
   }
 }
