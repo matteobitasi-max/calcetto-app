@@ -5,6 +5,7 @@ import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
+import android.os.Bundle;
 import android.view.HapticFeedbackConstants;
 import android.webkit.WebView;
 import com.getcapacitor.BridgeActivity;
@@ -22,6 +23,13 @@ public class MainActivity extends BridgeActivity implements SensorEventListener 
     private SensorManager sensori;
     private final ArrayDeque<Long> strattoni = new ArrayDeque<>();
     private long ferma = 0;
+
+    @Override
+    public void onCreate(Bundle savedInstanceState) {
+        // plugin "Salute" dell'app (Health Connect): va registrato prima di avviare Capacitor
+        registerPlugin(SalutePlugin.class);
+        super.onCreate(savedInstanceState);
+    }
 
     @Override
     public void onResume() {

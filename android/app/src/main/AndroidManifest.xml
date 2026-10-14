@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8" ?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
     <application
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
@@ -36,6 +37,23 @@
             </intent-filter>
         </activity>
 
+        <!-- Health Connect: spiegazione dei permessi (Android 13 e precedenti / Android 14+) -->
+        <activity android:name=".PrivacySaluteActivity" android:exported="true">
+            <intent-filter>
+                <action android:name="androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE" />
+            </intent-filter>
+        </activity>
+        <activity-alias
+            android:name="ViewPermissionUsageActivity"
+            android:exported="true"
+            android:targetActivity=".PrivacySaluteActivity"
+            android:permission="android.permission.START_VIEW_PERMISSION_USAGE">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW_PERMISSION_USAGE" />
+                <category android:name="android.intent.category.HEALTH_PERMISSIONS" />
+            </intent-filter>
+        </activity-alias>
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"
@@ -49,6 +67,13 @@
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.CAMERA" />
+    <!-- km percorsi nelle partite, letti da Health Connect (solo lettura) -->
+    <uses-permission android:name="android.permission.health.READ_DISTANCE" />
+    <!-- Health Connect funziona da Android 8: sotto, l'app si installa ma i km non ci sono -->
+    <uses-sdk tools:overrideLibrary="androidx.health.connect.client" />
+    <queries>
+        <package android:name="com.google.android.apps.healthdata" />
+    </queries>
     <!-- la fotocamera serve solo per le foto: l'app resta installabile anche senza -->
     <uses-feature android:name="android.hardware.camera" android:required="false" />
 </manifest>
