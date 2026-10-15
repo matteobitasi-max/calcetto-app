@@ -1,8 +1,8 @@
 import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server'
 
-// Lo Studio ha il suo login Sanity, quindi non passa da Clerk. /accesso-app gestisce da sé
+// Lo Studio ha il suo login Sanity, quindi non passa da Clerk. /api/cron si protegge con CRON_SECRET. /accesso-app gestisce da sé
 // chi non ha ancora fatto l'accesso (login delle app nel browser).
-const isPublicRoute = createRouteMatcher(['/sign-in(.*)', '/accesso-app(.*)', '/account-eliminato', '/api/strava/callback', '/studio(.*)'])
+const isPublicRoute = createRouteMatcher(['/sign-in(.*)', '/accesso-app(.*)', '/account-eliminato', '/api/strava/callback', '/api/cron/(.*)', '/studio(.*)'])
 
 export default clerkMiddleware(async (auth, req) => {
   if (!isPublicRoute(req)) await auth.protect()

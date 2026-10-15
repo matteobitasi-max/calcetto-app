@@ -105,6 +105,13 @@ export const match = defineType({
       readOnly: true,
     }),
     defineField({
+      name: 'promemoriaPer',
+      title: 'Promemoria inviato per la chiusura delle',
+      description: 'Il promemoria "chiudono tra 30 minuti" è già partito per questo orario di chiusura',
+      type: 'datetime',
+      readOnly: true,
+    }),
+    defineField({
       name: 'durataFinestraMinuti',
       title: 'Durata finestra convocazioni (minuti)',
       type: 'number',
