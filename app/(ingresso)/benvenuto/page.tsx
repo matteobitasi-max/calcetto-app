@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { Suspense } from 'react'
 import { scegliLega, uniscitiConCodice } from '@/app/actions'
 import { CreaLega } from '@/components/crea-lega'
+import { EsciLega } from '@/components/esci-lega'
 import { getCurrentPlayer, getMemberships, getUtente } from '@/lib/player'
 import { ActionForm } from '@/components/action-form'
 import { SubmitButton } from '@/components/submit-button'
@@ -64,15 +65,18 @@ async function Benvenuto() {
             </summary>
             <div className="space-y-1 border-t border-zinc-200 p-2 dark:border-zinc-800">
               {leghe.map((m) => (
-                <form key={m.lega._id} action={scegliLega.bind(null, m.lega._id, '/')}>
-                  <SubmitButton className="flex w-full items-center justify-between rounded-lg px-3 py-2 text-left hover:bg-zinc-100 dark:hover:bg-zinc-800">
-                    <span className="font-medium">{m.lega.nome}</span>
-                    <span className="text-xs text-zinc-500">
-                      {m.isAdmin ? 'organizzatore' : 'giocatore'}
-                      {attiva?.lega._id === m.lega._id && ' · attiva'}
-                    </span>
-                  </SubmitButton>
-                </form>
+                <div key={m.lega._id} className="flex items-center gap-1">
+                  <form action={scegliLega.bind(null, m.lega._id, '/')} className="min-w-0 flex-1">
+                    <SubmitButton className="flex w-full items-center justify-between gap-2 rounded-lg px-3 py-2 text-left hover:bg-zinc-100 dark:hover:bg-zinc-800">
+                      <span className="truncate font-medium">{m.lega.nome}</span>
+                      <span className="shrink-0 text-xs text-zinc-500">
+                        {m.isAdmin ? 'organizzatore' : 'giocatore'}
+                        {attiva?.lega._id === m.lega._id && ' · attiva'}
+                      </span>
+                    </SubmitButton>
+                  </form>
+                  <EsciLega legaId={m.lega._id} nome={m.lega.nome} organizzatore={!!m.isAdmin} />
+                </div>
               ))}
             </div>
           </details>

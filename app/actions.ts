@@ -1060,6 +1060,58 @@ export async function salvaAccount(_prev: FormState, formData: FormData): Promis
   return {}
 }
 
+// Un giocatore a caso della rosa (prima chi usa già l'app), per prendere il posto dell'organizzatore.
+async function nuovoOrganizzatoreACaso(legaId: string, escludi: string) {
+  const candidati = await sanity.fetch<{ _id: string; collegato: boolean }[]>(
+    `*[_type == "player" && lega._ref == $lega && _id != $me && attivo != false]{_id, "collegato": defined(clerkUserId)}`,
+    { lega: legaId, me: escludi },
+  )
+  const collegati = candidati.filter((c) => c.collegato)
+  const tra = collegati.length ? collegati : candidati
+  return tra.length ? tra[randomInt(tra.length)]._id : null
+}
+
+// Esco da una lega: la mia scheda resta (con lo storico) ma non è più attiva; se mi reinvitano rientro con quella.
+// Se ero l'unico organizzatore, un giocatore a caso diventa organizzatore e riceve una notifica.
+export async function esciDallaLega(legaId: string) {
+  const me = (await getMemberships()).find((m) => m.lega._id === legaId)
+  if (!me) throw new Error('Non fai parte di questa lega')
+  const altriOrganizzatori = await sanity.fetch<number>(
+    `count(*[_type == "player" && lega._ref == $lega && _id != $me && isAdmin == true && attivo != false])`,
+    { lega: legaId, me: me._id },
+  )
+  const nuovo = me.isAdmin && altriOrganizzatori === 0 ? await nuovoOrganizzatoreACaso(legaId, me._id) : null
+  const tx = sanity.transaction().patch(me._id, (p) => p.set({ attivo: false, isAdmin: false, puoInserireRisultati: false }))
+  if (nuovo) tx.patch(nuovo, (p) => p.set({ isAdmin: true }))
+  await tx.commit()
+  if (nuovo) {
+    await inviaAGiocatori([nuovo], {
+      title: `👑 Sei il nuovo organizzatore di ${me.lega.nome}`,
+      body: 'L\u2019organizzatore ha lasciato la lega: ora gestisci tu partite, squadre e inviti.',
+      url: '/',
+      tag: `nuovo-organizzatore-${nuovo}`,
+    }).catch(() => undefined)
+  }
+  if ((await cookies()).get(COOKIE_LEGA)?.value === legaId) (await cookies()).delete(COOKIE_LEGA)
+  refresh()
+}
+
+// L'organizzatore elimina la lega con tutto quello che contiene (partite, serie, giocatori). Non si torna indietro.
+export async function eliminaLega(legaId: string) {
+  const me = await requireIn(legaId, 'organizzatore')
+  if (me.ospite) throw new Error('Per eliminare una lega devi farne parte')
+  const ids = await sanity.fetch<string[]>(`*[_type in ["match", "series", "player"] && lega._ref == $lega]._id`, { lega: legaId })
+  // prima le partite e le serie (che puntano ai giocatori), poi i giocatori, infine la lega
+  const ordine = await sanity.fetch<{ _id: string; _type: string }[]>(`*[_id in $ids]{_id, _type}`, { ids })
+  const tx = sanity.transaction()
+  for (const d of ordine.filter((d) => d._type !== 'player')) tx.delete(d._id)
+  for (const d of ordine.filter((d) => d._type === 'player')) tx.delete(d._id)
+  tx.delete(legaId)
+  await tx.commit()
+  if ((await cookies()).get(COOKIE_LEGA)?.value === legaId) (await cookies()).delete(COOKIE_LEGA)
+  refresh()
+}
+
 export async function eliminaAccount(): Promise<FormState> {
   const utente = await getUtente()
   if (!utente) return { error: 'Accesso richiesto.' }
@@ -1078,15 +1130,10 @@ export async function eliminaAccount(): Promise<FormState> {
   // della rosa (prima chi usa già l'app), che riceve una notifica.
   const nuoviOrganizzatori: { id: string; lega: string }[] = []
   for (const s of schede.filter((s) => s.isAdmin && s.altriAdmin === 0 && s.altriMembri > 0)) {
-    const candidati = await sanity.fetch<{ _id: string; collegato: boolean }[]>(
-      `*[_type == "player" && lega._ref == $lega && _id != $me && attivo != false]{_id, "collegato": defined(clerkUserId)}`,
-      { lega: s.legaId, me: s._id },
-    )
-    const collegati = candidati.filter((c) => c.collegato)
-    const tra = collegati.length ? collegati : candidati
-    const scelto = tra[randomInt(tra.length)]
-    tx.patch(scelto._id, (p) => p.set({ isAdmin: true }))
-    nuoviOrganizzatori.push({ id: scelto._id, lega: s.lega })
+    const scelto = await nuovoOrganizzatoreACaso(s.legaId, s._id)
+    if (!scelto) continue
+    tx.patch(scelto, (p) => p.set({ isAdmin: true }))
+    nuoviOrganizzatori.push({ id: scelto, lega: s.lega })
   }
 
   for (const s of schede) {
