@@ -632,16 +632,24 @@ async function nuovaScheda(legaId: string, utente: NonNullable<Awaited<ReturnTyp
   })
 }
 
-export async function creaLega(_prev: FormState, formData: FormData): Promise<FormState> {
+export type EsitoNuovaLega = { error?: string; creata?: { nome: string; invito: string } } | undefined
+
+// Nuova lega (con la città facoltativa per il meteo): chi la crea è organizzatore.
+// Restituisce il link d'invito, da condividere subito su WhatsApp.
+export async function creaLega(_prev: EsitoNuovaLega, formData: FormData): Promise<EsitoNuovaLega> {
   const utente = await getUtente()
   if (!utente) return { error: 'Accesso richiesto.' }
   const nome = str(formData, 'nome')
   if (nome.length < 2 || nome.length > 40) return { error: 'Il nome deve avere tra 2 e 40 caratteri.' }
+  const cittaScritta = str(formData, 'citta')
+  const citta = cittaScritta ? await cercaCitta(cittaScritta) : null
+  if (cittaScritta && !citta) return { error: `Non trovo la città “${cittaScritta}”: prova a scriverla in un altro modo, o lasciala vuota.` }
 
-  const lega = await sanity.create({ _type: 'league', nome, codiceInvito: await nuovoCodice(), creataDa: utente.id })
+  const codiceInvito = await nuovoCodice()
+  const lega = await sanity.create({ _type: 'league', nome, codiceInvito, creataDa: utente.id, ...(citta && { citta }) })
   await nuovaScheda(lega._id, utente, true)
   await attivaLega(lega._id)
-  redirect('/')
+  return { creata: { nome, invito: `${await baseUrl()}/invito/${codiceInvito}` } }
 }
 
 // Entrare con il link d'invito: chi ce l'ha entra subito nella rosa.

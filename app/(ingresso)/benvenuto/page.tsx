@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { Suspense } from 'react'
-import { creaLega, scegliLega, uniscitiConCodice } from '@/app/actions'
+import { scegliLega, uniscitiConCodice } from '@/app/actions'
+import { CreaLega } from '@/components/crea-lega'
 import { getCurrentPlayer, getMemberships, getUtente } from '@/lib/player'
 import { ActionForm } from '@/components/action-form'
 import { SubmitButton } from '@/components/submit-button'
@@ -64,12 +65,7 @@ async function Benvenuto() {
       <Card className="space-y-3">
         <h2 className="font-semibold">⚽ Crea una lega</h2>
         <p className="text-sm text-zinc-500">Diventi organizzatore: poi inviti gli altri con un link su WhatsApp.</p>
-        <ActionForm action={creaLega} className="space-y-3">
-          <input name="nome" required minLength={2} maxLength={40} placeholder="Es. Calcetto del giovedì" className={inputClass} />
-          <SubmitButton className={`${buttonClass('secondary')} w-full`} pendingText="Creo…">
-            Crea la lega
-          </SubmitButton>
-        </ActionForm>
+        <CreaLega />
       </Card>
 
       {leghe.length > 0 && (
