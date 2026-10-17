@@ -1,28 +1,80 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
-// Se manca internet mentre si usa l'app, un avviso copre la pagina; quando la connessione
-// torna sparisce da solo e la pagina si aggiorna. (Se manca già all'apertura dell'app, la
-// pagina è capacitor/www/offline.html.)
+// Il server risponde? (un file piccolo, senza cache, con un limite di 5 secondi)
+async function raggiungibile() {
+  const stop = new AbortController()
+  const timer = setTimeout(() => stop.abort(), 5000)
+  try {
+    const r = await fetch(`/icon-192.png?ping=${Date.now()}`, { cache: 'no-store', signal: stop.signal })
+    return r.ok
+  } catch {
+    return false
+  } finally {
+    clearTimeout(timer)
+  }
+}
+
+// Avviso "Nessuna connessione" mentre si usa l'app. Non si fida solo del telefono (che con un Wi-Fi
+// senza internet o poco segnale dice "online"): compare anche se una richiesta al server fallisce,
+// poi ricontrolla ogni 5 secondi e quando la connessione torna sparisce e aggiorna la pagina.
+// Si ricontrolla anche quando l'app torna in primo piano. (Senza internet già all'apertura
+// dell'app, la pagina è capacitor/www/offline.html.)
 export function SenzaConnessione() {
   const router = useRouter()
   const [offline, setOffline] = useState(false)
+  const offlineRef = useRef(false)
 
   useEffect(() => {
-    const giu = () => setOffline(true)
-    const su = () => {
+    let attesa: ReturnType<typeof setTimeout> | undefined
+
+    const tornato = () => {
+      clearTimeout(attesa)
+      offlineRef.current = false
       setOffline(false)
       router.refresh()
     }
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- stato della rete, noto solo nel browser
-    setOffline(!navigator.onLine)
+    const ricontrolla = async () => {
+      clearTimeout(attesa)
+      if (navigator.onLine && (await raggiungibile())) return tornato()
+      attesa = setTimeout(ricontrolla, 5000)
+    }
+    const giu = () => {
+      if (offlineRef.current) return
+      offlineRef.current = true
+      setOffline(true)
+      attesa = setTimeout(ricontrolla, 5000)
+    }
+    const verifica = async () => {
+      if (!navigator.onLine || !(await raggiungibile())) giu()
+    }
+
+    // Le richieste al server che falliscono per la rete fanno comparire l'avviso.
+    const fetchOriginale = window.fetch
+    window.fetch = async (...argomenti) => {
+      try {
+        return await fetchOriginale(...argomenti)
+      } catch (e) {
+        if (!(e instanceof DOMException && e.name === 'AbortError')) verifica()
+        throw e
+      }
+    }
+
+    const primoPiano = () => document.visibilityState === 'visible' && verifica()
+    const online = () => offlineRef.current && ricontrolla()
     window.addEventListener('offline', giu)
-    window.addEventListener('online', su)
+    window.addEventListener('online', online)
+    document.addEventListener('visibilitychange', primoPiano)
+    if (!navigator.onLine) giu()
+
     return () => {
+      clearTimeout(attesa)
+      window.fetch = fetchOriginale
       window.removeEventListener('offline', giu)
-      window.removeEventListener('online', su)
+      window.removeEventListener('online', online)
+      document.removeEventListener('visibilitychange', primoPiano)
     }
   }, [router])
 
@@ -41,7 +93,13 @@ export function SenzaConnessione() {
       </p>
       <button
         type="button"
-        onClick={() => (navigator.onLine ? (setOffline(false), router.refresh()) : window.location.reload())}
+        onClick={async () => {
+          if (navigator.onLine && (await raggiungibile())) {
+            offlineRef.current = false
+            setOffline(false)
+            router.refresh()
+          }
+        }}
         className="rounded-xl bg-green-600 px-8 py-3 font-semibold text-white shadow hover:bg-green-700"
       >
         Riprova
