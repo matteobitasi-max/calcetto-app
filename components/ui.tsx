@@ -131,6 +131,38 @@ function FasciaCapitano() {
   )
 }
 
+// La "C" dell'organizzatore, come nel logo dell'app: C bianca bordata di verde su campo a strisce.
+function LogoC({ size = 22 }: { size?: number }) {
+  return (
+    <svg viewBox="0 0 24 24" width={size} height={size} aria-hidden className="shrink-0">
+      <rect width="24" height="24" rx="5.5" fill="#2a9d46" />
+      <path d="M4 0h4v24H4zM12 0h4v24h-4zM20 0h4v24h-4z" fill="#1f8a3c" />
+      <rect width="24" height="24" rx="5.5" fill="none" stroke="#166534" strokeWidth="1" />
+      <path
+        d="M8.2 5.5h7.6l2.7 2.7v2.4h-4.2V9.3h-3.6v5.4h3.6v-1.3h4.2v2.4l-2.7 2.7H8.2l-2.7-2.7V8.2z"
+        fill="#fff"
+        stroke="#166534"
+        strokeWidth="0.9"
+        strokeLinejoin="round"
+      />
+    </svg>
+  )
+}
+
+// L'organizzatore della lega: la "C" del logo, toccandola si apre la spiegazione.
+export function IconaOrganizzatore() {
+  return (
+    <Medaglia
+      emoji={<span className="inline-block scale-[2.5] py-4"><LogoC /></span>}
+      titolo="Organizzatore"
+      testo="Gestisce la lega: crea le partite, apre e chiude le convocazioni, fa le squadre, inserisce i risultati e invita i giocatori."
+      className="shrink-0 rounded-md"
+    >
+      <LogoC />
+    </Medaglia>
+  )
+}
+
 // Il badge del giocatore: toccandolo si apre la spiegazione.
 export function PlayerBadge({ badge }: { badge?: Badge }) {
   if (!badge || !BADGE[badge]) return null

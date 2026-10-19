@@ -1,7 +1,7 @@
 import { Suspense } from 'react'
 import { mioInCima, overall, requirePlayer } from '@/lib/player'
 import { getPlayers } from '@/lib/matches'
-import { ButtonLink, Card, Loading, PageTitle, PlayerRow } from '@/components/ui'
+import { ButtonLink, Card, IconaOrganizzatore, Loading, PageTitle, PlayerRow } from '@/components/ui'
 
 export default function GiocatoriPage() {
   return (
@@ -30,13 +30,12 @@ async function Rosa() {
                 player={p}
                 mio={p._id === me._id}
                 mostraAccesso
-                right={
+                // ruolo a sinistra del voto, così i voti restano allineati a destra
+                prima={
                   p.isAdmin ? (
-                    <span title="Organizzatore">👑</span>
+                    <IconaOrganizzatore />
                   ) : (
-                    <span>
-                      {p.puoInserireRisultati && <span title="Può inserire i risultati">📝</span>}
-                    </span>
+                    p.puoInserireRisultati && <span title="Può inserire i risultati">📝</span>
                   )
                 }
               />
