@@ -30,7 +30,7 @@ export function AccessoNativo() {
 
   const apri = async () => {
     setAperto(true)
-    await Browser.open({ url: `${window.location.origin}/accesso-app`, presentationStyle: 'popover' })
+    await Browser.open({ url: `${window.location.origin}/accesso-app`, presentationStyle: 'fullscreen' })
   }
 
   return (

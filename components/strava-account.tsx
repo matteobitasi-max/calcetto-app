@@ -13,7 +13,7 @@ export function StravaAccount({ atleta, collegato }: { atleta?: string; collegat
     startTransition(async () => {
       const app = Capacitor.isNativePlatform() && Capacitor.isPluginAvailable('Browser')
       const url = await collegaStrava(app, window.location.pathname)
-      if (app) await Browser.open({ url, presentationStyle: 'popover' })
+      if (app) await Browser.open({ url, presentationStyle: 'fullscreen' })
       else window.location.assign(url)
     })
 

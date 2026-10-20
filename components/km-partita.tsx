@@ -49,7 +49,7 @@ export function KmPartita({
       try {
         sessionStorage.setItem(DOPO_STRAVA, matchId)
       } catch {}
-      if (app) await Browser.open({ url, presentationStyle: 'popover' })
+      if (app) await Browser.open({ url, presentationStyle: 'fullscreen' })
       else window.location.assign(url)
     })
 
