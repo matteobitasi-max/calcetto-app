@@ -6,6 +6,7 @@ import { getKmTotali, getPartitePunteggio, getPlayer, getPlayerStats, getStorico
 import { classifica } from '@/lib/punteggio'
 import { TROFEI, trofeiLega, type IdTrofeo } from '@/lib/trofei'
 import { Medaglia } from '@/components/medaglia'
+import { SaluteAccount } from '@/components/salute-account'
 import { formatData } from '@/lib/dates'
 import { immagineUrl } from '@/lib/image'
 import { caricaFoto } from '@/app/actions'
@@ -94,6 +95,13 @@ export async function ProfiloGiocatore({ id }: { id: string }) {
       </Card>
 
       <Statistiche stats={stats} km={kmTotali.get(id)} />
+
+      {/* Solo nel mio profilo e nell'app: Apple Health (iPhone) / Health Connect (Android) per i km */}
+      {mio && (
+        <Card className="p-0! empty:hidden">
+          <SaluteAccount />
+        </Card>
+      )}
 
       <Card>
         <h2 className="mb-1 font-semibold">🏅 Trofei</h2>
