@@ -397,20 +397,21 @@ async function KmCard({ match, me, rosa }: { match: Match; me: Membro; rosa: Pla
   )
 }
 
-// Km, gol e MVP del giocatore in questa partita.
+// Gol, MVP e km del giocatore in questa partita (i km accanto al voto).
 function Prestazione({ match, playerId }: { match: Match; playerId: string }) {
   const gol = match.marcatori.find((m) => m.giocatoreId === playerId)?.gol ?? 0
   const km = match.distanze.find((d) => d.giocatoreId === playerId)?.km
   if (!gol && match.mvpId !== playerId && km == null) return null
   return (
-    <span className="shrink-0 text-sm">
+    // gol e MVP, poi i km subito accanto al voto
+    <span className="flex shrink-0 items-center gap-1.5 text-sm">
+      {gol > 0 && <span title={`${gol} gol`}>⚽{gol > 1 && <sub>{gol}</sub>}</span>}
+      {match.mvpId === playerId && <span title="MVP">🫑</span>}
       {km != null && (
-        <span title="Km percorsi" className="mr-1 whitespace-nowrap text-xs font-medium text-zinc-500">
-          🏃{km.toLocaleString('it-IT', { maximumFractionDigits: 1 })} km
+        <span title="Km percorsi" className="whitespace-nowrap text-xs font-semibold text-zinc-600 dark:text-zinc-300">
+          {km.toLocaleString('it-IT', { maximumFractionDigits: 1 })} km
         </span>
       )}
-      {gol > 0 && <span title={`${gol} gol`}>⚽{gol > 1 && <sub>{gol}</sub>}</span>}
-      {match.mvpId === playerId && <span title="MVP"> 🫑</span>}
     </span>
   )
 }
