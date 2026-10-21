@@ -8,7 +8,7 @@ export function SaluteAccount() {
   const [disponibile, setDisponibile] = useState(false)
   const [attivi, setAttivi] = useState(false)
   const [pending, setPending] = useState(false)
-  const [nome, setNome] = useState('Apple Salute')
+  const [nome, setNome] = useState('Apple Health')
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- dipende dal dispositivo: noto solo nell'app
@@ -38,15 +38,26 @@ export function SaluteAccount() {
     }
   }
 
+  const ios = nome === 'Apple Health'
   return (
-    <label className="flex cursor-pointer items-center justify-between gap-3 px-4 py-3 text-sm">
-      <span>
-        <span className="font-semibold">❤️ Km automatici da {nome}</span>
-        <span className="block text-xs text-zinc-500">
-          Dopo ogni partita, aprendo l&apos;app, i km che hai corso compaiono da soli accanto al tuo nome.
+    <div className="space-y-3 px-4 py-3 text-sm">
+      {/* sempre visibile nell'app: cosa legge The Cap da Apple Health / Health Connect e perché */}
+      <div>
+        <p className="font-semibold">❤️ {ios ? 'Apple Health (Salute)' : 'Health Connect'}</p>
+        <p className="mt-1 text-xs text-zinc-500">
+          The Cap legge da {ios ? 'Apple Health (l\u2019app Salute)' : 'Health Connect'} <b>solo la distanza camminata e corsa</b>{' '}
+          registrata durante l&apos;orario delle tue partite, per mostrare i km che hai percorso. Non scrive nulla e non legge
+          altri dati di salute. Puoi cambiare il permesso quando vuoi
+          {ios ? ' da Impostazioni → Salute → Accesso ai dati e dispositivi → TheCap.' : ' dalle impostazioni di Health Connect.'}
+        </p>
+      </div>
+      <label className="flex cursor-pointer items-center justify-between gap-3">
+        <span>
+          <span className="font-medium">Km automatici da {nome}</span>
+          <span className="block text-xs text-zinc-500">Dopo ogni partita, aprendo l&apos;app, i tuoi km compaiono da soli accanto al tuo nome.</span>
         </span>
-      </span>
-      <input type="checkbox" checked={attivi} disabled={pending} onChange={cambia} className="h-5 w-5 shrink-0 accent-green-600" />
-    </label>
+        <input type="checkbox" checked={attivi} disabled={pending} onChange={cambia} className="h-5 w-5 shrink-0 accent-green-600" />
+      </label>
+    </div>
   )
 }

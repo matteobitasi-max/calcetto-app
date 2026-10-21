@@ -7,7 +7,8 @@ export const Salute = registerPlugin<{ distanza(o: { inizio: number; fine: numbe
 export const saluteDisponibile = () => Capacitor.isNativePlatform() && Capacitor.isPluginAvailable('Salute')
 
 // Il nome da mostrare: Apple Salute su iPhone, Health Connect su Android.
-export const nomeSalute = () => (Capacitor.getPlatform() === 'android' ? 'Health Connect' : 'Apple Salute')
+// Su iPhone il nome ufficiale "Apple Health" (in italiano l'app si chiama Salute), come chiede Apple.
+export const nomeSalute = () => (Capacitor.getPlatform() === 'android' ? 'Health Connect' : 'Apple Health')
 
 // Preferenze su questo telefono: km automatici attivi e partite da non ricompilare (km tolti a mano).
 const AUTO = 'km-salute-auto'

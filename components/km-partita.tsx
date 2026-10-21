@@ -9,7 +9,7 @@ import { Salute, escludiPartita, impostaKmAutomatici, nomeSalute, saluteDisponib
 
 const DOPO_STRAVA = 'km-dopo-strava'
 
-const FONTI: Record<string, string> = { strava: 'da Strava', salute: 'dall\u2019app Salute del telefono', manuale: 'inseriti a mano' }
+const FONTI: Record<string, string> = { strava: 'da Strava', salute: 'da Apple Health / Health Connect', manuale: 'inseriti a mano' }
 const formatoKm = (km: number) => km.toLocaleString('it-IT', { maximumFractionDigits: 2 })
 
 // "I tuoi km" nella partita finita: da Apple Salute (iPhone) o Health Connect (Android), o da Strava (se attivo).
@@ -32,7 +32,7 @@ export function KmPartita({
   const [pending, startTransition] = useTransition()
   const [messaggio, setMessaggio] = useState<{ testo: string; errore?: boolean } | null>(null)
   const [salute, setSalute] = useState(false)
-  const [nome, setNome] = useState('Apple Salute')
+  const [nome, setNome] = useState('Apple Health')
 
   const daStrava = () =>
     startTransition(async () => {

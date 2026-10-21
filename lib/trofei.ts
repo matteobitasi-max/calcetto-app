@@ -6,7 +6,7 @@ export const TROFEI = {
   tripletta: { emoji: '⚽', nome: 'Bomber', descrizione: 'Segna 3 gol in una sola partita.' },
   presente: { emoji: '🔥', nome: 'Leader', descrizione: 'Gioca 10 partite di fila della lega, senza saltarne una.' },
   peperone: { emoji: '🫑', nome: 'Golden Peperone', descrizione: 'Vinci il premio MVP 🫑 per 3 volte.' },
-  maratoneta: { emoji: '🏃', nome: 'Maratoneta', descrizione: 'Corri più di 7 km in una partita (km presi da Apple Salute o Health Connect).' },
+  maratoneta: { emoji: '🏃', nome: 'Maratoneta', descrizione: 'Corri più di 7 km in una partita (km presi da Apple Health o Health Connect).' },
   muro: { emoji: '🧱', nome: 'Muro', descrizione: 'Finisci una partita senza subire gol con la tua squadra.' },
   freddoloso: {
     emoji: '🥶',
