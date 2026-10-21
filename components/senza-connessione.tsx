@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
+import { LOGO_OFFLINE } from '@/lib/logo-offline'
 
 // Il server risponde? (un file piccolo, senza cache, con un limite di 5 secondi)
 async function raggiungibile() {
@@ -84,8 +85,8 @@ export function SenzaConnessione() {
       role="alert"
       className="fixed inset-0 z-[80] flex flex-col items-center justify-center gap-4 bg-white/95 p-6 text-center backdrop-blur-sm dark:bg-zinc-950/95"
     >
-      {/* eslint-disable-next-line @next/next/no-img-element -- logo statico */}
-      <img src="/icon-512.png" alt="" width={80} height={80} className="rounded-[22%] shadow-lg" />
+      {/* eslint-disable-next-line @next/next/no-img-element -- logo incorporato: si vede anche senza internet */}
+      <img src={LOGO_OFFLINE} alt="" width={96} height={96} className="rounded-[22%] shadow-lg" />
       <p className="text-5xl">📡</p>
       <h1 className="text-2xl font-bold">Nessuna connessione</h1>
       <p className="max-w-xs text-zinc-600 dark:text-zinc-400">
