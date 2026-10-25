@@ -77,8 +77,8 @@ async function Partite() {
                 {formatData(ultima.data, { weekday: 'long', day: 'numeric', month: 'long' })} · {ultima.luogo}
               </p>
               <div className="flex justify-between px-2 text-xs font-semibold">
-                <span className="text-blue-600 dark:text-blue-400">Squadra A</span>
-                <span className="text-orange-600 dark:text-orange-400">Squadra B</span>
+                <span className="text-blue-600 dark:text-blue-400">{ultima.nomeA ?? 'Squadra A'}</span>
+                <span className="text-orange-600 dark:text-orange-400">{ultima.nomeB ?? 'Squadra B'}</span>
               </div>
               <Tabellino match={ultima} />
             </Card>
@@ -228,7 +228,7 @@ function ProssimaPartita({
           {inAttesa > 0 && <p className="text-xs text-amber-700 dark:text-amber-400">Lista piena · {inAttesa} in lista d&apos;attesa</p>}
           {miaSquadra && (
             <p className={`text-xs font-medium ${miaSquadra === 'A' ? 'text-blue-600 dark:text-blue-400' : 'text-orange-600 dark:text-orange-400'}`}>
-              Sei nella Squadra {miaSquadra}
+              {match.torneo ? `La tua squadra: ${(miaSquadra === 'A' ? match.nomeA : match.nomeB) ?? miaSquadra}` : `Sei nella Squadra ${miaSquadra}`}
               {match.pettorine === miaSquadra && ' · 🦺 porta la pettorina!'}
             </p>
           )}

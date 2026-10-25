@@ -15,6 +15,8 @@ import { riscriviPartita, type MatchDaUnire } from '@/lib/unisci'
 import { daysBetween, formatData, romeLocalToISO } from '@/lib/dates'
 import { inviaAGiocatori, inviaATutti, rimuoviIscrizione, salvaIscrizione, salvaTokenNativo, type PushSub } from '@/lib/push'
 import { assicuraRicorrenze, getSeries, occurrenceId, rimuoviFutureVuote, type Series } from '@/lib/series'
+import { puoCreareTornei } from '@/lib/tornei'
+import { SQUADRE_PREDEFINITE, giornate } from '@/lib/girone'
 
 export type FormState = { error?: string } | undefined
 
@@ -1004,6 +1006,21 @@ export async function unisciSchede(tieniId: string, togliId: string) {
   )
   const tx = sanity.transaction()
   for (const m of partite) tx.patch(m._id, (p) => p.ifRevisionId(m._rev).set(riscriviPartita(m, tieniId, togliId)))
+  // Squadre dei tornei: il doppione viene sostituito dalla scheda giusta (senza ripeterla).
+  const tornei = await sanity.fetch<{ _id: string; _rev: string; squadre: { _key: string; giocatori?: { _key?: string; _ref: string }[] }[] }[]>(
+    `*[_type == "tournament" && references($togli)]{_id, _rev, squadre}`,
+    { togli: togliId },
+  )
+  for (const t of tornei) {
+    const squadre = t.squadre.map((sq) => {
+      const visti = new Set<string>()
+      const giocatori = (sq.giocatori ?? [])
+        .map((g) => (g._ref === togliId ? { ...g, _ref: tieniId } : g))
+        .filter((g) => !visti.has(g._ref) && visti.add(g._ref))
+      return { ...sq, giocatori }
+    })
+    tx.patch(t._id, (p) => p.ifRevisionId(t._rev).set({ squadre }))
+  }
 
   // Dati che mancano alla scheda giusta: si prendono dal doppione.
   const completa = Object.fromEntries(
@@ -1105,8 +1122,8 @@ export async function esciDallaLega(legaId: string) {
 export async function eliminaLega(legaId: string) {
   const me = await requireIn(legaId, 'organizzatore')
   if (me.ospite) throw new Error('Per eliminare una lega devi farne parte')
-  const ids = await sanity.fetch<string[]>(`*[_type in ["match", "series", "player"] && lega._ref == $lega]._id`, { lega: legaId })
-  // prima le partite e le serie (che puntano ai giocatori), poi i giocatori, infine la lega
+  const ids = await sanity.fetch<string[]>(`*[_type in ["match", "series", "tournament", "player"] && lega._ref == $lega]._id`, { lega: legaId })
+  // prima partite, serie e tornei (che puntano ai giocatori), poi i giocatori, infine la lega
   const ordine = await sanity.fetch<{ _id: string; _type: string }[]>(`*[_id in $ids]{_id, _type}`, { ids })
   const tx = sanity.transaction()
   for (const d of ordine.filter((d) => d._type !== 'player')) tx.delete(d._id)
@@ -1165,4 +1182,120 @@ export async function eliminaAccount(): Promise<FormState> {
   await (await clerkClient()).users.deleteUser(utente.id)
   ;(await cookies()).delete(COOKIE_LEGA)
   redirect('/account-eliminato')
+}
+
+// ---------- Tornei (Pro) ----------
+
+// Nuovo torneo a girone all'italiana: squadre fisse dalla rosa e calendario generato.
+// Le partite sono normali partite della lega (con squadre già fatte e senza convocazioni).
+export async function creaTorneo(_prev: FormState, formData: FormData): Promise<FormState> {
+  const admin = await requireIn(str(formData, 'legaId'), 'organizzatore')
+  if (!(await puoCreareTornei())) return { error: 'I tornei sono una funzione Pro.' }
+  const utente = await getUtente()
+
+  const nome = str(formData, 'nome')
+  if (nome.length < 2 || nome.length > 60) return { error: 'Il nome del torneo deve avere tra 2 e 60 caratteri.' }
+  const quante = num(formData, 'numSquadre') ?? 0
+  if (!Number.isInteger(quante) || quante < 2 || quante > SQUADRE_PREDEFINITE.length) {
+    return { error: `Servono da 2 a ${SQUADRE_PREDEFINITE.length} squadre.` }
+  }
+  const rosa = new Set(
+    await sanity.fetch<string[]>(`*[_type == "player" && lega._ref == $lega && attivo != false]._id`, { lega: admin.lega._id }),
+  )
+  const squadre = Array.from({ length: quante }, (_, i) => ({
+    _key: `s${i + 1}`,
+    _type: 'squadraTorneo',
+    nome: str(formData, `nome_${i}`) || SQUADRE_PREDEFINITE[i].nome,
+    colore: SQUADRE_PREDEFINITE[i].colore,
+    giocatori: [] as { _key: string; _type: 'reference'; _ref: string }[],
+  }))
+  for (const [k, v] of formData) {
+    if (!k.startsWith('squadra_') || typeof v !== 'string' || v === '') continue
+    const id = k.slice('squadra_'.length)
+    const i = Number(v)
+    if (!rosa.has(id) || !squadre[i]) continue
+    squadre[i].giocatori.push({ _key: id, _type: 'reference', _ref: id })
+  }
+  const vuota = squadre.find((sq) => !sq.giocatori.length)
+  if (vuota) return { error: `La squadra “${vuota.nome}” non ha giocatori.` }
+  if (new Set(squadre.map((sq) => sq.nome.toLowerCase())).size < squadre.length) return { error: 'Due squadre hanno lo stesso nome.' }
+
+  const inizio = str(formData, 'inizio')
+  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(inizio)) return { error: 'Scegli giorno e ora della prima giornata.' }
+  const ogniGiorni = num(formData, 'ogniGiorni') ?? 7
+  if (![0, 1, 7, 14].includes(ogniGiorni)) return { error: 'Frequenza delle giornate non valida.' }
+  const durata = num(formData, 'durataMinuti') ?? 40
+  if (!Number.isInteger(durata) || durata < 10 || durata > 300) return { error: 'Durata non valida (10-300 minuti).' }
+  const luogo = str(formData, 'luogo')
+  if (!luogo) return { error: 'Scrivi dove si gioca.' }
+  const andataRitorno = formData.get('andataRitorno') === 'on'
+
+  const calendario = giornate(quante, andataRitorno)
+  const torneo = await sanity.create({
+    _type: 'tournament',
+    lega: { _type: 'reference', _ref: admin.lega._id },
+    nome,
+    formato: 'girone',
+    andataRitorno,
+    puntiVittoria: 3,
+    puntiPareggio: 1,
+    squadre,
+    ...(utente && { creatoDa: utente.id }),
+  })
+
+  // Giornate a distanza di `ogniGiorni` giorni (0 = tutte lo stesso giorno, una dopo l'altra);
+  // le partite della stessa giornata si giocano una dopo l'altra.
+  const adesso = new Date().toISOString()
+  const [giorno0, ora0] = inizio.split('T')
+  let slot = 0
+  const tx = sanity.transaction()
+  calendario.forEach((coppie, g) => {
+    coppie.forEach(([a, b], i) => {
+      // ora "italiana" scritta come se fosse UTC, poi convertita (così l'ora legale non sposta gli orari)
+      const base = new Date(`${giorno0}T${ora0}:00Z`)
+      base.setUTCDate(base.getUTCDate() + g * ogniGiorni)
+      base.setUTCMinutes(base.getUTCMinutes() + (ogniGiorni === 0 ? slot : i) * durata)
+      slot++
+      const data = romeLocalToISO(base.toISOString().slice(0, 16))
+      const sa = squadre[a]
+      const sb = squadre[b]
+      const giocatori = [...sa.giocatori, ...sb.giocatori]
+      tx.create({
+        _type: 'match',
+        lega: { _type: 'reference', _ref: admin.lega._id },
+        torneo: { _type: 'reference', _ref: torneo._id },
+        turno: g + 1,
+        chiaveA: sa._key,
+        chiaveB: sb._key,
+        nomeA: sa.nome,
+        nomeB: sb.nome,
+        data,
+        durataMinuti: durata,
+        luogo,
+        postiDisponibili: giocatori.length,
+        postiAutomatici: false,
+        stato: 'chiusa',
+        aperturaConvocazioni: adesso,
+        chiusuraConvocazioni: adesso,
+        durataFinestraMinuti: 15,
+        convocazioni: giocatori.map((p) => ({ _key: p._ref, _type: 'convocazione', giocatore: { _type: 'reference', _ref: p._ref }, risposta: 'presente', rispostoIl: adesso })),
+        squadraA: sa.giocatori,
+        squadraB: sb.giocatori,
+        formazioniUfficialiIl: adesso,
+      })
+    })
+  })
+  await tx.commit()
+  redirect(`/tornei/${torneo._id}`)
+}
+
+// Elimina il torneo con tutte le sue partite (anche quelle già giocate).
+export async function eliminaTorneo(torneoId: string) {
+  await requireForDoc(torneoId, 'organizzatore')
+  const partite = await sanity.fetch<string[]>(`*[_type == "match" && torneo._ref == $id]._id`, { id: torneoId })
+  const tx = sanity.transaction()
+  for (const id of partite) tx.delete(id)
+  tx.delete(torneoId)
+  await tx.commit()
+  redirect('/tornei')
 }

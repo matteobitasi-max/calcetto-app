@@ -69,8 +69,8 @@ async function Editor({ params }: { params: Promise<{ id: string }> }) {
       <RisultatoEditor
         action={salvaRisultato.bind(null, match._id)}
         squadre={[
-          { chiave: 'A', nome: 'Squadra A', colore: 'border-t-blue-500', giocatori: match.squadraA.map(giocatore) },
-          { chiave: 'B', nome: 'Squadra B', colore: 'border-t-orange-500', giocatori: match.squadraB.map(giocatore) },
+          { chiave: 'A', nome: match.nomeA ?? 'Squadra A', colore: 'border-t-blue-500', giocatori: match.squadraA.map(giocatore) },
+          { chiave: 'B', nome: match.nomeB ?? 'Squadra B', colore: 'border-t-orange-500', giocatori: match.squadraB.map(giocatore) },
         ]}
         golIniziali={Object.fromEntries(match.marcatori.map((m) => [m.giocatoreId, m.gol]))}
         autogolIniziali={{ A: match.autogolA ?? 0, B: match.autogolB ?? 0 }}

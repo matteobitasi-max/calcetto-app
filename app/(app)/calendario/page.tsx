@@ -222,6 +222,12 @@ function GiornoScelto({
               ＋ Nuova partita{organizzo.length > 1 && ` · ${l.nome}`}
             </Link>
           ))}
+          <Link
+            href={`/tornei/nuovo?giorno=${giorno}${organizzo.length === 1 ? `&lega=${organizzo[0].id}` : ''}`}
+            className="rounded-full bg-zinc-100 px-3 py-1.5 text-xs font-semibold hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700"
+          >
+            🏆 Torneo da questo giorno
+          </Link>
         </div>
       )}
     </Card>

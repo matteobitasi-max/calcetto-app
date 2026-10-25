@@ -67,6 +67,18 @@ export const match = defineType({
     defineField({ name: 'quota', title: 'Quota a testa (€)', type: 'number', validation: (r) => r.min(0) }),
     defineField({ name: 'note', title: 'Note', type: 'text', rows: 3 }),
     defineField({
+      name: 'torneo',
+      title: 'Torneo',
+      description: 'Partita di un torneo: squadre fisse, niente convocazioni',
+      type: 'reference',
+      to: [{ type: 'tournament' }],
+    }),
+    defineField({ name: 'turno', title: 'Giornata del torneo', type: 'number', hidden: ({ document }) => !document?.torneo }),
+    defineField({ name: 'chiaveA', title: 'Squadra A (chiave nel torneo)', type: 'string', hidden: true }),
+    defineField({ name: 'chiaveB', title: 'Squadra B (chiave nel torneo)', type: 'string', hidden: true }),
+    defineField({ name: 'nomeA', title: 'Nome squadra A', type: 'string', hidden: ({ document }) => !document?.torneo }),
+    defineField({ name: 'nomeB', title: 'Nome squadra B', type: 'string', hidden: ({ document }) => !document?.torneo }),
+    defineField({
       name: 'serie',
       title: 'Partita ricorrente',
       description: 'Il modello da cui è stata generata questa partita',

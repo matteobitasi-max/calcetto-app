@@ -69,6 +69,11 @@ async function MatchDetail({ params }: { params: Promise<{ id: string }> }) {
           <StatoBadge match={match} />
         </div>
         <p className="text-sm font-semibold text-zinc-600 dark:text-zinc-300">🏟️ {player.lega.nome}</p>
+        {match.torneo && (
+          <Link href={`/tornei/${match.torneo._id}`} className="block text-sm font-semibold text-amber-700 hover:underline dark:text-amber-400">
+            🏆 {match.torneo.nome} · Giornata {match.turno} · {match.nomeA} – {match.nomeB}
+          </Link>
+        )}
         <p className="text-sm text-zinc-500">
           📍 {match.luogo}
           {match.quota != null && ` · ${match.quota} € a testa`}
@@ -223,11 +228,13 @@ function Squadre({ match, mioId }: { match: Match; mioId: string }) {
     ['B', match.squadraB, 'border-t-orange-500'],
   ]
   const mia = match.squadraA.some((p) => p._id === mioId) ? 'A' : match.squadraB.some((p) => p._id === mioId) ? 'B' : null
+  // Nelle partite dei tornei le squadre hanno un nome.
+  const nome = (l: 'A' | 'B') => (l === 'A' ? match.nomeA : match.nomeB) ?? `Squadra ${l}`
   return (
     <div className="space-y-3">
       {mia && match.stato !== 'giocata' && (
         <p className={`rounded-xl p-3 text-center text-sm font-medium text-white ${mia === 'A' ? 'bg-blue-600' : 'bg-orange-500'}`}>
-          Sei nella Squadra {mia}
+          {match.torneo ? `La tua squadra: ${nome(mia)}` : `Sei nella Squadra ${mia}`}
           {match.pettorine === mia && ' · 🦺 porta la pettorina!'}
         </p>
       )}
@@ -238,7 +245,7 @@ function Squadre({ match, mioId }: { match: Match; mioId: string }) {
             <Card key={lettera} className={`border-t-4 ${color}`}>
               <h2 className="mb-3 flex items-center justify-between gap-2 font-semibold">
                 <span>
-                  Squadra {lettera}
+                  {nome(lettera)}
                   {match.pettorine === lettera && <span className="ml-2 rounded-full bg-zinc-100 px-2 py-0.5 text-xs font-normal dark:bg-zinc-800">🦺 pettorine</span>}
                 </span>
                 <span className="text-sm font-normal text-zinc-500">forza {totale.toFixed(1)}</span>
@@ -332,7 +339,8 @@ function AdminPanel({ match, whatsappUrl }: { match: Match; whatsappUrl: string 
         </div>
       )}
 
-      {match.stato === 'chiusa' && (
+      {/* Nei tornei le squadre sono fisse: niente formazioni né convocazioni da riaprire */}
+      {match.stato === 'chiusa' && !match.torneo && (
         <>
           <div className="flex flex-wrap gap-2">
             {count >= 2 && new Date() < risultatoDa(match) && (

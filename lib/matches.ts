@@ -46,6 +46,13 @@ export type Match = {
   pettorine?: 'A' | 'B'
   formazioniUfficialiIl?: string
   distanze: Distanza[]
+  /** Partita di un torneo: squadre fisse con nome, niente convocazioni. */
+  torneo?: { _id: string; nome: string }
+  turno?: number
+  chiaveA?: string
+  chiaveB?: string
+  nomeA?: string
+  nomeB?: string
 }
 
 export type FonteKm = 'strava' | 'salute' | 'manuale'
@@ -71,7 +78,8 @@ const matchFields = `
   "mvpId": mvp._ref,
   "pagamenti": coalesce(pagamenti[]{"giocatoreId": giocatore._ref, stato, metodo, il}, []),
   pettorine, formazioniUfficialiIl,
-  "distanze": coalesce(distanze[]{"giocatoreId": giocatore._ref, km, fonte}, [])
+  "distanze": coalesce(distanze[]{"giocatoreId": giocatore._ref, km, fonte}, []),
+  "torneo": torneo->{_id, nome}, turno, chiaveA, chiaveB, nomeA, nomeB
 `
 
 // Le partite di una lega o, con un elenco, di più leghe insieme (vista "Tutte le leghe").
@@ -87,6 +95,11 @@ export function getPastMatches(legaId: string | string[], limit = 20) {
     `*[_type == "match" && lega._ref in $leghe && stato in ["giocata", "annullata"]] | order(data desc)[0...$limit]{${matchFields}}`,
     { leghe: [legaId].flat(), limit },
   )
+}
+
+// Le partite di un torneo, per giornata.
+export function getPartiteTorneo(torneoId: string) {
+  return sanity.fetch<Match[]>(`*[_type == "match" && torneo._ref == $torneoId] | order(turno asc, data asc){${matchFields}}`, { torneoId })
 }
 
 export function getMatch(id: string) {

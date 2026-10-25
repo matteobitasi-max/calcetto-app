@@ -112,6 +112,9 @@ export function LegaMenu({
               <hr className="my-2 border-zinc-200 dark:border-zinc-800" />
             </>
           )}
+          <Link href="/tornei" role="menuitem" className={voce} onClick={() => setOpen(false)}>
+            🏆 Tornei
+          </Link>
           {organizzatore && (
             <Link href="/lega" role="menuitem" className={voce} onClick={() => setOpen(false)}>
               ⚙️ Impostazioni e inviti
