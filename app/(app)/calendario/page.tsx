@@ -5,6 +5,7 @@ import { finestra, getMatchesBetween, presenti, type Match, type Stato } from '@
 import { formatData, isoToRomeLocal } from '@/lib/dates'
 import { assicuraRicorrenze } from '@/lib/series'
 import { Card, Loading, StatoBadge } from '@/components/ui'
+import { avatarUrl } from '@/lib/image'
 import { FiltroLega } from './filtro-lega'
 
 const GIORNI = ['L', 'M', 'M', 'G', 'V', 'S', 'D']
@@ -87,7 +88,11 @@ async function Calendario({ searchParams }: { searchParams: Promise<Record<strin
   return (
     <div className="space-y-4">
       {membri.length > 1 && (
-        <FiltroLega leghe={membri.map((x) => ({ id: x.lega._id, nome: x.lega.nome }))} scelta={scelta} mese={meseCorrente} />
+        <FiltroLega
+          leghe={membri.map((x) => ({ id: x.lega._id, nome: x.lega.nome, logo: avatarUrl(x.lega.logo, 64), organizzatore: !!x.isAdmin }))}
+          scelta={scelta}
+          mese={meseCorrente}
+        />
       )}
       <Card>
         <div className="mb-4 flex items-center justify-between">

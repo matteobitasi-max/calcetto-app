@@ -6,7 +6,7 @@ import { scegliLega } from '@/app/actions'
 
 export type LegaVoce = { id: string; nome: string; logo: string | null }
 
-function Stemma({ lega, size = 28 }: { lega: LegaVoce; size?: number }) {
+export function Stemma({ lega, size = 28 }: { lega: Pick<LegaVoce, 'nome' | 'logo'>; size?: number }) {
   return lega.logo ? (
     // eslint-disable-next-line @next/next/no-img-element -- miniatura già ridimensionata dal CDN di Sanity
     <img src={lega.logo} alt="" width={size} height={size} className="shrink-0 rounded-lg object-cover" style={{ width: size, height: size }} />
