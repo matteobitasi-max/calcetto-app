@@ -1108,11 +1108,18 @@ export async function eliminaLega(legaId: string) {
   const ids = await sanity.fetch<string[]>(`*[_type in ["match", "series", "player"] && lega._ref == $lega]._id`, { lega: legaId })
   // prima le partite e le serie (che puntano ai giocatori), poi i giocatori, infine la lega
   const ordine = await sanity.fetch<{ _id: string; _type: string }[]>(`*[_id in $ids]{_id, _type}`, { ids })
-  const tx = sanity.transaction()
-  for (const d of ordine.filter((d) => d._type !== 'player')) tx.delete(d._id)
-  for (const d of ordine.filter((d) => d._type === 'player')) tx.delete(d._id)
-  tx.delete(legaId)
-  await tx.commit()
+  // Due transazioni: Sanity controlla i riferimenti sullo stato di partenza, quindi i giocatori
+  // ancora citati dalle partite non si possono cancellare nella stessa transazione delle partite.
+  const partite = ordine.filter((d) => d._type !== 'player')
+  if (partite.length) {
+    const prima = sanity.transaction()
+    for (const d of partite) prima.delete(d._id)
+    await prima.commit()
+  }
+  const poi = sanity.transaction()
+  for (const d of ordine.filter((d) => d._type === 'player')) poi.delete(d._id)
+  poi.delete(legaId)
+  await poi.commit()
   if ((await cookies()).get(COOKIE_LEGA)?.value === legaId) (await cookies()).delete(COOKIE_LEGA)
   refresh()
 }
