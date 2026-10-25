@@ -1,9 +1,42 @@
 'use client'
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
+import { useSceltaFoto } from '@/components/scelta-foto'
 import { SQUADRE_PREDEFINITE } from '@/lib/girone'
 
 export type GiocatoreRosa = { id: string; nome: string; forza: number; ruolo?: string }
+
+// Foto della squadra: si scatta o si sceglie, e parte con il modulo nel campo `name` (già rimpicciolita).
+function FotoSquadra({ name, attuale, colore, nome }: { name: string; attuale?: string | null; colore: string; nome: string }) {
+  const input = useRef<HTMLInputElement>(null)
+  const [anteprima, setAnteprima] = useState(attuale ?? null)
+  const scelta = useSceltaFoto({
+    titolo: `Foto di ${nome}`,
+    onFoto: (foto) => {
+      const dt = new DataTransfer()
+      dt.items.add(foto)
+      input.current!.files = dt.files
+      input.current!.dispatchEvent(new Event('change', { bubbles: true }))
+      setAnteprima(URL.createObjectURL(foto))
+    },
+  })
+  return (
+    <>
+      <button
+        type="button"
+        onClick={scelta.apri}
+        aria-label={`Foto di ${nome}`}
+        className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full text-lg text-white"
+        style={{ background: colore }}
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element -- anteprima locale (blob:) o miniatura del CDN */}
+        {anteprima ? <img src={anteprima} alt="" className="h-full w-full object-cover" /> : '📷'}
+      </button>
+      <input ref={input} type="file" name={name} accept="image/*" hidden />
+      {scelta.menu}
+    </>
+  )
+}
 
 // Le squadre del torneo: una scheda per squadra con i suoi giocatori; ogni giocatore si sposta
 // in un'altra squadra (o fuori dal torneo) dal suo menu. Invia nome_<i> e squadra_<giocatore>.
@@ -12,14 +45,19 @@ export function SquadreEditor({
   numSquadre,
   nomiIniziali = SQUADRE_PREDEFINITE.map((s) => s.nome),
   coloriIniziali = SQUADRE_PREDEFINITE.map((s) => s.colore),
+  fotoIniziali = [],
   squadraIniziale = {},
+  onNomi,
 }: {
   rosa: GiocatoreRosa[]
   numSquadre: number
   nomiIniziali?: string[]
   coloriIniziali?: string[]
+  fotoIniziali?: (string | null)[]
   /** giocatore → indice della squadra */
   squadraIniziale?: Record<string, string>
+  /** Avvisa quando cambiano i nomi delle squadre (per l'anteprima del tabellone). */
+  onNomi?: (nomi: string[]) => void
 }) {
   const [nomi, setNomi] = useState(() => SQUADRE_PREDEFINITE.map((s, i) => nomiIniziali[i] ?? s.nome))
   const [squadraDi, setSquadraDi] = useState<Record<string, string>>(squadraIniziale)
@@ -89,18 +127,27 @@ export function SquadreEditor({
           const media = m.length ? m.reduce((s, p) => s + p.forza, 0) / m.length : 0
           return (
             <div key={i} className="rounded-xl border border-zinc-200 p-3 dark:border-zinc-800" style={{ borderTop: `4px solid ${colore(i)}` }}>
-              <input
-                name={`nome_${i}`}
-                value={nomi[i]}
-                onChange={(e) => setNomi((v) => v.map((x, j) => (j === i ? e.target.value : x)))}
-                required
-                maxLength={30}
-                aria-label={`Nome squadra ${i + 1}`}
-                className="w-full bg-transparent font-semibold outline-none"
-              />
-              <p className={`text-xs ${m.length ? 'text-zinc-500' : 'text-red-600'}`}>
-                {m.length ? `${m.length} giocator${m.length === 1 ? 'e' : 'i'} · forza media ${media.toFixed(1)}` : 'Nessun giocatore'}
-              </p>
+              <div className="flex items-center gap-3">
+                <FotoSquadra name={`foto_${i}`} attuale={fotoIniziali[i]} colore={colore(i)} nome={nomi[i] || `squadra ${i + 1}`} />
+                <div className="min-w-0 flex-1">
+                  <input
+                    name={`nome_${i}`}
+                    value={nomi[i]}
+                    onChange={(e) => {
+                  const nuovi = nomi.map((x, j) => (j === i ? e.target.value : x))
+                  setNomi(nuovi)
+                  onNomi?.(nuovi)
+                }}
+                    required
+                    maxLength={30}
+                    aria-label={`Nome squadra ${i + 1}`}
+                    className="w-full rounded-md bg-zinc-50 px-2 py-1 font-semibold outline-none focus:ring-2 focus:ring-green-600 dark:bg-zinc-800"
+                  />
+                  <p className={`px-2 text-xs ${m.length ? 'text-zinc-500' : 'text-red-600'}`}>
+                    {m.length ? `${m.length} giocator${m.length === 1 ? 'e' : 'i'} · forza media ${media.toFixed(1)}` : 'Nessun giocatore'}
+                  </p>
+                </div>
+              </div>
               {m.length > 0 && <ul className="mt-1 divide-y divide-zinc-100 dark:divide-zinc-800">{m.map(riga)}</ul>}
             </div>
           )

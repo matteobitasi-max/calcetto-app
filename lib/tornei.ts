@@ -3,13 +3,14 @@ import { sanity } from './sanity'
 import { isTitolare } from './player'
 import type { SanityImage } from './roster'
 
-export type SquadraTorneo = { _key: string; nome: string; colore?: string; giocatori: { _id: string; nome: string; cognome?: string; soprannome?: string; foto?: SanityImage }[] }
+export type SquadraTorneo = { _key: string; nome: string; colore?: string; logo?: SanityImage; giocatori: { _id: string; nome: string; cognome?: string; soprannome?: string; foto?: SanityImage }[] }
 
 export type Torneo = {
   _id: string
   legaId: string
   nome: string
   formato: 'girone' | 'eliminazione'
+  primoTurno?: string[]
   calendario?: { inizio: string; ogniGiorni: number; durataMinuti: number; luogo: string }
   andataRitorno: boolean
   puntiVittoria: number
@@ -20,9 +21,9 @@ export type Torneo = {
   giocate: number
 }
 
-const torneoFields = `_id, "legaId": lega._ref, nome, "formato": coalesce(formato, "girone"), "andataRitorno": coalesce(andataRitorno, false), calendario,
+const torneoFields = `_id, "legaId": lega._ref, nome, "formato": coalesce(formato, "girone"), "andataRitorno": coalesce(andataRitorno, false), calendario, primoTurno,
   "puntiVittoria": coalesce(puntiVittoria, 3), "puntiPareggio": coalesce(puntiPareggio, 1), _createdAt,
-  "squadre": coalesce(squadre[]{_key, nome, colore, "giocatori": coalesce(giocatori[]->{_id, nome, cognome, soprannome, foto}, [])}, []),
+  "squadre": coalesce(squadre[]{_key, nome, colore, logo, "giocatori": coalesce(giocatori[]->{_id, nome, cognome, soprannome, foto}, [])}, []),
   "partite": count(*[_type == "match" && torneo._ref == ^._id]),
   "giocate": count(*[_type == "match" && torneo._ref == ^._id && stato == "giocata"])`
 

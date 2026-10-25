@@ -39,12 +39,25 @@ const vincente = (m: PartitaTabellone) => {
   return m.passa === 'A' ? m.chiaveA : m.passa === 'B' ? m.chiaveB : undefined
 }
 
-/** Il tabellone completo: per ogni turno gli incroci, con squadre note, partita e vincitore. */
-export function tabellone<M extends PartitaTabellone>(chiavi: string[], partite: M[]): Incrocio<M>[][] {
+/** Primo turno di base: i posti del tabellone (chiave della squadra o '' = vuoto) secondo le teste di serie. */
+export const primoTurnoTeste = (chiavi: string[]) => ordineTeste(dimensioneTabellone(chiavi.length)).map((t) => chiavi[t] ?? '')
+
+/** Un primo turno è valido se ci sono tutte le squadre una volta sola e nessun incrocio è senza squadre. */
+export function primoTurnoValido(posti: string[], chiavi: string[]) {
+  if (posti.length !== dimensioneTabellone(chiavi.length)) return false
+  const piene = posti.filter(Boolean)
+  if (piene.length !== chiavi.length || new Set(piene).size !== chiavi.length || !piene.every((k) => chiavi.includes(k))) return false
+  for (let p = 0; p < posti.length; p += 2) if (!posti[p] && !posti[p + 1]) return false
+  return true
+}
+
+/** Il tabellone completo: per ogni turno gli incroci, con squadre note, partita e vincitore.
+ * `primoTurno`: i posti scelti a mano (altrimenti quelli delle teste di serie). */
+export function tabellone<M extends PartitaTabellone>(chiavi: string[], partite: M[], primoTurno?: string[]): Incrocio<M>[][] {
   const dim = dimensioneTabellone(chiavi.length)
   const turni = Math.log2(dim)
   const trova = (t: number, p: number) => partite.find((m) => m.turno === t && m.posizione === p)
-  const teste = ordineTeste(dim)
+  const posti = primoTurno && primoTurnoValido(primoTurno, chiavi) ? primoTurno : primoTurnoTeste(chiavi)
   const risultato: Incrocio<M>[][] = []
   for (let t = 1; t <= turni; t++) {
     const incroci: Incrocio<M>[] = []
@@ -52,8 +65,8 @@ export function tabellone<M extends PartitaTabellone>(chiavi: string[], partite:
       let a: string | undefined
       let b: string | undefined
       if (t === 1) {
-        a = chiavi[teste[2 * p]]
-        b = chiavi[teste[2 * p + 1]]
+        a = posti[2 * p] || undefined
+        b = posti[2 * p + 1] || undefined
       } else {
         a = risultato[t - 2][2 * p].vincitore
         b = risultato[t - 2][2 * p + 1].vincitore

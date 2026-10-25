@@ -118,7 +118,7 @@ export function RisultatoEditor({
             {squadre.map((s) => (
               <label
                 key={s.chiave}
-                className={`cursor-pointer rounded-lg border-2 px-3 py-2 text-center text-sm font-semibold ${
+                className={`relative cursor-pointer rounded-lg border-2 px-3 py-2 text-center text-sm font-semibold ${
                   passa === s.chiave ? 'border-green-600 bg-white dark:bg-zinc-900' : 'border-transparent bg-white/60 dark:bg-zinc-900/60'
                 }`}
               >

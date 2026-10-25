@@ -17,7 +17,7 @@ import { inviaAGiocatori, inviaATutti, rimuoviIscrizione, salvaIscrizione, salva
 import { assicuraRicorrenze, getSeries, occurrenceId, rimuoviFutureVuote, type Series } from '@/lib/series'
 import { puoCreareTornei } from '@/lib/tornei'
 import { SQUADRE_PREDEFINITE, giornate } from '@/lib/girone'
-import { daCreare, tabellone } from '@/lib/tabellone'
+import { daCreare, primoTurnoTeste, primoTurnoValido, tabellone } from '@/lib/tabellone'
 
 export type FormState = { error?: string } | undefined
 
@@ -1196,17 +1196,19 @@ export async function eliminaAccount(): Promise<FormState> {
 
 // ---------- Tornei (Pro) ----------
 
-type SquadraDoc = { _key: string; _type: 'squadraTorneo'; nome: string; colore: string; giocatori: { _key: string; _type: 'reference'; _ref: string }[] }
+type SquadraDoc = { _key: string; _type: 'squadraTorneo'; nome: string; colore: string; logo?: unknown; giocatori: { _key: string; _type: 'reference'; _ref: string }[] }
 type CalendarioTorneo = { inizio: string; ogniGiorni: number; durataMinuti: number; luogo: string }
 
-// Squadre dal modulo: nome_<i> e squadra_<giocatore> = indice della squadra (solo giocatori della rosa, ognuno in una squadra).
-async function squadreDalModulo(formData: FormData, legaId: string, quante: number, chiavi?: string[]): Promise<SquadraDoc[] | string> {
+// Squadre dal modulo: nome_<i>, foto_<i> e squadra_<giocatore> = indice della squadra (solo giocatori della rosa,
+// ognuno in una squadra). `esistenti`: le squadre di prima (chiavi, colori e foto se non se ne sceglie un'altra).
+async function squadreDalModulo(formData: FormData, legaId: string, quante: number, esistenti?: SquadraDoc[]): Promise<SquadraDoc[] | string> {
   const rosa = new Set(await sanity.fetch<string[]>(`*[_type == "player" && lega._ref == $lega && attivo != false]._id`, { lega: legaId }))
   const squadre: SquadraDoc[] = Array.from({ length: quante }, (_, i) => ({
-    _key: chiavi?.[i] ?? `s${i + 1}`,
+    _key: esistenti?.[i]?._key ?? `s${i + 1}`,
     _type: 'squadraTorneo',
     nome: str(formData, `nome_${i}`).slice(0, 30) || SQUADRE_PREDEFINITE[i].nome,
-    colore: SQUADRE_PREDEFINITE[i].colore,
+    colore: esistenti?.[i]?.colore || SQUADRE_PREDEFINITE[i].colore,
+    ...(esistenti?.[i]?.logo ? { logo: esistenti[i].logo } : {}),
     giocatori: [],
   }))
   for (const [k, v] of formData) {
@@ -1218,6 +1220,11 @@ async function squadreDalModulo(formData: FormData, legaId: string, quante: numb
   const vuota = squadre.find((sq) => !sq.giocatori.length)
   if (vuota) return `La squadra “${vuota.nome}” non ha giocatori.`
   if (new Set(squadre.map((sq) => sq.nome.toLowerCase())).size < squadre.length) return 'Due squadre hanno lo stesso nome.'
+  for (const [i, sq] of squadre.entries()) {
+    const upload = await uploadFoto(formData.get(`foto_${i}`))
+    if (upload && 'error' in upload) return `${sq.nome}: ${upload.error}`
+    if (upload) sq.logo = upload.foto
+  }
   return squadre
 }
 
@@ -1264,8 +1271,8 @@ function partitaTorneo(legaId: string, torneoId: string, cal: CalendarioTorneo, 
 // Tabellone: crea le partite degli incroci di cui si conoscono entrambe le squadre (all'inizio il primo turno,
 // poi i turni successivi man mano che arrivano i risultati).
 async function aggiornaTabellone(torneoId: string) {
-  const t = await sanity.fetch<{ legaId: string; formato?: string; calendario?: CalendarioTorneo; squadre: SquadraDoc[] } | null>(
-    `*[_type == "tournament" && _id == $id][0]{"legaId": lega._ref, formato, calendario, squadre}`,
+  const t = await sanity.fetch<{ legaId: string; formato?: string; calendario?: CalendarioTorneo; primoTurno?: string[]; squadre: SquadraDoc[] } | null>(
+    `*[_type == "tournament" && _id == $id][0]{"legaId": lega._ref, formato, calendario, primoTurno, squadre}`,
     { id: torneoId },
   )
   if (!t || t.formato !== 'eliminazione' || !t.calendario) return
@@ -1273,6 +1280,7 @@ async function aggiornaTabellone(torneoId: string) {
   const tab = tabellone(
     t.squadre.map((sq) => sq._key),
     partite.map((m) => ({ ...m, golA: m.risultato?.golA, golB: m.risultato?.golB })),
+    t.primoTurno,
   )
   const nuovi = daCreare(tab)
   // Risultato corretto dopo: la partita del turno dopo (se non ancora giocata) prende le squadre giuste.
@@ -1329,10 +1337,20 @@ export async function creaTorneo(_prev: FormState, formData: FormData): Promise<
   if (!Number.isInteger(quante) || quante < 2 || quante > SQUADRE_PREDEFINITE.length) {
     return { error: `Servono da 2 a ${SQUADRE_PREDEFINITE.length} squadre.` }
   }
-  const lette = await squadreDalModulo(formData, admin.lega._id, quante)
-  if (typeof lette === 'string') return { error: lette }
-  // Tabellone: l'ordine delle squadre è quello delle teste di serie; col sorteggio si mescolano.
-  const squadre = formato === 'eliminazione' && formData.get('sorteggio') === 'on' ? [...lette].sort(() => Math.random() - 0.5) : lette
+  const squadre = await squadreDalModulo(formData, admin.lega._id, quante)
+  if (typeof squadre === 'string') return { error: squadre }
+  // Tabellone: i posti del primo turno come li ha messi l'organizzatore (indici delle squadre, -1 = vuoto).
+  let primoTurno: string[] | undefined
+  if (formato === 'eliminazione') {
+    let posti: unknown
+    try {
+      posti = JSON.parse(str(formData, 'primoTurno') || 'null')
+    } catch {
+      posti = null
+    }
+    primoTurno = Array.isArray(posti) ? posti.map((i) => (typeof i === 'number' && squadre[i] ? squadre[i]._key : '')) : primoTurnoTeste(squadre.map((sq) => sq._key))
+    if (!primoTurnoValido(primoTurno, squadre.map((sq) => sq._key))) return { error: 'Nel tabellone ogni incrocio deve avere almeno una squadra.' }
+  }
 
   const inizio = str(formData, 'inizio')
   if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(inizio)) return { error: 'Scegli giorno e ora della prima giornata.' }
@@ -1355,6 +1373,7 @@ export async function creaTorneo(_prev: FormState, formData: FormData): Promise<
     puntiPareggio: 1,
     calendario,
     squadre,
+    ...(primoTurno && { primoTurno }),
     ...(utente && { creatoDa: utente.id }),
   })
 
@@ -1380,9 +1399,8 @@ export async function salvaSquadreTorneo(torneoId: string, _prev: FormState, for
   if (!(await puoCreareTornei())) return { error: 'I tornei sono una funzione Pro.' }
   const torneo = await sanity.fetch<{ _rev: string; squadre: SquadraDoc[] } | null>(`*[_type == "tournament" && _id == $id][0]{_rev, squadre}`, { id: torneoId })
   if (!torneo) return { error: 'Torneo non trovato.' }
-  const squadre = await squadreDalModulo(formData, admin.lega._id, torneo.squadre.length, torneo.squadre.map((sq) => sq._key))
+  const squadre = await squadreDalModulo(formData, admin.lega._id, torneo.squadre.length, torneo.squadre)
   if (typeof squadre === 'string') return { error: squadre }
-  squadre.forEach((sq, i) => (sq.colore = torneo.squadre[i].colore ?? sq.colore))
 
   const daGiocare = await sanity.fetch<{ _id: string; chiaveA: string; chiaveB: string }[]>(
     `*[_type == "match" && torneo._ref == $id && !(stato in ["giocata", "annullata"])]{_id, chiaveA, chiaveB}`,

@@ -9,6 +9,7 @@ import { Card, Field, inputClass } from '@/components/ui'
 import { SQUADRE_PREDEFINITE, giornate } from '@/lib/girone'
 import { dimensioneTabellone, nomeTurno, turniTabellone } from '@/lib/tabellone'
 import { SquadreEditor, type GiocatoreRosa } from '../squadre-editor'
+import { PrimoTurnoEditor } from './primo-turno-editor'
 
 const FREQUENZE = [
   { giorni: 7, girone: 'Una giornata a settimana', tabellone: 'Un turno a settimana' },
@@ -23,6 +24,7 @@ export function TorneoForm({ legaId, rosa, inizio }: { legaId: string; rosa: Gio
   const [numSquadre, setNumSquadre] = useState(Math.min(4, Math.max(2, rosa.length)))
   const [andataRitorno, setAndataRitorno] = useState(false)
   const [ogniGiorni, setOgniGiorni] = useState(7)
+  const [nomi, setNomi] = useState(SQUADRE_PREDEFINITE.map((s) => s.nome))
 
   const massimo = Math.min(SQUADRE_PREDEFINITE.length, rosa.length)
   const calendario = giornate(numSquadre, andataRitorno)
@@ -48,7 +50,7 @@ export function TorneoForm({ legaId, rosa, inizio }: { legaId: string; rosa: Gio
           ).map(([valore, titolo, sotto]) => (
             <label
               key={valore}
-              className={`cursor-pointer rounded-xl border-2 p-3 ${formato === valore ? 'border-green-600 bg-green-50 dark:bg-green-950' : 'border-zinc-200 dark:border-zinc-800'}`}
+              className={`relative cursor-pointer rounded-xl border-2 p-3 ${formato === valore ? 'border-green-600 bg-green-50 dark:bg-green-950' : 'border-zinc-200 dark:border-zinc-800'}`}
             >
               <input type="radio" name="formato" value={valore} checked={formato === valore} onChange={() => setFormato(valore)} className="sr-only" />
               <span className="block font-semibold">{titolo}</span>
@@ -70,18 +72,20 @@ export function TorneoForm({ legaId, rosa, inizio }: { legaId: string; rosa: Gio
             <input type="checkbox" name="andataRitorno" checked={andataRitorno} onChange={(e) => setAndataRitorno(e.target.checked)} />
             Andata e ritorno
           </label>
-        ) : (
-          <label className="flex items-center gap-2 text-sm">
-            <input type="checkbox" name="sorteggio" defaultChecked />
-            Accoppiamenti a sorteggio (altrimenti l&apos;ordine delle squadre è quello delle teste di serie)
-          </label>
-        )}
+        ) : null}
       </Card>
 
       <Card className="space-y-3">
         <h2 className="font-semibold">Squadre e giocatori</h2>
-        <SquadreEditor rosa={rosa} numSquadre={numSquadre} />
+        <SquadreEditor rosa={rosa} numSquadre={numSquadre} onNomi={setNomi} />
       </Card>
+
+      {formato === 'eliminazione' && (
+        <Card className="space-y-3">
+          <h2 className="font-semibold">Tabellone</h2>
+          <PrimoTurnoEditor key={numSquadre} numSquadre={numSquadre} nomi={nomi} />
+        </Card>
+      )}
 
       <Card className="space-y-4">
         <h2 className="font-semibold">Calendario</h2>

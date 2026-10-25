@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { Suspense } from 'react'
+import { Suspense, type ReactNode } from 'react'
 import { eliminaTorneo } from '@/app/actions'
 import { displayName, membroDi } from '@/lib/player'
 import { getPartiteTorneo, type Match } from '@/lib/matches'
@@ -8,6 +8,7 @@ import { getTorneo } from '@/lib/tornei'
 import { classifica } from '@/lib/girone'
 import { nomeTurno, tabellone, type Incrocio } from '@/lib/tabellone'
 import { formatData } from '@/lib/dates'
+import { avatarUrl } from '@/lib/image'
 import { SubmitButton } from '@/components/submit-button'
 import { ButtonLink, Card, Loading, StatoBadge } from '@/components/ui'
 
@@ -35,6 +36,8 @@ async function Torneo({ params }: { params: Promise<{ id: string }> }) {
     torneo.puntiPareggio,
   )
   const colore = new Map(torneo.squadre.map((s) => [s._key, s.colore]))
+  const foto = new Map(torneo.squadre.map((s) => [s._key, avatarUrl(s.logo, 96)]))
+  const stemma = (chiave: string | undefined, size = 20) => <StemmaSquadra colore={chiave ? colore.get(chiave) : undefined} foto={chiave ? foto.get(chiave) : null} size={size} />
 
   // Marcatori del torneo, con la squadra di ognuno.
   const giocatori = new Map(torneo.squadre.flatMap((s) => s.giocatori.map((g) => [g._id, { nome: displayName(g), squadra: s.nome, colore: s.colore }] as const)))
@@ -50,6 +53,7 @@ async function Torneo({ params }: { params: Promise<{ id: string }> }) {
     ? tabellone(
         torneo.squadre.map((s) => s._key),
         partite.map((m) => ({ ...m, golA: m.risultato?.golA, golB: m.risultato?.golB })),
+        torneo.primoTurno,
       )
     : []
   const nomeSquadra = new Map(torneo.squadre.map((s) => [s._key, s.nome]))
@@ -78,7 +82,9 @@ async function Torneo({ params }: { params: Promise<{ id: string }> }) {
       {campione && (
         <Card className="border-2 border-amber-400 text-center">
           <p className="text-xs font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-400">Vincitore</p>
-          <p className="text-xl font-bold">🏆 {nomeSquadra.get(campione)}</p>
+          <p className="flex items-center justify-center gap-2 text-xl font-bold">
+            🏆 {stemma(campione, 36)} {nomeSquadra.get(campione)}
+          </p>
         </Card>
       )}
 
@@ -91,7 +97,7 @@ async function Torneo({ params }: { params: Promise<{ id: string }> }) {
                 <div key={t} className="flex w-56 shrink-0 flex-col justify-around gap-3">
                   <p className="text-center text-xs font-semibold uppercase tracking-wide text-zinc-500">{nomeTurno(t + 1, tab.length)}</p>
                   {incroci.map((inc) => (
-                    <IncrocioCard key={inc.posizione} inc={inc} nome={nomeSquadra} colore={colore} />
+                    <IncrocioCard key={inc.posizione} inc={inc} nome={nomeSquadra} stemma={stemma} />
                   ))}
                 </div>
               ))}
@@ -123,7 +129,7 @@ async function Torneo({ params }: { params: Promise<{ id: string }> }) {
                   <td className="px-3 py-2 text-zinc-500">{i + 1}</td>
                   <td className="py-2">
                     <span className="flex items-center gap-2 font-medium">
-                      <span className="h-3 w-3 shrink-0 rounded-full" style={{ background: r.colore }} />
+                      {stemma(r.chiave, 24)}
                       {r.nome}
                     </span>
                   </td>
@@ -172,10 +178,10 @@ async function Torneo({ params }: { params: Promise<{ id: string }> }) {
               <Link key={m._id} href={`/partite/${m._id}`} className="flex items-center justify-between gap-2 px-4 py-3 text-sm hover:bg-zinc-50 dark:hover:bg-zinc-800">
                 <span className="min-w-0">
                   <span className="flex items-center gap-1.5 font-medium">
-                    <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: colore.get(m.chiaveA ?? '') }} />
+                    {stemma(m.chiaveA)}
                     <span className="truncate">{m.nomeA}</span>
                     <span className="text-zinc-400">–</span>
-                    <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: colore.get(m.chiaveB ?? '') }} />
+                    {stemma(m.chiaveB)}
                     <span className="truncate">{m.nomeB}</span>
                   </span>
                   <span className="block text-xs capitalize text-zinc-500">
@@ -212,12 +218,22 @@ async function Torneo({ params }: { params: Promise<{ id: string }> }) {
 }
 
 // Un incrocio del tabellone: le due squadre (o chi deve ancora arrivare), il risultato e chi passa.
-function IncrocioCard({ inc, nome, colore }: { inc: Incrocio<Match>; nome: Map<string, string>; colore: Map<string, string | undefined> }) {
+// Foto della squadra o, senza foto, il suo colore.
+function StemmaSquadra({ colore, foto, size }: { colore?: string; foto?: string | null; size: number }) {
+  return foto ? (
+    // eslint-disable-next-line @next/next/no-img-element -- miniatura già ridimensionata dal CDN di Sanity
+    <img src={foto} alt="" width={size} height={size} className="shrink-0 rounded-full object-cover" style={{ width: size, height: size }} />
+  ) : (
+    <span className="shrink-0 rounded-full" style={{ width: size * 0.55, height: size * 0.55, background: colore ?? '#d4d4d8' }} />
+  )
+}
+
+function IncrocioCard({ inc, nome, stemma }: { inc: Incrocio<Match>; nome: Map<string, string>; stemma: (chiave: string | undefined) => ReactNode }) {
   const m = inc.partita
   const riga = (chiave: string | undefined, gol: number | undefined) => (
     <div className={`flex items-center justify-between gap-2 px-3 py-1.5 text-sm ${chiave && inc.vincitore === chiave ? 'font-bold' : ''}`}>
       <span className="flex min-w-0 items-center gap-1.5">
-        <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: chiave ? colore.get(chiave) : '#d4d4d8' }} />
+        {stemma(chiave)}
         <span className={`truncate ${chiave ? '' : 'italic text-zinc-400'}`}>{chiave ? nome.get(chiave) : inc.bye ? '—' : 'da decidere'}</span>
       </span>
       {gol != null && <span className="tabular-nums">{gol}</span>}
