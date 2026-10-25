@@ -21,7 +21,8 @@ const firma = (form: HTMLFormElement) =>
 // Pillola "Salva" fissa in basso a destra (come "+ Nuova partita"): compare quando il modulo
 // che la contiene è diverso da com'era, sparisce se si torna come prima o dopo un salvataggio
 // riuscito. Confronta il contenuto dopo ogni tocco, così vede anche calendari e selettori.
-export function PillSalva({ label = 'Salva' }: { label?: string }) {
+// `quando="completo"` (moduli nuovi): compare invece quando tutti i campi obbligatori sono compilati.
+export function PillSalva({ label = 'Salva', quando = 'modificato' }: { label?: string; quando?: 'modificato' | 'completo' }) {
   const id = useId()
   const segnaposto = useRef<HTMLSpanElement>(null)
   const iniziale = useRef<string | null>(null)
@@ -33,13 +34,19 @@ export function PillSalva({ label = 'Salva' }: { label?: string }) {
   useEffect(() => {
     const form = segnaposto.current?.closest('form')
     if (!form) return
-    // il punto di partenza si prende quando i campi hanno finito di inizializzarsi
-    const avvio = setTimeout(() => (iniziale.current = firma(form)), 300)
     let attesa: ReturnType<typeof setTimeout> | undefined
     const controlla = () => {
       clearTimeout(attesa)
-      attesa = setTimeout(() => iniziale.current != null && setModificato(firma(form) !== iniziale.current), 60)
+      attesa = setTimeout(() => {
+        if (quando === 'completo') setModificato(form.checkValidity())
+        else if (iniziale.current != null) setModificato(firma(form) !== iniziale.current)
+      }, 60)
     }
+    // il punto di partenza si prende quando i campi hanno finito di inizializzarsi
+    const avvio = setTimeout(() => {
+      iniziale.current = firma(form)
+      if (quando === 'completo') controlla()
+    }, 300)
     const eventi = ['input', 'change', 'click', 'keyup'] as const
     for (const e of eventi) form.addEventListener(e, controlla)
     return () => {
@@ -47,7 +54,7 @@ export function PillSalva({ label = 'Salva' }: { label?: string }) {
       clearTimeout(attesa)
       for (const e of eventi) form.removeEventListener(e, controlla)
     }
-  }, [])
+  }, [quando])
 
   // Salvataggio finito senza errori: quello di adesso diventa il nuovo punto di partenza.
   useEffect(() => {
@@ -58,11 +65,11 @@ export function PillSalva({ label = 'Salva' }: { label?: string }) {
     if (!eraInCorso.current) return
     eraInCorso.current = false
     const form = segnaposto.current?.closest('form')
-    if (form && !esito?.error) {
+    if (form && !esito?.error && quando === 'modificato') {
       iniziale.current = firma(form)
       setModificato(false)
     }
-  }, [pending, esito])
+  }, [pending, esito, quando])
 
   const visibile = modificato || pending
   useEffect(() => {

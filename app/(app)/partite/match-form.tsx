@@ -2,8 +2,7 @@ import type { FormState } from '@/app/actions'
 import { ActionForm } from '@/components/action-form'
 import { PillSalva } from '@/components/pill-salva'
 import { PostiInput } from '@/components/posti-input'
-import { SubmitButton } from '@/components/submit-button'
-import { Card, Field, buttonClass, inputClass } from '@/components/ui'
+import { Card, Field, inputClass } from '@/components/ui'
 import { adessoArrotondato, isoToRomeLocal, minutiTra } from '@/lib/dates'
 import type { Match } from '@/lib/matches'
 import { QuandoFields } from './quando-fields'
@@ -63,14 +62,8 @@ export function MatchForm({
         </Field>
       </Card>
 
-      {/* Modifica: la pillola "Salva" compare quando cambi qualcosa. Nuova partita: pulsante in fondo. */}
-      {match ? (
-        <PillSalva label={submitLabel} />
-      ) : (
-        <SubmitButton className={buttonClass('primary')} pendingText="Salvo…">
-          {submitLabel}
-        </SubmitButton>
-      )}
+      {/* Modifica: la pillola compare quando cambi qualcosa. Nuova partita: quando hai compilato tutto il necessario. */}
+      <PillSalva label={submitLabel} quando={match ? 'modificato' : 'completo'} />
     </ActionForm>
   )
 }
