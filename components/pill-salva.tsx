@@ -15,6 +15,11 @@ const iscriviti = (f: () => void) => {
 const nessuna: string[] = []
 
 // Il contenuto del modulo, per capire se è diverso da com'era (le foto per nome e peso).
+// Il modulo ha tutti i campi obbligatori compilati? Legge lo stato dei campi senza checkValidity(),
+// che farebbe scattare gli eventi "invalid" (e il modulo mostrerebbe l'avviso scorrendo fino a lì).
+const completo = (form: HTMLFormElement) =>
+  [...form.elements].every((el) => !(el instanceof HTMLInputElement || el instanceof HTMLSelectElement || el instanceof HTMLTextAreaElement) || !el.willValidate || el.validity.valid)
+
 const firma = (form: HTMLFormElement) =>
   JSON.stringify([...new FormData(form)].map(([k, v]) => [k, typeof v === 'string' ? v : `${v.name}:${v.size}`]))
 
@@ -38,7 +43,7 @@ export function PillSalva({ label = 'Salva', quando = 'modificato' }: { label?: 
     const controlla = () => {
       clearTimeout(attesa)
       attesa = setTimeout(() => {
-        if (quando === 'completo') setModificato(form.checkValidity())
+        if (quando === 'completo') setModificato(completo(form))
         else if (iniziale.current != null) setModificato(firma(form) !== iniziale.current)
       }, 60)
     }
