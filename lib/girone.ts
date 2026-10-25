@@ -83,13 +83,11 @@ export const LETTERE_GIRONI = 'ABCDEFGH'.split('')
 /** Distribuzione di base delle squadre nei gironi: a turno (A, B, C, A, B, C, …). */
 export const gironiDiBase = (squadre: number, gironi: number) => Array.from({ length: squadre }, (_, i) => i % gironi)
 
-/** Ordine delle qualificate per il tabellone (teste di serie): prima le prime di ogni girone, poi le seconde, …
- * Con un numero dispari di gironi le seconde vanno al contrario, così al primo turno non si incontrano squadre dello stesso girone. */
-export function qualificateInOrdine(classifiche: string[][], qualificate: number) {
-  const ordine: string[] = []
-  for (let pos = 0; pos < qualificate; pos++) {
-    const fascia = classifiche.map((c) => c[pos]).filter(Boolean)
-    ordine.push(...(pos % 2 === 1 && classifiche.length % 2 === 1 ? fascia.reverse() : fascia))
-  }
-  return ordine
+/** Primo turno della fase finale (squadre a due a due): ogni prima contro la seconda del girone dopo
+ * (1ª A – 2ª B, 1ª B – 2ª C, …, 1ª ultimo – 2ª A), così non si incontrano subito squadre dello stesso girone.
+ * Se passa solo la prima: le prime in ordine di girone (1ª A – 1ª B, 1ª C – 1ª D, …). */
+export function incrociGironi(classifiche: string[][], qualificate: number) {
+  const prime = classifiche.map((c) => c[0]).filter(Boolean)
+  if (qualificate < 2) return prime
+  return prime.flatMap((p, i) => [p, classifiche[(i + 1) % classifiche.length][1]].filter(Boolean))
 }

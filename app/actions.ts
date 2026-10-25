@@ -16,7 +16,7 @@ import { daysBetween, formatData, romeLocalToISO } from '@/lib/dates'
 import { inviaAGiocatori, inviaATutti, rimuoviIscrizione, salvaIscrizione, salvaTokenNativo, type PushSub } from '@/lib/push'
 import { assicuraRicorrenze, getSeries, occurrenceId, rimuoviFutureVuote, type Series } from '@/lib/series'
 import { puoCreareTornei } from '@/lib/tornei'
-import { LETTERE_GIRONI, SQUADRE_PREDEFINITE, classifica, giornate, qualificateInOrdine } from '@/lib/girone'
+import { LETTERE_GIRONI, SQUADRE_PREDEFINITE, classifica, giornate, incrociGironi } from '@/lib/girone'
 import { daCreare, primoTurnoTeste, primoTurnoValido, tabellone } from '@/lib/tabellone'
 
 export type FormState = { error?: string } | undefined
@@ -1320,7 +1320,7 @@ async function aggiornaTabellone(torneoId: string) {
           t.puntiPareggio ?? 1,
         ).map((r) => r.chiave),
       )
-      primoTurno = primoTurnoTeste(qualificateInOrdine(classifiche, t.qualificate ?? 2))
+      primoTurno = incrociGironi(classifiche, t.qualificate ?? 2)
       await sanity.patch(torneoId).set({ primoTurno }).commit()
     }
     chiavi = primoTurno.filter(Boolean)
@@ -1390,7 +1390,7 @@ export async function creaTorneo(_prev: FormState, formData: FormData): Promise<
   }
   const squadre = await squadreDalModulo(formData, admin.lega._id, quante)
   if (typeof squadre === 'string') return { error: squadre }
-  // Tabellone: i posti del primo turno come li ha messi l'organizzatore (indici delle squadre, -1 = vuoto).
+  // Tabellone: il primo turno come l'ha messo l'organizzatore (indici delle squadre, a due a due).
   let primoTurno: string[] | undefined
   if (formato === 'eliminazione') {
     let posti: unknown
@@ -1399,8 +1399,10 @@ export async function creaTorneo(_prev: FormState, formData: FormData): Promise<
     } catch {
       posti = null
     }
-    primoTurno = Array.isArray(posti) ? posti.map((i) => (typeof i === 'number' && squadre[i] ? squadre[i]._key : '')) : primoTurnoTeste(squadre.map((sq) => sq._key))
-    if (!primoTurnoValido(primoTurno, squadre.map((sq) => sq._key))) return { error: 'Nel tabellone ogni incrocio deve avere almeno una squadra.' }
+    primoTurno = Array.isArray(posti)
+      ? posti.filter((i) => typeof i === 'number' && squadre[i]).map((i) => squadre[i]._key)
+      : primoTurnoTeste(squadre.map((sq) => sq._key))
+    if (!primoTurnoValido(primoTurno, squadre.map((sq) => sq._key))) return { error: 'Nel tabellone devono esserci tutte le squadre, una volta sola.' }
   }
   // Gironi + tabellone: girone di ogni squadra (girone_<i> = indice del girone) e quante passano da ognuno.
   const numGironi = num(formData, 'numGironi') ?? 2

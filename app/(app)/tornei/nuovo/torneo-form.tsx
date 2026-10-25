@@ -7,7 +7,7 @@ import { DatePicker } from '@/components/date-picker'
 import { PillSalva } from '@/components/pill-salva'
 import { Card, Field, inputClass } from '@/components/ui'
 import { LETTERE_GIRONI, SQUADRE_PREDEFINITE, gironiDiBase, giornate } from '@/lib/girone'
-import { dimensioneTabellone, nomeTurno, turniTabellone } from '@/lib/tabellone'
+import { nomeTurno, partitePerTurno, turniTabellone } from '@/lib/tabellone'
 import { SquadreEditor, type GiocatoreRosa } from '../squadre-editor'
 import { PrimoTurnoEditor } from './primo-turno-editor'
 import { GironiEditor } from './gironi-editor'
@@ -32,9 +32,8 @@ export function TorneoForm({ legaId, rosa, inizio }: { legaId: string; rosa: Gio
 
   const massimo = Math.min(SQUADRE_PREDEFINITE.length, rosa.length)
   const calendario = giornate(numSquadre, andataRitorno)
-  const dim = dimensioneTabellone(numSquadre)
   const turni = turniTabellone(numSquadre)
-  const esenti = dim - numSquadre
+  const perTurno = partitePerTurno(numSquadre)
 
   // Gironi + tabellone: gironi possibili (almeno 2 squadre ciascuno) e quante ne passano (mai tutte).
   const maxGironi = Math.min(LETTERE_GIRONI.length, Math.floor(numSquadre / 2))
@@ -173,9 +172,8 @@ export function TorneoForm({ legaId, rosa, inizio }: { legaId: string; rosa: Gio
             </>
           ) : (
             <>
-              🏆 {Array.from({ length: turni }, (_, t) => nomeTurno(t + 1, turni)).join(' → ')} · {numSquadre - 1} partite
-              {esenti > 0 && ` · ${esenti} squadr${esenti === 1 ? 'a passa' : 'e passano'} direttamente il primo turno`}. I turni dopo si creano
-              da soli con i risultati.
+              🏆 {perTurno.map((n, t) => `${nomeTurno(t + 1, turni)} (${n})`).join(' → ')} · {numSquadre - 1} partite. Se in un turno le
+              squadre sono dispari, l&apos;ultima passa direttamente. I turni dopo si creano da soli con i risultati.
             </>
           )}{' '}
           Le partite dello stesso turno si giocano una dopo l&apos;altra.
