@@ -75,3 +75,21 @@ export const SQUADRE_PREDEFINITE = [
   { nome: 'Marroni', colore: '#92400e' },
   { nome: 'Oro', colore: '#ca8a04' },
 ]
+
+// ---------- Gironi + tabellone ----------
+
+export const LETTERE_GIRONI = 'ABCDEFGH'.split('')
+
+/** Distribuzione di base delle squadre nei gironi: a turno (A, B, C, A, B, C, …). */
+export const gironiDiBase = (squadre: number, gironi: number) => Array.from({ length: squadre }, (_, i) => i % gironi)
+
+/** Ordine delle qualificate per il tabellone (teste di serie): prima le prime di ogni girone, poi le seconde, …
+ * Con un numero dispari di gironi le seconde vanno al contrario, così al primo turno non si incontrano squadre dello stesso girone. */
+export function qualificateInOrdine(classifiche: string[][], qualificate: number) {
+  const ordine: string[] = []
+  for (let pos = 0; pos < qualificate; pos++) {
+    const fascia = classifiche.map((c) => c[pos]).filter(Boolean)
+    ordine.push(...(pos % 2 === 1 && classifiche.length % 2 === 1 ? fascia.reverse() : fascia))
+  }
+  return ordine
+}

@@ -6,10 +6,11 @@ import { ActionForm } from '@/components/action-form'
 import { DatePicker } from '@/components/date-picker'
 import { PillSalva } from '@/components/pill-salva'
 import { Card, Field, inputClass } from '@/components/ui'
-import { SQUADRE_PREDEFINITE, giornate } from '@/lib/girone'
+import { LETTERE_GIRONI, SQUADRE_PREDEFINITE, gironiDiBase, giornate } from '@/lib/girone'
 import { dimensioneTabellone, nomeTurno, turniTabellone } from '@/lib/tabellone'
 import { SquadreEditor, type GiocatoreRosa } from '../squadre-editor'
 import { PrimoTurnoEditor } from './primo-turno-editor'
+import { GironiEditor } from './gironi-editor'
 
 const FREQUENZE = [
   { giorni: 7, girone: 'Una giornata a settimana', tabellone: 'Un turno a settimana' },
@@ -18,9 +19,11 @@ const FREQUENZE = [
   { giorni: 0, girone: 'Tutto in un giorno (partite una dopo l’altra)', tabellone: 'Tutto in un giorno (partite una dopo l’altra)' },
 ]
 
-// Nuovo torneo: girone all'italiana o eliminazione diretta, squadre (spostando i giocatori) e calendario.
+// Nuovo torneo: girone all'italiana, eliminazione diretta o gironi + tabellone, squadre (spostando i giocatori) e calendario.
 export function TorneoForm({ legaId, rosa, inizio }: { legaId: string; rosa: GiocatoreRosa[]; inizio?: string }) {
-  const [formato, setFormato] = useState<'girone' | 'eliminazione'>('girone')
+  const [formato, setFormato] = useState<'girone' | 'eliminazione' | 'gironi'>('girone')
+  const [numGironi, setNumGironi] = useState(2)
+  const [qualificate, setQualificate] = useState(2)
   const [numSquadre, setNumSquadre] = useState(Math.min(4, Math.max(2, rosa.length)))
   const [andataRitorno, setAndataRitorno] = useState(false)
   const [ogniGiorni, setOgniGiorni] = useState(7)
@@ -33,6 +36,16 @@ export function TorneoForm({ legaId, rosa, inizio }: { legaId: string; rosa: Gio
   const turni = turniTabellone(numSquadre)
   const esenti = dim - numSquadre
 
+  // Gironi + tabellone: gironi possibili (almeno 2 squadre ciascuno) e quante ne passano (mai tutte).
+  const maxGironi = Math.min(LETTERE_GIRONI.length, Math.floor(numSquadre / 2))
+  const gironiOk = Math.max(2, Math.min(numGironi, maxGironi))
+  const piccolo = Math.floor(numSquadre / gironiOk)
+  const qualificateOk = Math.min(qualificate, Math.max(1, piccolo - 1))
+  const grandezze = LETTERE_GIRONI.slice(0, gironiOk).map((_, g) => gironiDiBase(numSquadre, gironiOk).filter((x) => x === g).length)
+  const partiteGironi = grandezze.reduce((s, n) => s + giornate(n).flat().length, 0)
+  const qualificateTot = gironiOk * qualificateOk
+  const turniFinale = turniTabellone(qualificateTot)
+
   return (
     <ActionForm action={creaTorneo} className="space-y-4 pb-20">
       <input type="hidden" name="legaId" value={legaId} />
@@ -42,11 +55,12 @@ export function TorneoForm({ legaId, rosa, inizio }: { legaId: string; rosa: Gio
         <Field label="Nome del torneo">
           <input name="nome" required minLength={2} maxLength={60} placeholder="Es. Torneo d'autunno" className={inputClass} />
         </Field>
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid gap-2 sm:grid-cols-3">
           {(
             [
               ['girone', '🔁 Girone', 'Tutti contro tutti, classifica a punti'],
               ['eliminazione', '🏆 Tabellone', 'Eliminazione diretta fino alla finale'],
+              ['gironi', '🔀 Gironi + tabellone', 'Prima i gironi, poi scontri diretti tra le migliori'],
             ] as const
           ).map(([valore, titolo, sotto]) => (
             <label
@@ -74,6 +88,28 @@ export function TorneoForm({ legaId, rosa, inizio }: { legaId: string; rosa: Gio
             Andata e ritorno
           </label>
         ) : null}
+        {formato === 'gironi' &&
+          (maxGironi < 2 ? (
+            <p className="text-sm text-red-600">Per fare almeno 2 gironi servono almeno 4 squadre.</p>
+          ) : (
+            <div className="grid grid-cols-2 gap-4">
+              <Field label="Gironi">
+                <select name="numGironi" value={gironiOk} onChange={(e) => setNumGironi(Number(e.target.value))} className={inputClass}>
+                  {Array.from({ length: maxGironi - 1 }, (_, i) => i + 2).map((n) => (
+                    <option key={n} value={n}>
+                      {n} gironi
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              <Field label="Passano per girone">
+                <select name="qualificate" value={qualificateOk} onChange={(e) => setQualificate(Number(e.target.value))} className={inputClass}>
+                  <option value={1}>La prima</option>
+                  {piccolo > 2 && <option value={2}>Le prime 2</option>}
+                </select>
+              </Field>
+            </div>
+          ))}
       </Card>
 
       <Card className="space-y-3">
@@ -86,6 +122,13 @@ export function TorneoForm({ legaId, rosa, inizio }: { legaId: string; rosa: Gio
         />
       </Card>
 
+      {formato === 'gironi' && maxGironi >= 2 && (
+        <Card className="space-y-3">
+          <h2 className="font-semibold">Gironi</h2>
+          <GironiEditor key={`${numSquadre}-${gironiOk}`} numSquadre={numSquadre} numGironi={gironiOk} nomi={nomi} foto={foto} />
+        </Card>
+      )}
+
       {formato === 'eliminazione' && (
         <Card className="space-y-3">
           <h2 className="font-semibold">Tabellone</h2>
@@ -95,14 +138,14 @@ export function TorneoForm({ legaId, rosa, inizio }: { legaId: string; rosa: Gio
 
       <Card className="space-y-4">
         <h2 className="font-semibold">Calendario</h2>
-        <Field label={formato === 'girone' ? 'Prima giornata' : 'Primo turno'}>
+        <Field label={formato === 'eliminazione' ? 'Primo turno' : 'Prima giornata'}>
           <DatePicker name="inizio" withTime required defaultValue={inizio} placeholder="Scegli giorno e ora" />
         </Field>
-        <Field label={formato === 'girone' ? 'Giornate' : 'Turni'}>
+        <Field label={formato === 'eliminazione' ? 'Turni' : 'Giornate'}>
           <select name="ogniGiorni" value={ogniGiorni} onChange={(e) => setOgniGiorni(Number(e.target.value))} className={inputClass}>
             {FREQUENZE.map((f) => (
               <option key={f.giorni} value={f.giorni}>
-                {formato === 'girone' ? f.girone : f.tabellone}
+                {formato === 'eliminazione' ? f.tabellone : f.girone}
               </option>
             ))}
           </select>
@@ -120,6 +163,13 @@ export function TorneoForm({ legaId, rosa, inizio }: { legaId: string; rosa: Gio
             <>
               📋 {calendario.length} giornat{calendario.length === 1 ? 'a' : 'e'} · {calendario.flat().length} partite
               {numSquadre % 2 === 1 && ' · a ogni giornata una squadra riposa'}.
+            </>
+          ) : formato === 'gironi' ? (
+            <>
+              🔀 {gironiOk} gironi da {grandezze.join(', ')} squadre · {partiteGironi} partite nei gironi. Poi passa{' '}
+              {qualificateOk === 1 ? 'la prima' : 'le prime 2'} di ogni girone ({qualificateTot} squadre):{' '}
+              {Array.from({ length: turniFinale }, (_, t) => nomeTurno(t + 1, turniFinale)).join(' → ')}, con incroci tra gironi diversi. Il tabellone si
+              crea da solo alla fine dei gironi.
             </>
           ) : (
             <>

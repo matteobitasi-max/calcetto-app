@@ -29,15 +29,12 @@ async function Torneo({ params }: { params: Promise<{ id: string }> }) {
   if (!torneo || !me) notFound()
   const partite = await getPartiteTorneo(torneo._id)
 
-  const tabella = classifica(
-    torneo.squadre,
-    partite.filter((m) => m.stato === 'giocata').map((m) => ({ chiaveA: m.chiaveA, chiaveB: m.chiaveB, golA: m.risultato?.golA, golB: m.risultato?.golB })),
-    torneo.puntiVittoria,
-    torneo.puntiPareggio,
-  )
   const colore = new Map(torneo.squadre.map((s) => [s._key, s.colore]))
   const foto = new Map(torneo.squadre.map((s) => [s._key, avatarUrl(s.logo, 96)]))
   const stemma = (chiave: string | undefined, size = 20) => <StemmaSquadra colore={chiave ? colore.get(chiave) : undefined} foto={chiave ? foto.get(chiave) : null} size={size} />
+  const nomeSquadra = new Map(torneo.squadre.map((s) => [s._key, s.nome]))
+  const risultati = (ms: Match[]) =>
+    ms.filter((m) => m.stato === 'giocata').map((m) => ({ chiaveA: m.chiaveA, chiaveB: m.chiaveB, golA: m.risultato?.golA, golB: m.risultato?.golB }))
 
   // Marcatori del torneo, con la squadra di ognuno.
   const giocatori = new Map(torneo.squadre.flatMap((s) => s.giocatori.map((g) => [g._id, { nome: displayName(g), squadra: s.nome, colore: s.colore }] as const)))
@@ -45,19 +42,106 @@ async function Torneo({ params }: { params: Promise<{ id: string }> }) {
   for (const m of partite) for (const g of m.marcatori) gol.set(g.giocatoreId, (gol.get(g.giocatoreId) ?? 0) + g.gol)
   const marcatori = [...gol].filter(([pid]) => giocatori.has(pid)).sort((a, b) => b[1] - a[1]).slice(0, 10)
 
-  const perGiornata = new Map<number, Match[]>()
-  for (const m of partite) perGiornata.set(m.turno ?? 0, [...(perGiornata.get(m.turno ?? 0) ?? []), m])
   const giocate = partite.filter((m) => m.stato === 'giocata').length
-  const eliminazione = torneo.formato === 'eliminazione'
-  const tab = eliminazione
-    ? tabellone(
-        torneo.squadre.map((s) => s._key),
-        partite.map((m) => ({ ...m, golA: m.risultato?.golA, golB: m.risultato?.golB })),
-        torneo.primoTurno,
-      )
-    : []
-  const nomeSquadra = new Map(torneo.squadre.map((s) => [s._key, s.nome]))
+  const ibrido = torneo.formato === 'gironi'
+  const conTabellone = torneo.formato === 'eliminazione' || ibrido
+  const deiGironi = ibrido ? partite.filter((m) => m.fase === 'gironi') : torneo.formato === 'girone' ? partite : []
+  const finale = ibrido ? partite.filter((m) => m.fase === 'eliminazione') : torneo.formato === 'eliminazione' ? partite : []
+  // Gironi + tabellone: il tabellone c'è quando i gironi sono finiti (primoTurno salvato).
+  const chiaviTabellone = ibrido ? (torneo.primoTurno ?? []).filter(Boolean) : torneo.squadre.map((s) => s._key)
+  const tab =
+    conTabellone && chiaviTabellone.length >= 2
+      ? tabellone(
+          chiaviTabellone,
+          finale.map((m) => ({ ...m, golA: m.risultato?.golA, golB: m.risultato?.golB })),
+          torneo.primoTurno,
+        )
+      : []
   const campione = tab.at(-1)?.[0]?.vincitore
+  const gironi = ibrido ? [...new Set(torneo.squadre.map((s) => s.girone).filter(Boolean))].sort() as string[] : []
+  const formato =
+    torneo.formato === 'eliminazione'
+      ? 'Eliminazione diretta'
+      : ibrido
+        ? `${gironi.length} gironi + tabellone (passa${(torneo.qualificate ?? 2) === 1 ? ' la prima' : 'no le prime 2'})`
+        : `Girone all'italiana${torneo.andataRitorno ? ' (andata e ritorno)' : ''}`
+
+  // Classifica di un gruppo di squadre; `passano`: quante si qualificano (evidenziate).
+  const tabellaClassifica = (squadre: typeof torneo.squadre, ms: Match[], passano = 0) => (
+    <Card className="overflow-x-auto p-0">
+      <table className="w-full text-sm tabular-nums">
+        <thead className="text-xs text-zinc-500">
+          <tr className="border-b border-zinc-200 dark:border-zinc-800">
+            <th className="px-3 py-2 text-left font-medium">#</th>
+            <th className="py-2 text-left font-medium">Squadra</th>
+            <th className="px-1.5 py-2 font-medium">G</th>
+            <th className="px-1.5 py-2 font-medium">V</th>
+            <th className="px-1.5 py-2 font-medium">N</th>
+            <th className="px-1.5 py-2 font-medium">P</th>
+            <th className="px-1.5 py-2 font-medium">DR</th>
+            <th className="px-3 py-2 font-medium">Pt</th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
+          {classifica(squadre, risultati(ms), torneo.puntiVittoria, torneo.puntiPareggio).map((r, i) => (
+            <tr key={r.chiave} className={i < passano ? 'bg-green-50 dark:bg-green-950/40' : ''}>
+              <td className={`px-3 py-2 ${i < passano ? 'font-bold text-green-700 dark:text-green-400' : 'text-zinc-500'}`}>{i + 1}</td>
+              <td className="py-2">
+                <span className="flex items-center gap-2 font-medium">
+                  {stemma(r.chiave, 24)}
+                  {r.nome}
+                </span>
+              </td>
+              <td className="px-1.5 py-2 text-center">{r.g}</td>
+              <td className="px-1.5 py-2 text-center">{r.v}</td>
+              <td className="px-1.5 py-2 text-center">{r.n}</td>
+              <td className="px-1.5 py-2 text-center">{r.p}</td>
+              <td className="px-1.5 py-2 text-center">{r.gf - r.gs > 0 ? `+${r.gf - r.gs}` : r.gf - r.gs}</td>
+              <td className="px-3 py-2 text-center font-bold">{r.punti}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </Card>
+  )
+
+  // Le partite divise per giornata.
+  const listaGiornate = (ms: Match[], prefisso = '') => {
+    const perGiornata = new Map<number, Match[]>()
+    for (const m of ms) perGiornata.set(m.turno ?? 0, [...(perGiornata.get(m.turno ?? 0) ?? []), m])
+    return [...perGiornata].map(([turno, lista]) => (
+      <Card key={turno} className="divide-y divide-zinc-100 p-0 dark:divide-zinc-800">
+        <p className="px-4 py-2 text-xs font-semibold uppercase tracking-wide text-zinc-500">
+          {prefisso}Giornata {turno}
+        </p>
+        {lista.map((m) => (
+          <Link key={m._id} href={`/partite/${m._id}`} className="flex items-center justify-between gap-2 px-4 py-3 text-sm hover:bg-zinc-50 dark:hover:bg-zinc-800">
+            <span className="min-w-0">
+              <span className="flex items-center gap-1.5 font-medium">
+                {stemma(m.chiaveA)}
+                <span className="truncate">{m.nomeA}</span>
+                <span className="text-zinc-400">–</span>
+                {stemma(m.chiaveB)}
+                <span className="truncate">{m.nomeB}</span>
+              </span>
+              <span className="block text-xs capitalize text-zinc-500">
+                {formatData(m.data, breve)} · {m.luogo}
+              </span>
+            </span>
+            {m.stato === 'giocata' && m.risultato?.golA != null ? (
+              <span className="shrink-0 font-bold tabular-nums">
+                {m.risultato.golA} – {m.risultato.golB}
+              </span>
+            ) : (
+              <StatoBadge match={m} />
+            )}
+          </Link>
+        ))}
+      </Card>
+    ))
+  }
+
+  const titolo = (testo: string) => <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">{testo}</h2>
 
   return (
     <div className="space-y-4 pb-8">
@@ -67,8 +151,7 @@ async function Torneo({ params }: { params: Promise<{ id: string }> }) {
         </Link>
         <h1 className="mt-1 text-xl font-bold">🏆 {torneo.nome}</h1>
         <p className="text-sm text-zinc-500">
-          🏟️ {me.lega.nome} · {eliminazione ? 'Eliminazione diretta' : <>Girone all&apos;italiana{torneo.andataRitorno && ' (andata e ritorno)'}</>} ·{' '}
-          {giocate}/{partite.length} partite giocate
+          🏟️ {me.lega.nome} · {formato} · {giocate}/{partite.length} partite giocate
         </p>
         {me.isAdmin && (
           <div className="mt-2">
@@ -88,68 +171,52 @@ async function Torneo({ params }: { params: Promise<{ id: string }> }) {
         </Card>
       )}
 
-      {eliminazione && (
+      {conTabellone && (
         <section className="space-y-2">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">Tabellone</h2>
-          <div className="-mx-4 overflow-x-auto px-4 pb-2">
-            <div className="flex gap-3">
-              {tab.map((incroci, t) => (
-                <div key={t} className="flex w-56 shrink-0 flex-col justify-around gap-3">
-                  <p className="text-center text-xs font-semibold uppercase tracking-wide text-zinc-500">{nomeTurno(t + 1, tab.length)}</p>
-                  {incroci.map((inc) => (
-                    <IncrocioCard key={inc.posizione} inc={inc} nome={nomeSquadra} stemma={stemma} />
-                  ))}
-                </div>
-              ))}
+          {titolo(ibrido ? 'Fase finale' : 'Tabellone')}
+          {tab.length ? (
+            <div className="-mx-4 overflow-x-auto px-4 pb-2">
+              <div className="flex gap-3">
+                {tab.map((incroci, t) => (
+                  <div key={t} className="flex w-56 shrink-0 flex-col justify-around gap-3">
+                    <p className="text-center text-xs font-semibold uppercase tracking-wide text-zinc-500">{nomeTurno(t + 1, tab.length)}</p>
+                    {incroci.map((inc) => (
+                      <IncrocioCard key={inc.posizione} inc={inc} nome={nomeSquadra} stemma={stemma} />
+                    ))}
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
+          ) : (
+            <Card className="text-sm text-zinc-500">
+              Il tabellone si crea da solo quando sono finite tutte le partite dei gironi: passa
+              {(torneo.qualificate ?? 2) === 1 ? ' la prima' : 'no le prime 2'} di ogni girone, con incroci tra gironi diversi.
+            </Card>
+          )}
         </section>
       )}
 
-      {!eliminazione && (
-      <section className="space-y-2">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">Classifica</h2>
-        <Card className="overflow-x-auto p-0">
-          <table className="w-full text-sm tabular-nums">
-            <thead className="text-xs text-zinc-500">
-              <tr className="border-b border-zinc-200 dark:border-zinc-800">
-                <th className="px-3 py-2 text-left font-medium">#</th>
-                <th className="py-2 text-left font-medium">Squadra</th>
-                <th className="px-1.5 py-2 font-medium">G</th>
-                <th className="px-1.5 py-2 font-medium">V</th>
-                <th className="px-1.5 py-2 font-medium">N</th>
-                <th className="px-1.5 py-2 font-medium">P</th>
-                <th className="px-1.5 py-2 font-medium">DR</th>
-                <th className="px-3 py-2 font-medium">Pt</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
-              {tabella.map((r, i) => (
-                <tr key={r.chiave}>
-                  <td className="px-3 py-2 text-zinc-500">{i + 1}</td>
-                  <td className="py-2">
-                    <span className="flex items-center gap-2 font-medium">
-                      {stemma(r.chiave, 24)}
-                      {r.nome}
-                    </span>
-                  </td>
-                  <td className="px-1.5 py-2 text-center">{r.g}</td>
-                  <td className="px-1.5 py-2 text-center">{r.v}</td>
-                  <td className="px-1.5 py-2 text-center">{r.n}</td>
-                  <td className="px-1.5 py-2 text-center">{r.p}</td>
-                  <td className="px-1.5 py-2 text-center">{r.gf - r.gs > 0 ? `+${r.gf - r.gs}` : r.gf - r.gs}</td>
-                  <td className="px-3 py-2 text-center font-bold">{r.punti}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </Card>
-      </section>
+      {torneo.formato === 'girone' && (
+        <section className="space-y-2">
+          {titolo('Classifica')}
+          {tabellaClassifica(torneo.squadre, deiGironi)}
+        </section>
       )}
+
+      {gironi.map((l) => (
+        <section key={l} className="space-y-2">
+          {titolo(`Girone ${l}`)}
+          {tabellaClassifica(
+            torneo.squadre.filter((s) => s.girone === l),
+            deiGironi.filter((m) => m.girone === l),
+            torneo.qualificate ?? 2,
+          )}
+        </section>
+      ))}
 
       {marcatori.length > 0 && (
         <section className="space-y-2">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">Marcatori</h2>
+          {titolo('Marcatori')}
           <Card className="divide-y divide-zinc-100 p-0 dark:divide-zinc-800">
             {marcatori.map(([pid, n]) => {
               const g = giocatori.get(pid)!
@@ -168,39 +235,18 @@ async function Torneo({ params }: { params: Promise<{ id: string }> }) {
         </section>
       )}
 
-      {!eliminazione && (
-      <section className="space-y-2">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">Giornate</h2>
-        {[...perGiornata].map(([turno, ms]) => (
-          <Card key={turno} className="divide-y divide-zinc-100 p-0 dark:divide-zinc-800">
-            <p className="px-4 py-2 text-xs font-semibold uppercase tracking-wide text-zinc-500">Giornata {turno}</p>
-            {ms.map((m) => (
-              <Link key={m._id} href={`/partite/${m._id}`} className="flex items-center justify-between gap-2 px-4 py-3 text-sm hover:bg-zinc-50 dark:hover:bg-zinc-800">
-                <span className="min-w-0">
-                  <span className="flex items-center gap-1.5 font-medium">
-                    {stemma(m.chiaveA)}
-                    <span className="truncate">{m.nomeA}</span>
-                    <span className="text-zinc-400">–</span>
-                    {stemma(m.chiaveB)}
-                    <span className="truncate">{m.nomeB}</span>
-                  </span>
-                  <span className="block text-xs capitalize text-zinc-500">
-                    {formatData(m.data, breve)} · {m.luogo}
-                  </span>
-                </span>
-                {m.stato === 'giocata' && m.risultato?.golA != null ? (
-                  <span className="shrink-0 font-bold tabular-nums">
-                    {m.risultato.golA} – {m.risultato.golB}
-                  </span>
-                ) : (
-                  <StatoBadge match={m} />
-                )}
-              </Link>
-            ))}
-          </Card>
-        ))}
-      </section>
+      {torneo.formato === 'girone' && (
+        <section className="space-y-2">
+          {titolo('Giornate')}
+          {listaGiornate(deiGironi)}
+        </section>
       )}
+      {gironi.map((l) => (
+        <section key={l} className="space-y-2">
+          {titolo(`Partite del girone ${l}`)}
+          {listaGiornate(deiGironi.filter((m) => m.girone === l), `Girone ${l} · `)}
+        </section>
+      ))}
 
       {me.isAdmin && (
         <form action={eliminaTorneo.bind(null, torneo._id)} className="text-center">
@@ -217,7 +263,6 @@ async function Torneo({ params }: { params: Promise<{ id: string }> }) {
   )
 }
 
-// Un incrocio del tabellone: le due squadre (o chi deve ancora arrivare), il risultato e chi passa.
 // Foto della squadra o, senza foto, il suo colore.
 function StemmaSquadra({ colore, foto, size }: { colore?: string; foto?: string | null; size: number }) {
   return foto ? (
@@ -228,6 +273,7 @@ function StemmaSquadra({ colore, foto, size }: { colore?: string; foto?: string 
   )
 }
 
+// Un incrocio del tabellone: le due squadre (o chi deve ancora arrivare), il risultato e chi passa.
 function IncrocioCard({ inc, nome, stemma }: { inc: Incrocio<Match>; nome: Map<string, string>; stemma: (chiave: string | undefined) => ReactNode }) {
   const m = inc.partita
   const riga = (chiave: string | undefined, gol: number | undefined) => (

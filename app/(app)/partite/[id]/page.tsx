@@ -71,7 +71,11 @@ async function MatchDetail({ params }: { params: Promise<{ id: string }> }) {
         <p className="text-sm font-semibold text-zinc-600 dark:text-zinc-300">🏟️ {player.lega.nome}</p>
         {match.torneo && (
           <Link href={`/tornei/${match.torneo._id}`} className="block text-sm font-semibold text-amber-700 hover:underline dark:text-amber-400">
-            🏆 {match.torneo.nome} · Giornata {match.turno} · {match.nomeA} – {match.nomeB}
+            🏆 {match.torneo.nome} ·{' '}
+            {match.fase === 'eliminazione' || match.torneo.formato === 'eliminazione'
+              ? `Tabellone · turno ${match.turno}`
+              : `${match.girone ? `Girone ${match.girone} · ` : ''}Giornata ${match.turno}`}{' '}
+            · {match.nomeA} – {match.nomeB}
           </Link>
         )}
         <p className="text-sm text-zinc-500">

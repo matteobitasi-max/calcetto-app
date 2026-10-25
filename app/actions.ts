@@ -16,7 +16,7 @@ import { daysBetween, formatData, romeLocalToISO } from '@/lib/dates'
 import { inviaAGiocatori, inviaATutti, rimuoviIscrizione, salvaIscrizione, salvaTokenNativo, type PushSub } from '@/lib/push'
 import { assicuraRicorrenze, getSeries, occurrenceId, rimuoviFutureVuote, type Series } from '@/lib/series'
 import { puoCreareTornei } from '@/lib/tornei'
-import { SQUADRE_PREDEFINITE, giornate } from '@/lib/girone'
+import { LETTERE_GIRONI, SQUADRE_PREDEFINITE, classifica, giornate, qualificateInOrdine } from '@/lib/girone'
 import { daCreare, primoTurnoTeste, primoTurnoValido, tabellone } from '@/lib/tabellone'
 
 export type FormState = { error?: string } | undefined
@@ -344,7 +344,7 @@ export async function salvaRisultato(matchId: string, _prev: FormState, formData
   if (mvp && !inCampo.has(mvp)) return { error: 'L\u2019MVP deve essere uno dei giocatori in campo.' }
 
   // Tabellone: in caso di pareggio bisogna dire chi passa il turno (es. ai rigori).
-  const eliminazione = match.torneo?.formato === 'eliminazione'
+  const eliminazione = match.torneo?.formato === 'eliminazione' || match.fase === 'eliminazione'
   const passa = str(formData, 'passa')
   if (eliminazione && golA === golB && passa !== 'A' && passa !== 'B') return { error: 'È finita in pareggio: scegli chi passa il turno.' }
 
@@ -361,7 +361,7 @@ export async function salvaRisultato(matchId: string, _prev: FormState, formData
   if (!(eliminazione && golA === golB)) patch.unset(['passa'])
   await patch.commit()
   // Tabellone: con il vincitore si crea (se si può) la partita del turno dopo.
-  if (eliminazione && match.torneo) await aggiornaTabellone(match.torneo._id)
+  if (match.torneo && match.torneo.formato !== 'girone') await aggiornaTabellone(match.torneo._id)
   redirect(`/partite/${matchId}`)
 }
 
@@ -1196,7 +1196,7 @@ export async function eliminaAccount(): Promise<FormState> {
 
 // ---------- Tornei (Pro) ----------
 
-type SquadraDoc = { _key: string; _type: 'squadraTorneo'; nome: string; colore: string; logo?: unknown; giocatori: { _key: string; _type: 'reference'; _ref: string }[] }
+type SquadraDoc = { _key: string; _type: 'squadraTorneo'; nome: string; colore: string; logo?: unknown; girone?: string; giocatori: { _key: string; _type: 'reference'; _ref: string }[] }
 type CalendarioTorneo = { inizio: string; ogniGiorni: number; durataMinuti: number; luogo: string }
 
 // Squadre dal modulo: nome_<i>, foto_<i> e squadra_<giocatore> = indice della squadra (solo giocatori della rosa,
@@ -1209,6 +1209,7 @@ async function squadreDalModulo(formData: FormData, legaId: string, quante: numb
     nome: str(formData, `nome_${i}`).slice(0, 30) || SQUADRE_PREDEFINITE[i].nome,
     colore: esistenti?.[i]?.colore || SQUADRE_PREDEFINITE[i].colore,
     ...(esistenti?.[i]?.logo ? { logo: esistenti[i].logo } : {}),
+    ...(esistenti?.[i]?.girone ? { girone: esistenti[i].girone } : {}),
     giocatori: [],
   }))
   for (const [k, v] of formData) {
@@ -1239,7 +1240,15 @@ function orarioTorneo(cal: CalendarioTorneo, turno: number, slot: number) {
 }
 
 // Partita di un torneo: squadre fisse già fatte, tutti "presenti", niente finestra di convocazioni.
-function partitaTorneo(legaId: string, torneoId: string, cal: CalendarioTorneo, sa: SquadraDoc, sb: SquadraDoc, dove: { turno: number; posizione?: number; slot: number }) {
+// `giorno`: la giornata del calendario in cui cade (di base il turno; nella fase finale dei gironi viene dopo).
+function partitaTorneo(
+  legaId: string,
+  torneoId: string,
+  cal: CalendarioTorneo,
+  sa: SquadraDoc,
+  sb: SquadraDoc,
+  dove: { turno: number; giorno?: number; posizione?: number; slot: number; fase?: 'gironi' | 'eliminazione'; girone?: string },
+) {
   const adesso = new Date().toISOString()
   const giocatori = [...sa.giocatori, ...sb.giocatori]
   return {
@@ -1248,11 +1257,13 @@ function partitaTorneo(legaId: string, torneoId: string, cal: CalendarioTorneo, 
     torneo: { _type: 'reference', _ref: torneoId },
     turno: dove.turno,
     ...(dove.posizione != null && { posizione: dove.posizione }),
+    ...(dove.fase && { fase: dove.fase }),
+    ...(dove.girone && { girone: dove.girone }),
     chiaveA: sa._key,
     chiaveB: sb._key,
     nomeA: sa.nome,
     nomeB: sb.nome,
-    data: orarioTorneo(cal, dove.turno, dove.slot),
+    data: orarioTorneo(cal, dove.giorno ?? dove.turno, dove.slot),
     durataMinuti: cal.durataMinuti,
     luogo: cal.luogo,
     postiDisponibili: giocatori.length,
@@ -1269,18 +1280,55 @@ function partitaTorneo(legaId: string, torneoId: string, cal: CalendarioTorneo, 
 }
 
 // Tabellone: crea le partite degli incroci di cui si conoscono entrambe le squadre (all'inizio il primo turno,
-// poi i turni successivi man mano che arrivano i risultati).
+// poi i turni successivi man mano che arrivano i risultati). Gironi + tabellone: quando tutte le partite
+// dei gironi sono finite, le prime di ogni girone formano il tabellone (incroci tra gironi diversi).
 async function aggiornaTabellone(torneoId: string) {
-  const t = await sanity.fetch<{ legaId: string; formato?: string; calendario?: CalendarioTorneo; primoTurno?: string[]; squadre: SquadraDoc[] } | null>(
-    `*[_type == "tournament" && _id == $id][0]{"legaId": lega._ref, formato, calendario, primoTurno, squadre}`,
+  const t = await sanity.fetch<{
+    legaId: string
+    formato?: string
+    calendario?: CalendarioTorneo
+    primoTurno?: string[]
+    qualificate?: number
+    puntiVittoria?: number
+    puntiPareggio?: number
+    squadre: SquadraDoc[]
+  } | null>(
+    `*[_type == "tournament" && _id == $id][0]{"legaId": lega._ref, formato, calendario, primoTurno, qualificate, puntiVittoria, puntiPareggio, squadre}`,
     { id: torneoId },
   )
-  if (!t || t.formato !== 'eliminazione' || !t.calendario) return
-  const partite = await getPartiteTorneo(torneoId)
+  if (!t || (t.formato !== 'eliminazione' && t.formato !== 'gironi') || !t.calendario) return
+  const tutte = await getPartiteTorneo(torneoId)
+  const gironi = t.formato === 'gironi'
+  const deiGironi = tutte.filter((m) => m.fase === 'gironi')
+  const partite = gironi ? tutte.filter((m) => m.fase === 'eliminazione') : tutte
+  // nella fase finale dei gironi, i turni del calendario vengono dopo l'ultima giornata dei gironi
+  const giornateGironi = Math.max(0, ...deiGironi.map((m) => m.turno ?? 0))
+
+  let primoTurno = t.primoTurno
+  let chiavi = t.squadre.map((sq) => sq._key)
+  if (gironi) {
+    if (!primoTurno?.length) {
+      if (!deiGironi.length || deiGironi.some((m) => m.stato !== 'giocata' && m.stato !== 'annullata')) return
+      const lettere = [...new Set(t.squadre.map((sq) => sq.girone).filter(Boolean))].sort() as string[]
+      const classifiche = lettere.map((l) =>
+        classifica(
+          t.squadre.filter((sq) => sq.girone === l),
+          deiGironi
+            .filter((m) => m.girone === l && m.stato === 'giocata')
+            .map((m) => ({ chiaveA: m.chiaveA, chiaveB: m.chiaveB, golA: m.risultato?.golA, golB: m.risultato?.golB })),
+          t.puntiVittoria ?? 3,
+          t.puntiPareggio ?? 1,
+        ).map((r) => r.chiave),
+      )
+      primoTurno = primoTurnoTeste(qualificateInOrdine(classifiche, t.qualificate ?? 2))
+      await sanity.patch(torneoId).set({ primoTurno }).commit()
+    }
+    chiavi = primoTurno.filter(Boolean)
+  }
   const tab = tabellone(
-    t.squadre.map((sq) => sq._key),
+    chiavi,
     partite.map((m) => ({ ...m, golA: m.risultato?.golA, golB: m.risultato?.golB })),
-    t.primoTurno,
+    primoTurno,
   )
   const nuovi = daCreare(tab)
   // Risultato corretto dopo: la partita del turno dopo (se non ancora giocata) prende le squadre giuste.
@@ -1310,20 +1358,22 @@ async function aggiornaTabellone(torneoId: string) {
   }
   nuovi.forEach((inc, k) => {
     // tutte lo stesso giorno: dopo tutte le partite già in calendario; altrimenti dopo quelle dello stesso turno
-    const prima = t.calendario!.ogniGiorni === 0 ? partite.length : partite.filter((m) => m.turno === inc.turno).length
+    const prima = t.calendario!.ogniGiorni === 0 ? tutte.length : partite.filter((m) => m.turno === inc.turno).length
     const giaNelTurno = nuovi.slice(0, k).filter((x) => t.calendario!.ogniGiorni !== 0 ? x.turno === inc.turno : true).length
     tx.create(
       partitaTorneo(t.legaId, torneoId, t.calendario!, squadra.get(inc.a!)!, squadra.get(inc.b!)!, {
         turno: inc.turno,
+        giorno: giornateGironi + inc.turno,
         posizione: inc.posizione,
         slot: prima + giaNelTurno,
+        ...(gironi && { fase: 'eliminazione' as const }),
       }),
     )
   })
   await tx.commit()
 }
 
-// Nuovo torneo: girone all'italiana o eliminazione diretta, con squadre fisse dalla rosa.
+// Nuovo torneo: girone all'italiana, eliminazione diretta o gironi + tabellone, con squadre fisse dalla rosa.
 // Le partite sono normali partite della lega (con squadre già fatte e senza convocazioni).
 export async function creaTorneo(_prev: FormState, formData: FormData): Promise<FormState> {
   const admin = await requireIn(str(formData, 'legaId'), 'organizzatore')
@@ -1332,7 +1382,8 @@ export async function creaTorneo(_prev: FormState, formData: FormData): Promise<
 
   const nome = str(formData, 'nome')
   if (nome.length < 2 || nome.length > 60) return { error: 'Il nome del torneo deve avere tra 2 e 60 caratteri.' }
-  const formato = str(formData, 'formato') === 'eliminazione' ? 'eliminazione' : 'girone'
+  const formati = ['girone', 'eliminazione', 'gironi'] as const
+  const formato = formati.find((f) => f === str(formData, 'formato')) ?? 'girone'
   const quante = num(formData, 'numSquadre') ?? 0
   if (!Number.isInteger(quante) || quante < 2 || quante > SQUADRE_PREDEFINITE.length) {
     return { error: `Servono da 2 a ${SQUADRE_PREDEFINITE.length} squadre.` }
@@ -1350,6 +1401,21 @@ export async function creaTorneo(_prev: FormState, formData: FormData): Promise<
     }
     primoTurno = Array.isArray(posti) ? posti.map((i) => (typeof i === 'number' && squadre[i] ? squadre[i]._key : '')) : primoTurnoTeste(squadre.map((sq) => sq._key))
     if (!primoTurnoValido(primoTurno, squadre.map((sq) => sq._key))) return { error: 'Nel tabellone ogni incrocio deve avere almeno una squadra.' }
+  }
+  // Gironi + tabellone: girone di ogni squadra (girone_<i> = indice del girone) e quante passano da ognuno.
+  const numGironi = num(formData, 'numGironi') ?? 2
+  const qualificate = num(formData, 'qualificate') ?? 2
+  if (formato === 'gironi') {
+    if (!Number.isInteger(numGironi) || numGironi < 2 || numGironi > LETTERE_GIRONI.length) return { error: 'Servono da 2 a 8 gironi.' }
+    squadre.forEach((sq, i) => {
+      const g = num(formData, `girone_${i}`)
+      sq.girone = LETTERE_GIRONI[g != null && Number.isInteger(g) && g >= 0 && g < numGironi ? g : i % numGironi]
+    })
+    const grandezze = LETTERE_GIRONI.slice(0, numGironi).map((l) => squadre.filter((sq) => sq.girone === l).length)
+    if (grandezze.some((n) => n < 2)) return { error: 'Ogni girone deve avere almeno 2 squadre.' }
+    if (![1, 2].includes(qualificate) || qualificate >= Math.min(...grandezze)) {
+      return { error: 'Dai gironi devono passare 1 o 2 squadre, e non tutte quelle del girone.' }
+    }
   }
 
   const inizio = str(formData, 'inizio')
@@ -1374,11 +1440,37 @@ export async function creaTorneo(_prev: FormState, formData: FormData): Promise<
     calendario,
     squadre,
     ...(primoTurno && { primoTurno }),
+    ...(formato === 'gironi' && { numGironi, qualificate }),
     ...(utente && { creatoDa: utente.id }),
   })
 
   if (formato === 'eliminazione') {
     await aggiornaTabellone(torneo._id)
+  } else if (formato === 'gironi') {
+    // Ogni girone tutti contro tutti; la giornata d di tutti i gironi si gioca lo stesso giorno, una partita dopo l'altra.
+    const perGirone = LETTERE_GIRONI.slice(0, numGironi).map((l) => ({ l, squadre: squadre.filter((sq) => sq.girone === l) }))
+    const calendari = perGirone.map((g) => giornate(g.squadre.length))
+    const giornateTot = Math.max(...calendari.map((c) => c.length))
+    let slot = 0
+    const tx = sanity.transaction()
+    for (let d = 0; d < giornateTot; d++) {
+      let nelGiorno = 0
+      perGirone.forEach((g, gi) =>
+        (calendari[gi][d] ?? []).forEach(([a, b]) => {
+          tx.create(
+            partitaTorneo(admin.lega._id, torneo._id, calendario, g.squadre[a], g.squadre[b], {
+              turno: d + 1,
+              slot: ogniGiorni === 0 ? slot : nelGiorno,
+              fase: 'gironi',
+              girone: g.l,
+            }),
+          )
+          slot++
+          nelGiorno++
+        }),
+      )
+    }
+    await tx.commit()
   } else {
     let slot = 0
     const tx = sanity.transaction()

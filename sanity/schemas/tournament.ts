@@ -17,8 +17,16 @@ export const tournament = defineType({
         list: [
           { title: "Girone all'italiana", value: 'girone' },
           { title: 'Eliminazione diretta (tabellone)', value: 'eliminazione' },
+          { title: 'Gironi + tabellone', value: 'gironi' },
         ],
       },
+    }),
+    defineField({ name: 'numGironi', title: 'Numero di gironi', type: 'number', hidden: ({ document }) => document?.formato !== 'gironi' }),
+    defineField({
+      name: 'qualificate',
+      title: 'Squadre che passano da ogni girone',
+      type: 'number',
+      hidden: ({ document }) => document?.formato !== 'gironi',
     }),
     defineField({
       name: 'primoTurno',
@@ -26,7 +34,7 @@ export const tournament = defineType({
       description: 'I posti del tabellone in ordine (chiave della squadra, vuoto = passa direttamente chi è accanto)',
       type: 'array',
       of: [defineArrayMember({ type: 'string' })],
-      hidden: ({ document }) => document?.formato !== 'eliminazione',
+      hidden: ({ document }) => document?.formato === 'girone',
     }),
     defineField({
       name: 'calendario',
@@ -55,6 +63,7 @@ export const tournament = defineType({
             defineField({ name: 'nome', type: 'string', validation: (r) => r.required() }),
             defineField({ name: 'colore', type: 'string' }),
             defineField({ name: 'logo', title: 'Foto della squadra', type: 'image', options: { hotspot: true } }),
+            defineField({ name: 'girone', title: 'Girone (A, B, …)', type: 'string' }),
             defineField({ name: 'giocatori', type: 'array', of: [defineArrayMember({ type: 'reference', to: [{ type: 'player' }] })] }),
           ],
         }),

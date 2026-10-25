@@ -47,7 +47,10 @@ export type Match = {
   formazioniUfficialiIl?: string
   distanze: Distanza[]
   /** Partita di un torneo: squadre fisse con nome, niente convocazioni. */
-  torneo?: { _id: string; nome: string; formato: 'girone' | 'eliminazione' }
+  torneo?: { _id: string; nome: string; formato: 'girone' | 'eliminazione' | 'gironi' }
+  /** Gironi + tabellone: la fase della partita e il suo girone. */
+  fase?: 'gironi' | 'eliminazione'
+  girone?: string
   turno?: number
   /** Tabellone: posizione dell'incrocio nel turno e, in caso di pareggio, chi passa. */
   posizione?: number
@@ -82,7 +85,7 @@ const matchFields = `
   "pagamenti": coalesce(pagamenti[]{"giocatoreId": giocatore._ref, stato, metodo, il}, []),
   pettorine, formazioniUfficialiIl,
   "distanze": coalesce(distanze[]{"giocatoreId": giocatore._ref, km, fonte}, []),
-  "torneo": torneo->{_id, nome, "formato": coalesce(formato, "girone")}, turno, posizione, passa, chiaveA, chiaveB, nomeA, nomeB
+  "torneo": torneo->{_id, nome, "formato": coalesce(formato, "girone")}, turno, fase, girone, posizione, passa, chiaveA, chiaveB, nomeA, nomeB
 `
 
 // Le partite di una lega o, con un elenco, di più leghe insieme (vista "Tutte le leghe").

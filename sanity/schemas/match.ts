@@ -74,6 +74,14 @@ export const match = defineType({
       to: [{ type: 'tournament' }],
     }),
     defineField({ name: 'turno', title: 'Giornata del torneo', type: 'number', hidden: ({ document }) => !document?.torneo }),
+    defineField({
+      name: 'fase',
+      title: 'Fase del torneo',
+      type: 'string',
+      options: { list: [{ title: 'Gironi', value: 'gironi' }, { title: 'Eliminazione diretta', value: 'eliminazione' }] },
+      hidden: ({ document }) => !document?.torneo,
+    }),
+    defineField({ name: 'girone', title: 'Girone', type: 'string', hidden: ({ document }) => !document?.torneo }),
     defineField({ name: 'posizione', title: 'Posizione nel tabellone', type: 'number', hidden: true }),
     defineField({
       name: 'passa',
