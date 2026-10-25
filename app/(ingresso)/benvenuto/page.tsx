@@ -3,7 +3,7 @@ import { Suspense } from 'react'
 import { scegliLega, uniscitiConCodice } from '@/app/actions'
 import { CreaLega } from '@/components/crea-lega'
 import { EsciLega } from '@/components/esci-lega'
-import { getCurrentPlayer, getMemberships, getUtente } from '@/lib/player'
+import { getCurrentPlayer, getMemberships, getUtente, isTitolare } from '@/lib/player'
 import { ActionForm } from '@/components/action-form'
 import { SubmitButton } from '@/components/submit-button'
 import { Card, Loading, buttonClass, inputClass } from '@/components/ui'
@@ -17,7 +17,7 @@ export default function BenvenutoPage() {
 }
 
 async function Benvenuto() {
-  const [utente, leghe, attiva] = await Promise.all([getUtente(), getMemberships(), getCurrentPlayer()])
+  const [utente, leghe, attiva, titolare] = await Promise.all([getUtente(), getMemberships(), getCurrentPlayer(), isTitolare()])
 
   return (
     <div className="space-y-4">
@@ -46,6 +46,17 @@ async function Benvenuto() {
           </div>
         </ActionForm>
       </Card>
+
+      {/* Il titolare dell'app può aggiungersi a qualsiasi lega, anche senza invito */}
+      {titolare && (
+        <Card className="space-y-3">
+          <h2 className="font-semibold">👑 Aggiungiti a una lega esistente</h2>
+          <p className="text-sm text-zinc-500">Scegli tra tutte le leghe dell&apos;app ed entra nella rosa come giocatore e organizzatore.</p>
+          <Link href="/leghe" className={`${buttonClass('secondary')} w-full justify-center`}>
+            Vedi tutte le leghe →
+          </Link>
+        </Card>
+      )}
 
       <Card className="space-y-3">
         <h2 className="font-semibold">⚽ Crea una lega</h2>

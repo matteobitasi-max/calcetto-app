@@ -12,12 +12,15 @@ export function MatchForm({
   action,
   match,
   giorno,
+  legaId,
   submitLabel,
 }: {
   action: (prev: FormState, fd: FormData) => Promise<FormState>
   match?: Match
   /** Giorno scelto dal calendario (AAAA-MM-GG) per una nuova partita. */
   giorno?: string
+  /** Nuova partita: la lega in cui crearla (se non è quella attiva). */
+  legaId?: string
   submitLabel: string
 }) {
   const giornoOk = giorno && /^\d{4}-\d{2}-\d{2}$/.test(giorno) ? giorno : undefined
@@ -33,6 +36,7 @@ export function MatchForm({
 
   return (
     <ActionForm action={action} className="space-y-4">
+      {legaId && <input type="hidden" name="legaId" value={legaId} />}
       <Card>
         <QuandoFields {...quando} nuova={!match} />
       </Card>

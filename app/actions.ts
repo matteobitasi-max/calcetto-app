@@ -118,8 +118,13 @@ async function modificaLista(matchId: string, key: string, da: Risposta, aggiunt
 // ---------- Partite (organizzatori) ----------
 
 export async function salvaPartita(matchId: string | null, _prev: FormState, formData: FormData): Promise<FormState> {
-  // Nuova partita: nella lega attiva. Modifica: nella lega della partita.
-  const admin = matchId ? await requireForDoc(matchId, 'organizzatore') : await requireAdmin()
+  // Nuova partita: nella lega scelta (dal calendario) o in quella attiva. Modifica: nella lega della partita.
+  const legaScelta = str(formData, 'legaId')
+  const admin = matchId
+    ? await requireForDoc(matchId, 'organizzatore')
+    : legaScelta
+      ? await requireIn(legaScelta, 'organizzatore')
+      : await requireAdmin()
   const lega = { _type: 'reference' as const, _ref: admin.lega._id }
   const luogo = str(formData, 'luogo')
   const [data, apertura, chiusura] = ['data', 'aperturaConvocazioni', 'chiusuraConvocazioni'].map((k) => {

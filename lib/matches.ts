@@ -74,17 +74,18 @@ const matchFields = `
   "distanze": coalesce(distanze[]{"giocatoreId": giocatore._ref, km, fonte}, [])
 `
 
-export function getUpcomingMatches(legaId: string) {
+// Le partite di una lega o, con un elenco, di più leghe insieme (vista "Tutte le leghe").
+export function getUpcomingMatches(legaId: string | string[]) {
   return sanity.fetch<Match[]>(
-    `*[_type == "match" && lega._ref == $legaId && coalesce(stato, "aperta") in ["aperta", "chiusa"]] | order(data asc){${matchFields}}`,
-    { legaId },
+    `*[_type == "match" && lega._ref in $leghe && coalesce(stato, "aperta") in ["aperta", "chiusa"]] | order(data asc){${matchFields}}`,
+    { leghe: [legaId].flat() },
   )
 }
 
-export function getPastMatches(legaId: string, limit = 20) {
+export function getPastMatches(legaId: string | string[], limit = 20) {
   return sanity.fetch<Match[]>(
-    `*[_type == "match" && lega._ref == $legaId && stato in ["giocata", "annullata"]] | order(data desc)[0...$limit]{${matchFields}}`,
-    { legaId, limit },
+    `*[_type == "match" && lega._ref in $leghe && stato in ["giocata", "annullata"]] | order(data desc)[0...$limit]{${matchFields}}`,
+    { leghe: [legaId].flat(), limit },
   )
 }
 
@@ -169,10 +170,10 @@ export function ordinati(m: Match, risposta: Risposta) {
     .sort((a, b) => (a.rispostoIl ?? '').localeCompare(b.rispostoIl ?? ''))
 }
 
-export function getMatchesBetween(legaId: string, from: string, to: string) {
+export function getMatchesBetween(legaId: string | string[], from: string, to: string) {
   return sanity.fetch<Match[]>(
-    `*[_type == "match" && lega._ref == $legaId && data >= $from && data < $to] | order(data asc){${matchFields}}`,
-    { legaId, from, to },
+    `*[_type == "match" && lega._ref in $leghe && data >= $from && data < $to] | order(data asc){${matchFields}}`,
+    { leghe: [legaId].flat(), from, to },
   )
 }
 
