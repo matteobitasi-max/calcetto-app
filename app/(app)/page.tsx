@@ -46,7 +46,7 @@ async function Partite() {
 
       {/* In alto: la prossima partita con il conto alla rovescia delle convocazioni */}
       {prossima ? (
-        <ProssimaPartita match={prossima} player={player} citta={player.lega.citta} />
+        <ProssimaPartita match={prossima} player={player} citta={player.lega.citta} lega={player.lega.nome} />
       ) : (
         <Card className="text-center text-sm text-zinc-500">Nessuna partita in programma.</Card>
       )}
@@ -172,10 +172,12 @@ function ProssimaPartita({
   match,
   player,
   citta,
+  lega,
 }: {
   match: Match
   player: Player & { ospite?: boolean }
   citta?: { lat: number; lon: number }
+  lega: string
 }) {
   const count = presenti(match).length
   const inAttesa = ordinati(match, 'riserva').length
@@ -198,6 +200,7 @@ function ProssimaPartita({
               </Suspense>
             </span>
           </h3>
+          <p className="text-sm font-semibold text-zinc-600 dark:text-zinc-300">🏟️ {lega}</p>
           <p className="text-sm text-zinc-500">
             📍 {match.luogo}
             {match.quota != null && ` · ${match.quota} €`}

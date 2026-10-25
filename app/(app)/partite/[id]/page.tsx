@@ -68,6 +68,7 @@ async function MatchDetail({ params }: { params: Promise<{ id: string }> }) {
           </h1>
           <StatoBadge match={match} />
         </div>
+        <p className="text-sm font-semibold text-zinc-600 dark:text-zinc-300">🏟️ {player.lega.nome}</p>
         <p className="text-sm text-zinc-500">
           📍 {match.luogo}
           {match.quota != null && ` · ${match.quota} € a testa`}
