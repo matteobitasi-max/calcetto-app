@@ -75,6 +75,8 @@ async function Editor({ params }: { params: Promise<{ id: string }> }) {
         golIniziali={Object.fromEntries(match.marcatori.map((m) => [m.giocatoreId, m.gol]))}
         autogolIniziali={{ A: match.autogolA ?? 0, B: match.autogolB ?? 0 }}
         mvpIniziale={match.mvpId}
+        tabellone={match.torneo?.formato === 'eliminazione'}
+        passaIniziale={match.passa}
       />
     </div>
   )

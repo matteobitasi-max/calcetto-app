@@ -6,9 +6,10 @@ import { displayName, membroDi } from '@/lib/player'
 import { getPartiteTorneo, type Match } from '@/lib/matches'
 import { getTorneo } from '@/lib/tornei'
 import { classifica } from '@/lib/girone'
+import { nomeTurno, tabellone, type Incrocio } from '@/lib/tabellone'
 import { formatData } from '@/lib/dates'
 import { SubmitButton } from '@/components/submit-button'
-import { Card, Loading, StatoBadge } from '@/components/ui'
+import { ButtonLink, Card, Loading, StatoBadge } from '@/components/ui'
 
 export default function TorneoPage({ params }: PageProps<'/tornei/[id]'>) {
   return (
@@ -44,6 +45,15 @@ async function Torneo({ params }: { params: Promise<{ id: string }> }) {
   const perGiornata = new Map<number, Match[]>()
   for (const m of partite) perGiornata.set(m.turno ?? 0, [...(perGiornata.get(m.turno ?? 0) ?? []), m])
   const giocate = partite.filter((m) => m.stato === 'giocata').length
+  const eliminazione = torneo.formato === 'eliminazione'
+  const tab = eliminazione
+    ? tabellone(
+        torneo.squadre.map((s) => s._key),
+        partite.map((m) => ({ ...m, golA: m.risultato?.golA, golB: m.risultato?.golB })),
+      )
+    : []
+  const nomeSquadra = new Map(torneo.squadre.map((s) => [s._key, s.nome]))
+  const campione = tab.at(-1)?.[0]?.vincitore
 
   return (
     <div className="space-y-4 pb-8">
@@ -53,10 +63,44 @@ async function Torneo({ params }: { params: Promise<{ id: string }> }) {
         </Link>
         <h1 className="mt-1 text-xl font-bold">🏆 {torneo.nome}</h1>
         <p className="text-sm text-zinc-500">
-          🏟️ {me.lega.nome} · Girone all&apos;italiana{torneo.andataRitorno && ' (andata e ritorno)'} · {giocate}/{partite.length} partite giocate
+          🏟️ {me.lega.nome} · {eliminazione ? 'Eliminazione diretta' : <>Girone all&apos;italiana{torneo.andataRitorno && ' (andata e ritorno)'}</>} ·{' '}
+          {giocate}/{partite.length} partite giocate
         </p>
+        {me.isAdmin && (
+          <div className="mt-2">
+            <ButtonLink href={`/tornei/${torneo._id}/squadre`} variant="secondary">
+              ✏️ Squadre e giocatori
+            </ButtonLink>
+          </div>
+        )}
       </div>
 
+      {campione && (
+        <Card className="border-2 border-amber-400 text-center">
+          <p className="text-xs font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-400">Vincitore</p>
+          <p className="text-xl font-bold">🏆 {nomeSquadra.get(campione)}</p>
+        </Card>
+      )}
+
+      {eliminazione && (
+        <section className="space-y-2">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">Tabellone</h2>
+          <div className="-mx-4 overflow-x-auto px-4 pb-2">
+            <div className="flex gap-3">
+              {tab.map((incroci, t) => (
+                <div key={t} className="flex w-56 shrink-0 flex-col justify-around gap-3">
+                  <p className="text-center text-xs font-semibold uppercase tracking-wide text-zinc-500">{nomeTurno(t + 1, tab.length)}</p>
+                  {incroci.map((inc) => (
+                    <IncrocioCard key={inc.posizione} inc={inc} nome={nomeSquadra} colore={colore} />
+                  ))}
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {!eliminazione && (
       <section className="space-y-2">
         <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">Classifica</h2>
         <Card className="overflow-x-auto p-0">
@@ -95,6 +139,7 @@ async function Torneo({ params }: { params: Promise<{ id: string }> }) {
           </table>
         </Card>
       </section>
+      )}
 
       {marcatori.length > 0 && (
         <section className="space-y-2">
@@ -117,6 +162,7 @@ async function Torneo({ params }: { params: Promise<{ id: string }> }) {
         </section>
       )}
 
+      {!eliminazione && (
       <section className="space-y-2">
         <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">Giornate</h2>
         {[...perGiornata].map(([turno, ms]) => (
@@ -148,6 +194,7 @@ async function Torneo({ params }: { params: Promise<{ id: string }> }) {
           </Card>
         ))}
       </section>
+      )}
 
       {me.isAdmin && (
         <form action={eliminaTorneo.bind(null, torneo._id)} className="text-center">
@@ -161,5 +208,43 @@ async function Torneo({ params }: { params: Promise<{ id: string }> }) {
         </form>
       )}
     </div>
+  )
+}
+
+// Un incrocio del tabellone: le due squadre (o chi deve ancora arrivare), il risultato e chi passa.
+function IncrocioCard({ inc, nome, colore }: { inc: Incrocio<Match>; nome: Map<string, string>; colore: Map<string, string | undefined> }) {
+  const m = inc.partita
+  const riga = (chiave: string | undefined, gol: number | undefined) => (
+    <div className={`flex items-center justify-between gap-2 px-3 py-1.5 text-sm ${chiave && inc.vincitore === chiave ? 'font-bold' : ''}`}>
+      <span className="flex min-w-0 items-center gap-1.5">
+        <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: chiave ? colore.get(chiave) : '#d4d4d8' }} />
+        <span className={`truncate ${chiave ? '' : 'italic text-zinc-400'}`}>{chiave ? nome.get(chiave) : inc.bye ? '—' : 'da decidere'}</span>
+      </span>
+      {gol != null && <span className="tabular-nums">{gol}</span>}
+    </div>
+  )
+  const giocata = m?.stato === 'giocata' && m.risultato?.golA != null
+  const contenuto = (
+    <>
+      {riga(inc.a, giocata ? m!.risultato!.golA : undefined)}
+      <div className="border-t border-zinc-100 dark:border-zinc-800" />
+      {riga(inc.b, giocata ? m!.risultato!.golB : undefined)}
+      <p className="border-t border-zinc-100 px-3 py-1 text-[11px] capitalize text-zinc-500 dark:border-zinc-800">
+        {inc.bye
+          ? 'passa direttamente'
+          : giocata && m!.risultato!.golA === m!.risultato!.golB
+            ? `pareggio · passa ${nome.get(inc.vincitore ?? '') ?? '?'}`
+            : m
+              ? formatData(m.data, breve)
+              : 'in attesa dei risultati'}
+      </p>
+    </>
+  )
+  return m ? (
+    <Link href={`/partite/${m._id}`} className="block overflow-hidden rounded-xl border border-zinc-200 bg-white hover:border-green-600 dark:border-zinc-800 dark:bg-zinc-900">
+      {contenuto}
+    </Link>
+  ) : (
+    <div className="overflow-hidden rounded-xl border border-dashed border-zinc-300 bg-white/60 dark:border-zinc-700 dark:bg-zinc-900/60">{contenuto}</div>
   )
 }

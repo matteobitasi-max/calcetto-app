@@ -31,13 +31,19 @@ export function RisultatoEditor({
   golIniziali,
   autogolIniziali,
   mvpIniziale,
+  tabellone = false,
+  passaIniziale,
 }: {
   action: (prev: FormState, fd: FormData) => Promise<FormState>
   squadre: [Squadra, Squadra]
   golIniziali: Record<string, number>
   autogolIniziali: { A: number; B: number }
   mvpIniziale?: string
+  /** Partita di un tabellone: col pareggio si sceglie chi passa il turno. */
+  tabellone?: boolean
+  passaIniziale?: 'A' | 'B'
 }) {
+  const [passa, setPassa] = useState(passaIniziale ?? '')
   const [gol, setGol] = useState(golIniziali)
   const [autogol, setAutogol] = useState(autogolIniziali)
   const [mvp, setMvp] = useState(mvpIniziale ?? '')
@@ -104,6 +110,25 @@ export function RisultatoEditor({
           'Tocca il 🫑 accanto a un giocatore per sceglierlo come MVP.'
         )}
       </p>
+
+      {tabellone && punteggio(a) === punteggio(b) && (
+        <div className="space-y-2 rounded-xl bg-amber-50 p-3 dark:bg-amber-950">
+          <p className="text-sm font-semibold text-amber-900 dark:text-amber-200">Pareggio: chi passa il turno (es. ai rigori)?</p>
+          <div className="grid grid-cols-2 gap-2">
+            {squadre.map((s) => (
+              <label
+                key={s.chiave}
+                className={`cursor-pointer rounded-lg border-2 px-3 py-2 text-center text-sm font-semibold ${
+                  passa === s.chiave ? 'border-green-600 bg-white dark:bg-zinc-900' : 'border-transparent bg-white/60 dark:bg-zinc-900/60'
+                }`}
+              >
+                <input type="radio" name="passa" value={s.chiave} checked={passa === s.chiave} onChange={() => setPassa(s.chiave)} className="sr-only" />
+                {s.nome}
+              </label>
+            ))}
+          </div>
+        </div>
+      )}
 
       <SubmitButton className={`${buttonClass('primary')} w-full`} pendingText="Salvo…">
         Salva risultato

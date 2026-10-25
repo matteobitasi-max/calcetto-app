@@ -9,7 +9,8 @@ export type Torneo = {
   _id: string
   legaId: string
   nome: string
-  formato: 'girone'
+  formato: 'girone' | 'eliminazione'
+  calendario?: { inizio: string; ogniGiorni: number; durataMinuti: number; luogo: string }
   andataRitorno: boolean
   puntiVittoria: number
   puntiPareggio: number
@@ -19,7 +20,7 @@ export type Torneo = {
   giocate: number
 }
 
-const torneoFields = `_id, "legaId": lega._ref, nome, "formato": coalesce(formato, "girone"), "andataRitorno": coalesce(andataRitorno, false),
+const torneoFields = `_id, "legaId": lega._ref, nome, "formato": coalesce(formato, "girone"), "andataRitorno": coalesce(andataRitorno, false), calendario,
   "puntiVittoria": coalesce(puntiVittoria, 3), "puntiPareggio": coalesce(puntiPareggio, 1), _createdAt,
   "squadre": coalesce(squadre[]{_key, nome, colore, "giocatori": coalesce(giocatori[]->{_id, nome, cognome, soprannome, foto}, [])}, []),
   "partite": count(*[_type == "match" && torneo._ref == ^._id]),

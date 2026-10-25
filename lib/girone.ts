@@ -66,4 +66,12 @@ export const SQUADRE_PREDEFINITE = [
   { nome: 'Bianchi', colore: '#a1a1aa' },
   { nome: 'Arancioni', colore: '#ea580c' },
   { nome: 'Viola', colore: '#9333ea' },
+  { nome: 'Celesti', colore: '#38bdf8' },
+  { nome: 'Rosa', colore: '#ec4899' },
+  { nome: 'Granata', colore: '#7f1d1d' },
+  { nome: 'Grigi', colore: '#6b7280' },
+  { nome: 'Turchesi', colore: '#14b8a6' },
+  { nome: 'Lime', colore: '#84cc16' },
+  { nome: 'Marroni', colore: '#92400e' },
+  { nome: 'Oro', colore: '#ca8a04' },
 ]

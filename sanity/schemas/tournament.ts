@@ -13,7 +13,24 @@ export const tournament = defineType({
       title: 'Formato',
       type: 'string',
       initialValue: 'girone',
-      options: { list: [{ title: "Girone all'italiana", value: 'girone' }] },
+      options: {
+        list: [
+          { title: "Girone all'italiana", value: 'girone' },
+          { title: 'Eliminazione diretta (tabellone)', value: 'eliminazione' },
+        ],
+      },
+    }),
+    defineField({
+      name: 'calendario',
+      title: 'Calendario',
+      description: 'Per programmare i turni successivi del tabellone',
+      type: 'object',
+      fields: [
+        defineField({ name: 'inizio', title: 'Prima giornata (ora italiana)', type: 'string' }),
+        defineField({ name: 'ogniGiorni', title: 'Giorni tra un turno e l’altro', type: 'number' }),
+        defineField({ name: 'durataMinuti', title: 'Durata partita (minuti)', type: 'number' }),
+        defineField({ name: 'luogo', title: 'Campo / luogo', type: 'string' }),
+      ],
     }),
     defineField({ name: 'andataRitorno', title: 'Andata e ritorno', type: 'boolean', initialValue: false }),
     defineField({ name: 'puntiVittoria', title: 'Punti per vittoria', type: 'number', initialValue: 3 }),
