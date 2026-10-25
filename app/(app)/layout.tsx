@@ -61,7 +61,12 @@ async function LegaEUtente() {
       </>
     )
   }
-  const voce = (m: (typeof leghe)[number]) => ({ id: m.lega._id, nome: m.lega.nome, logo: avatarUrl(m.lega.logo, 64) })
+  const voce = (m: (typeof leghe)[number]) => ({
+    id: m.lega._id,
+    nome: m.lega.nome,
+    logo: avatarUrl(m.lega.logo, 64),
+    organizzatore: !!m.isAdmin && !m.ospite,
+  })
   return (
     <>
       <LegaZoom

@@ -2,21 +2,9 @@
 
 import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState, useTransition } from 'react'
-import { Stemma } from '@/components/lega-menu'
+import { Capitano, Stemma } from '@/components/lega-menu'
 
 export type VoceFiltro = { id: string; nome: string; logo: string | null; organizzatore: boolean }
-
-// "C" accanto alle leghe in cui sono organizzatore.
-function Capitano() {
-  return (
-    <span
-      title="Sei organizzatore"
-      className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-amber-400 text-[11px] font-bold text-zinc-900"
-    >
-      C
-    </span>
-  )
-}
 
 // Menu in cima al calendario: tutte le mie leghe (predefinito) o una sola, con logo e "C" se organizzo.
 export function FiltroLega({ leghe, scelta, mese }: { leghe: VoceFiltro[]; scelta: string; mese: string }) {

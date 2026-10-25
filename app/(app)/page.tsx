@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { Suspense, type ReactNode } from 'react'
 import { redirect } from 'next/navigation'
-import { getCurrentPlayer, type Player } from '@/lib/player'
+import { getCurrentPlayer, getMemberships, type Player } from '@/lib/player'
 import { finestra, formatoInCorso, getPastMatches, getUpcomingMatches, ordinati, presenti, type Match } from '@/lib/matches'
 import { formatData, giornoPartita, oraPartita } from '@/lib/dates'
 import { assicuraRicorrenze } from '@/lib/series'
@@ -25,7 +25,7 @@ export default function Home() {
 const breve = { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' } as const
 
 async function Partite() {
-  const player = await getCurrentPlayer()
+  const [player, mie] = await Promise.all([getCurrentPlayer(), getMemberships()])
   // Nessuna lega: si sceglie se crearne una o entrare con un invito.
   if (!player) redirect('/benvenuto')
 
@@ -41,7 +41,8 @@ async function Partite() {
     <div className="space-y-6 pb-16">
       <NotificheToggle variant="banner" />
 
-      {player.isAdmin && <PillNuovaPartita />}
+      {/* Anche nelle leghe in cui gioco soltanto, se ne organizzo almeno una: la lega si sceglie dopo */}
+      {(player.isAdmin || mie.some((m) => m.isAdmin)) && <PillNuovaPartita />}
       {(player.isAdmin || player.badge === 'capitano') && <ScriviSquadra />}
 
       {/* In alto: la prossima partita con il conto alla rovescia delle convocazioni */}

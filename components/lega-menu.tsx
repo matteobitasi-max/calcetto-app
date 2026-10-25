@@ -4,7 +4,20 @@ import Link from 'next/link'
 import { useEffect, useRef, useState, useTransition } from 'react'
 import { scegliLega } from '@/app/actions'
 
-export type LegaVoce = { id: string; nome: string; logo: string | null }
+/** `organizzatore`: sono organizzatore di questa lega (mostra la "C"). */
+export type LegaVoce = { id: string; nome: string; logo: string | null; organizzatore?: boolean }
+
+// "C" accanto alle leghe in cui sono organizzatore.
+export function Capitano() {
+  return (
+    <span
+      title="Sei organizzatore"
+      className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-amber-400 text-[11px] font-bold text-zinc-900"
+    >
+      C
+    </span>
+  )
+}
 
 export function Stemma({ lega, size = 28 }: { lega: Pick<LegaVoce, 'nome' | 'logo'>; size?: number }) {
   return lega.logo ? (
@@ -64,6 +77,7 @@ export function LegaMenu({
         aria-expanded={open}
       >
         <span className="truncate font-semibold">{pending ? 'Cambio lega…' : corrente.nome}</span>
+        {!pending && corrente.organizzatore && <Capitano />}
         <span className="text-xs text-zinc-500" aria-hidden>
           ▾
         </span>
@@ -91,7 +105,8 @@ export function LegaMenu({
                   }}
                 >
                   <Stemma lega={l} size={24} />
-                  <span className="truncate">{l.nome}</span>
+                  <span className="min-w-0 flex-1 truncate">{l.nome}</span>
+                  {l.organizzatore && <Capitano />}
                 </button>
               ))}
               <hr className="my-2 border-zinc-200 dark:border-zinc-800" />
