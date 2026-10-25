@@ -25,6 +25,7 @@ export function TorneoForm({ legaId, rosa, inizio }: { legaId: string; rosa: Gio
   const [andataRitorno, setAndataRitorno] = useState(false)
   const [ogniGiorni, setOgniGiorni] = useState(7)
   const [nomi, setNomi] = useState(SQUADRE_PREDEFINITE.map((s) => s.nome))
+  const [foto, setFoto] = useState<(string | null)[]>([])
 
   const massimo = Math.min(SQUADRE_PREDEFINITE.length, rosa.length)
   const calendario = giornate(numSquadre, andataRitorno)
@@ -77,13 +78,18 @@ export function TorneoForm({ legaId, rosa, inizio }: { legaId: string; rosa: Gio
 
       <Card className="space-y-3">
         <h2 className="font-semibold">Squadre e giocatori</h2>
-        <SquadreEditor rosa={rosa} numSquadre={numSquadre} onNomi={setNomi} />
+        <SquadreEditor
+          rosa={rosa}
+          numSquadre={numSquadre}
+          onNomi={setNomi}
+          onFoto={(i, url) => setFoto((v) => Object.assign([...v], { [i]: url }))}
+        />
       </Card>
 
       {formato === 'eliminazione' && (
         <Card className="space-y-3">
           <h2 className="font-semibold">Tabellone</h2>
-          <PrimoTurnoEditor key={numSquadre} numSquadre={numSquadre} nomi={nomi} />
+          <PrimoTurnoEditor key={numSquadre} numSquadre={numSquadre} nomi={nomi} foto={foto} />
         </Card>
       )}
 

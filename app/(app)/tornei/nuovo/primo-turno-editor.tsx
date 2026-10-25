@@ -4,115 +4,73 @@ import { useRef, useState } from 'react'
 import { SQUADRE_PREDEFINITE } from '@/lib/girone'
 import { dimensioneTabellone, nomeTurno, ordineTeste, turniTabellone } from '@/lib/tabellone'
 
-// Posti del primo turno: indice della squadra, -1 = vuoto (chi è accanto passa direttamente).
-const teste = (n: number) => ordineTeste(dimensioneTabellone(n)).map((t) => (t < n ? t : -1))
+// Posti del primo turno, dall'alto in basso: indice della squadra o numero negativo = posto vuoto
+// (chi è accanto passa direttamente; -1, -2, … così ogni vuoto resta lo stesso mentre lo si sposta).
+// Due posti consecutivi (1°-2°, 3°-4°, …) sono un incrocio.
+const numeraVuoti = (posti: number[]) => {
+  let k = 0
+  return posti.map((v) => (v < 0 ? -++k : v))
+}
+const teste = (n: number) => numeraVuoti(ordineTeste(dimensioneTabellone(n)).map((t) => (t < n ? t : -1)))
 
 function mescola(n: number) {
   const dim = dimensioneTabellone(n)
-  // prima i posti vuoti, uno per incrocio (mai due vuoti insieme), poi le squadre a caso negli altri posti
+  // un posto vuoto in incroci diversi (mai due vuoti insieme), le squadre a caso negli altri
   const incroci = Array.from({ length: dim / 2 }, (_, i) => i).sort(() => Math.random() - 0.5)
   const posti = Array<number>(dim).fill(-2)
   incroci.slice(0, dim - n).forEach((p) => (posti[2 * p + (Math.random() < 0.5 ? 0 : 1)] = -1))
   const squadre = Array.from({ length: n }, (_, i) => i).sort(() => Math.random() - 0.5)
-  return posti.map((v) => (v === -1 ? -1 : squadre.pop()!))
+  return numeraVuoti(posti.map((v) => (v === -1 ? -1 : squadre.pop()!)))
 }
 
 const valido = (posti: number[]) => posti.every((_, i) => i % 2 || posti[i] >= 0 || posti[i + 1] >= 0)
 
-// Il primo turno del tabellone: si trascinano le squadre (o si tocca una e poi l'altra) per scambiarle.
-// "Sorteggia" le mescola a caso; si possono comunque spostare dopo. Invia `primoTurno` (JSON).
+// Spostamento minimo del dito (px) prima che parta il trascinamento: un tocco o un tremolio non sposta niente.
+const SOGLIA = 10
+
+// Il primo turno come lista da riordinare col dito: si trascina dalla maniglia ⠿ e le altre squadre si spostano.
+// Le squadre sono quelle scelte sopra (nomi e foto). Invia `primoTurno` (JSON).
 // Va montato con key={numSquadre}: cambiando il numero di squadre si riparte dalle teste di serie.
-export function PrimoTurnoEditor({ numSquadre, nomi }: { numSquadre: number; nomi: string[] }) {
+export function PrimoTurnoEditor({ numSquadre, nomi, foto }: { numSquadre: number; nomi: string[]; foto: (string | null)[] }) {
   const [posti, setPosti] = useState(() => teste(numSquadre))
-  const [scelto, setScelto] = useState<number | null>(null)
-  // trascinamento in corso: da quale posto, dove è partito il dito e dove si trova; `mosso` dopo qualche pixel
-  const [trascino, setTrascino] = useState<{ da: number; x0: number; y0: number; x: number; y: number; mosso: boolean } | null>(null)
-  const appenaTrascinato = useRef(false)
-
-  const scambia = (a: number, b: number) => {
-    if (a === b) return
-    setPosti((v) => {
-      const nuovo = [...v]
-      ;[nuovo[a], nuovo[b]] = [nuovo[b], nuovo[a]]
-      return nuovo
-    })
-  }
-
-  const postoSotto = (x: number, y: number) => {
-    const el = document.elementFromPoint(x, y)?.closest<HTMLElement>('[data-posto]')
-    return el ? Number(el.dataset.posto) : null
-  }
+  // trascinamento: posto attuale dell'elemento, da dove è partito il dito, se ha superato la soglia
+  const [trascino, setTrascino] = useState<{ indice: number; y0: number; attivo: boolean } | null>(null)
+  const lista = useRef<HTMLOListElement>(null)
 
   const turni = turniTabellone(numSquadre)
   const ok = valido(posti)
 
-  const posto = (i: number) => {
-    const sq = posti[i]
-    const colore = sq >= 0 ? SQUADRE_PREDEFINITE[sq]?.colore : undefined
-    const attivo = scelto === i || (trascino?.mosso && trascino.da === i)
-    return (
-      <div
-        key={i}
-        data-posto={i}
-        onClick={() => {
-          if (appenaTrascinato.current) {
-            appenaTrascinato.current = false
-            return
-          }
-          // tocco: il primo sceglie, il secondo scambia
-          if (scelto == null) setScelto(posti[i] >= 0 ? i : null)
-          else {
-            scambia(scelto, i)
-            setScelto(null)
-          }
-        }}
-        onPointerDown={(e) => {
-          appenaTrascinato.current = false
-          if (posti[i] < 0) return
-          ;(e.target as HTMLElement).setPointerCapture?.(e.pointerId)
-          setTrascino({ da: i, x0: e.clientX, y0: e.clientY, x: e.clientX, y: e.clientY, mosso: false })
-        }}
-        onPointerMove={(e) => {
-          if (trascino?.da !== i) return
-          const mosso = trascino.mosso || Math.hypot(e.clientX - trascino.x0, e.clientY - trascino.y0) > 8
-          setTrascino({ ...trascino, x: e.clientX, y: e.clientY, mosso })
-        }}
-        onPointerUp={(e) => {
-          if (trascino?.da !== i) return
-          setTrascino(null)
-          if (!trascino.mosso) return // era un tocco: ci pensa onClick
-          appenaTrascinato.current = true
-          const dove = postoSotto(e.clientX, e.clientY)
-          if (dove != null && dove !== i) scambia(i, dove)
-          setScelto(null)
-        }}
-        onPointerCancel={() => setTrascino(null)}
-        className={`flex touch-none select-none items-center gap-2 px-3 py-2 text-sm ${sq >= 0 ? 'cursor-grab' : ''} ${
-          attivo ? 'bg-green-100 ring-2 ring-inset ring-green-600 dark:bg-green-950' : ''
-        }`}
-      >
-        {sq >= 0 ? (
-          <>
-            <span className="text-zinc-400" aria-hidden>
-              ⠿
-            </span>
-            <span className="h-3 w-3 shrink-0 rounded-full" style={{ background: colore }} />
-            <span className="truncate font-medium">{nomi[sq] || SQUADRE_PREDEFINITE[sq]?.nome}</span>
-          </>
-        ) : (
-          <span className="italic text-zinc-400">— passa chi è sopra/sotto</span>
-        )}
-      </div>
-    )
+  // Il posto sotto il dito: quello col centro più vicino.
+  const postoA = (y: number) => {
+    const righe = [...(lista.current?.querySelectorAll<HTMLElement>('[data-riga]') ?? [])]
+    let migliore = 0
+    let distanza = Infinity
+    righe.forEach((r, i) => {
+      const box = r.getBoundingClientRect()
+      const d = Math.abs(box.top + box.height / 2 - y)
+      if (d < distanza) {
+        distanza = d
+        migliore = i
+      }
+    })
+    return migliore
   }
+
+  const sposta = (da: number, a: number) =>
+    setPosti((v) => {
+      const nuovo = [...v]
+      const [x] = nuovo.splice(da, 1)
+      nuovo.splice(a, 0, x)
+      return nuovo
+    })
+
+  const nome = (sq: number) => nomi[sq] || SQUADRE_PREDEFINITE[sq]?.nome
 
   return (
     <div className="space-y-3">
       <input type="hidden" name="primoTurno" value={JSON.stringify(posti)} />
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-xs text-zinc-500">
-          {nomeTurno(1, turni)}: trascina una squadra su un&apos;altra per scambiarle (o tocca una e poi l&apos;altra).
-        </p>
+        <p className="text-xs text-zinc-500">{nomeTurno(1, turni)}: trascina dalla maniglia ⠿ per cambiare gli incroci.</p>
         <div className="flex gap-2">
           <button
             type="button"
@@ -130,30 +88,77 @@ export function PrimoTurnoEditor({ numSquadre, nomi }: { numSquadre: number; nom
           </button>
         </div>
       </div>
-      <div className="grid gap-2 sm:grid-cols-2">
-        {Array.from({ length: posti.length / 2 }, (_, p) => (
-          <div
-            key={p}
-            className={`divide-y overflow-hidden rounded-xl border ${
-              posti[2 * p] < 0 && posti[2 * p + 1] < 0
-                ? 'divide-red-200 border-red-400'
-                : 'divide-zinc-100 border-zinc-200 dark:divide-zinc-800 dark:border-zinc-800'
-            }`}
-          >
-            {posto(2 * p)}
-            {posto(2 * p + 1)}
-          </div>
-        ))}
-      </div>
-      {!ok && <p className="text-sm text-red-600">Un incrocio è senza squadre: sposta una squadra lì.</p>}
-      {trascino?.mosso && (
-        <div
-          className="pointer-events-none fixed z-50 -translate-x-1/2 -translate-y-1/2 rounded-full bg-green-600 px-3 py-1.5 text-sm font-semibold text-white shadow-lg"
-          style={{ left: trascino.x, top: trascino.y }}
-        >
-          {nomi[posti[trascino.da]] || SQUADRE_PREDEFINITE[posti[trascino.da]]?.nome}
-        </div>
-      )}
+
+      <ol ref={lista}>
+        {posti.map((sq, i) => {
+          const inizioIncrocio = i % 2 === 0
+          const primo = i - (i % 2)
+          const incrocioVuoto = posti[primo] < 0 && posti[primo + 1] < 0
+          const trascinato = trascino?.attivo && trascino.indice === i
+          return (
+            <li key={sq} className={inizioIncrocio && i > 0 ? 'pt-3' : ''}>
+              {inizioIncrocio && (
+                <p className={`px-1 pb-1 text-[11px] font-semibold uppercase tracking-wide ${incrocioVuoto ? 'text-red-600' : 'text-zinc-400'}`}>
+                  Incrocio {i / 2 + 1}
+                </p>
+              )}
+              <div
+                data-riga
+                className={`flex items-center gap-3 border bg-white px-2 py-2 transition-shadow dark:bg-zinc-900 ${
+                  inizioIncrocio ? 'rounded-t-xl' : '-mt-px rounded-b-xl'
+                } ${
+                  trascinato
+                    ? 'relative z-10 border-green-600 shadow-lg'
+                    : incrocioVuoto
+                      ? 'border-red-300 dark:border-red-800'
+                      : 'border-zinc-200 dark:border-zinc-800'
+                }`}
+              >
+                <span
+                  role="button"
+                  tabIndex={0}
+                  aria-label={sq >= 0 ? `Sposta ${nome(sq)}` : 'Sposta il posto vuoto'}
+                  onPointerDown={(e) => {
+                    e.currentTarget.setPointerCapture(e.pointerId)
+                    setTrascino({ indice: i, y0: e.clientY, attivo: false })
+                  }}
+                  onPointerMove={(e) => {
+                    if (!trascino) return
+                    if (!trascino.attivo && Math.abs(e.clientY - trascino.y0) < SOGLIA) return
+                    const dove = postoA(e.clientY)
+                    if (dove !== trascino.indice) sposta(trascino.indice, dove)
+                    setTrascino({ ...trascino, indice: dove, attivo: true })
+                  }}
+                  onPointerUp={() => setTrascino(null)}
+                  onPointerCancel={() => setTrascino(null)}
+                  onKeyDown={(e) => {
+                    // da tastiera: frecce su/giù
+                    if (e.key === 'ArrowUp' && i > 0) sposta(i, i - 1)
+                    if (e.key === 'ArrowDown' && i < posti.length - 1) sposta(i, i + 1)
+                  }}
+                  className="flex h-10 w-9 shrink-0 cursor-grab touch-none select-none items-center justify-center rounded-lg text-xl text-zinc-400 hover:bg-zinc-100 active:cursor-grabbing dark:hover:bg-zinc-800"
+                >
+                  ⠿
+                </span>
+                {sq >= 0 ? (
+                  <>
+                    {foto[sq] ? (
+                      // eslint-disable-next-line @next/next/no-img-element -- anteprima locale o miniatura del CDN
+                      <img src={foto[sq]!} alt="" className="h-8 w-8 shrink-0 rounded-full object-cover" />
+                    ) : (
+                      <span className="mx-2 h-4 w-4 shrink-0 rounded-full" style={{ background: SQUADRE_PREDEFINITE[sq]?.colore }} />
+                    )}
+                    <span className="min-w-0 flex-1 truncate font-medium">{nome(sq)}</span>
+                  </>
+                ) : (
+                  <span className="flex-1 text-sm italic text-zinc-400">Posto vuoto · l&apos;altra squadra passa direttamente</span>
+                )}
+              </div>
+            </li>
+          )
+        })}
+      </ol>
+      {!ok && <p className="text-sm text-red-600">Un incrocio è senza squadre: trascina lì una squadra.</p>}
     </div>
   )
 }

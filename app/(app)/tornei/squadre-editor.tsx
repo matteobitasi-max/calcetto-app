@@ -7,7 +7,19 @@ import { SQUADRE_PREDEFINITE } from '@/lib/girone'
 export type GiocatoreRosa = { id: string; nome: string; forza: number; ruolo?: string }
 
 // Foto della squadra: si scatta o si sceglie, e parte con il modulo nel campo `name` (già rimpicciolita).
-function FotoSquadra({ name, attuale, colore, nome }: { name: string; attuale?: string | null; colore: string; nome: string }) {
+function FotoSquadra({
+  name,
+  attuale,
+  colore,
+  nome,
+  onAnteprima,
+}: {
+  name: string
+  attuale?: string | null
+  colore: string
+  nome: string
+  onAnteprima?: (url: string) => void
+}) {
   const input = useRef<HTMLInputElement>(null)
   const [anteprima, setAnteprima] = useState(attuale ?? null)
   const scelta = useSceltaFoto({
@@ -17,7 +29,9 @@ function FotoSquadra({ name, attuale, colore, nome }: { name: string; attuale?: 
       dt.items.add(foto)
       input.current!.files = dt.files
       input.current!.dispatchEvent(new Event('change', { bubbles: true }))
-      setAnteprima(URL.createObjectURL(foto))
+      const url = URL.createObjectURL(foto)
+      setAnteprima(url)
+      onAnteprima?.(url)
     },
   })
   return (
@@ -48,6 +62,7 @@ export function SquadreEditor({
   fotoIniziali = [],
   squadraIniziale = {},
   onNomi,
+  onFoto,
 }: {
   rosa: GiocatoreRosa[]
   numSquadre: number
@@ -58,6 +73,8 @@ export function SquadreEditor({
   squadraIniziale?: Record<string, string>
   /** Avvisa quando cambiano i nomi delle squadre (per l'anteprima del tabellone). */
   onNomi?: (nomi: string[]) => void
+  /** Avvisa quando si sceglie la foto di una squadra (anteprima). */
+  onFoto?: (squadra: number, url: string) => void
 }) {
   const [nomi, setNomi] = useState(() => SQUADRE_PREDEFINITE.map((s, i) => nomiIniziali[i] ?? s.nome))
   const [squadraDi, setSquadraDi] = useState<Record<string, string>>(squadraIniziale)
@@ -128,7 +145,13 @@ export function SquadreEditor({
           return (
             <div key={i} className="rounded-xl border border-zinc-200 p-3 dark:border-zinc-800" style={{ borderTop: `4px solid ${colore(i)}` }}>
               <div className="flex items-center gap-3">
-                <FotoSquadra name={`foto_${i}`} attuale={fotoIniziali[i]} colore={colore(i)} nome={nomi[i] || `squadra ${i + 1}`} />
+                <FotoSquadra
+                  name={`foto_${i}`}
+                  attuale={fotoIniziali[i]}
+                  colore={colore(i)}
+                  nome={nomi[i] || `squadra ${i + 1}`}
+                  onAnteprima={(url) => onFoto?.(i, url)}
+                />
                 <div className="min-w-0 flex-1">
                   <input
                     name={`nome_${i}`}
