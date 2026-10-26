@@ -132,14 +132,14 @@ const STILE_BADGE: Record<Badge, string> = {
   promessa: 'bg-violet-100 text-violet-800 ring-violet-300 dark:bg-violet-950 dark:text-violet-300 dark:ring-violet-800',
 }
 
-// La fascia da capitano: banda gialla con la "C".
+// La fascia da capitano: banda gialla con la "A" (come organizzatori e capitani delle squadre).
 function FasciaCapitano() {
   return (
     <svg viewBox="0 0 24 16" className="h-3 w-[18px]" aria-hidden>
       <rect x="0.5" y="1.5" width="23" height="13" rx="3" fill="#facc15" stroke="#a16207" />
       <path d="M3 1.5v13M21 1.5v13" stroke="#a16207" strokeWidth="1" />
       <text x="12" y="12" textAnchor="middle" fontSize="10" fontWeight="900" fill="#1e3a8a" fontFamily="system-ui, sans-serif">
-        C
+        A
       </text>
     </svg>
   )
