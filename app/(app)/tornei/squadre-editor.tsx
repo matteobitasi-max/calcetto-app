@@ -116,7 +116,7 @@ export function SquadreEditor({
     const capitano = sq !== '' && capitanoDi(Number(sq)) === p.id
     return (
     <li key={p.id} className="flex items-center justify-between gap-2 py-1.5">
-      <span className="flex min-w-0 items-center gap-1.5 text-sm">
+      <span className="flex min-w-0 flex-1 items-center gap-1.5 text-sm">
         {sq !== '' && (
           <button
             type="button"
@@ -138,7 +138,7 @@ export function SquadreEditor({
         value={di(p.id)}
         onChange={(e) => sposta(p.id, e.target.value)}
         aria-label={`Squadra di ${p.nome}`}
-        className="max-w-[45%] shrink-0 rounded-lg border border-zinc-200 bg-white px-2 py-1 text-xs dark:border-zinc-700 dark:bg-zinc-900"
+        className="w-28 shrink-0 truncate rounded-lg border border-zinc-200 bg-white px-2 py-1 text-xs dark:border-zinc-700 dark:bg-zinc-900"
       >
         <option value="">Fuori dal torneo</option>
         {Array.from({ length: numSquadre }, (_, i) => (
@@ -174,7 +174,8 @@ export function SquadreEditor({
           const m = membri(String(i))
           const media = m.length ? m.reduce((s, p) => s + p.forza, 0) / m.length : 0
           return (
-            <div key={i} className="rounded-xl border border-zinc-200 p-3 dark:border-zinc-800" style={{ borderTop: `4px solid ${colore(i)}` }}>
+            // min-w-0: la scheda si stringe con lo schermo invece di allargarsi col contenuto
+            <div key={i} className="min-w-0 rounded-xl border border-zinc-200 p-3 dark:border-zinc-800" style={{ borderTop: `4px solid ${colore(i)}` }}>
               <div className="flex items-center gap-3">
                 <FotoSquadra
                   name={`foto_${i}`}

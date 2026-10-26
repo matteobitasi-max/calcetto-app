@@ -34,7 +34,7 @@ export function GironiEditor({ numSquadre, numGironi, nomi, foto }: { numSquadre
         {LETTERE_GIRONI.slice(0, numGironi).map((lettera, gi) => {
           const dentro = girone.map((g, sq) => (g === gi ? sq : -1)).filter((sq) => sq >= 0)
           return (
-            <div key={lettera} className={`rounded-xl border p-3 ${dentro.length < 2 ? 'border-red-300 dark:border-red-800' : 'border-zinc-200 dark:border-zinc-800'}`}>
+            <div key={lettera} className={`min-w-0 rounded-xl border p-3 ${dentro.length < 2 ? 'border-red-300 dark:border-red-800' : 'border-zinc-200 dark:border-zinc-800'}`}>
               <p className="font-semibold">Girone {lettera}</p>
               {dentro.length < 2 && <p className="text-xs text-red-600">Servono almeno 2 squadre</p>}
               <ul className="mt-1 divide-y divide-zinc-100 dark:divide-zinc-800">
