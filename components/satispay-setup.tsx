@@ -3,6 +3,7 @@
 import jsQR from 'jsqr'
 import { useState } from 'react'
 import { inputClass } from './ui-classes'
+import { useT } from '@/components/lingua'
 
 // Legge il contenuto di un QR da un'immagine (es. lo screenshot del QR Satispay).
 async function leggiQr(file: File): Promise<string | null> {
@@ -27,6 +28,7 @@ const isLink = (s: string) => {
 
 // Link Satispay dell'organizzatore: si incolla, oppure si ricava dallo screenshot del QR.
 export function SatispaySetup({ link: linkIniziale, qrUrl }: { link?: string; qrUrl?: string | null }) {
+  const t = useT()
   const [link, setLink] = useState(linkIniziale ?? '')
   const [anteprima, setAnteprima] = useState(qrUrl ?? null)
   const [messaggio, setMessaggio] = useState<{ ok: boolean; testo: string }>()
@@ -36,10 +38,10 @@ export function SatispaySetup({ link: linkIniziale, qrUrl }: { link?: string; qr
       <div className="flex items-center gap-4">
         <div className="flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-zinc-100 text-3xl dark:bg-zinc-800">
           {/* eslint-disable-next-line @next/next/no-img-element -- anteprima locale o dal CDN di Sanity */}
-          {anteprima ? <img src={anteprima} alt="QR Satispay" className="h-full w-full object-contain" /> : '▦'}
+          {anteprima ? <img src={anteprima} alt={t('QR Satispay')} className="h-full w-full object-contain" /> : '▦'}
         </div>
         <label className="space-y-1 text-sm">
-          <span className="font-medium">Screenshot del tuo QR Satispay</span>
+          <span className="font-medium">{t('Screenshot del tuo QR Satispay')}</span>
           <input
             type="file"
             name="satispayQr"
@@ -52,24 +54,24 @@ export function SatispaySetup({ link: linkIniziale, qrUrl }: { link?: string; qr
               const letto = await leggiQr(file).catch(() => null)
               if (letto && isLink(letto)) {
                 setLink(letto)
-                setMessaggio({ ok: true, testo: 'Link letto dal QR ✓' })
+                setMessaggio({ ok: true, testo: `${t('Link letto dal QR')} ✓` })
               } else if (letto) {
-                setMessaggio({ ok: false, testo: `Il QR non contiene un link (contiene: "${letto.slice(0, 40)}"). Resterà da mostrare al campo.` })
+                setMessaggio({ ok: false, testo: t('Il QR non contiene un link (contiene: “{testo}”). Resterà da mostrare al campo.', { testo: letto.slice(0, 40) }) })
               } else {
-                setMessaggio({ ok: false, testo: 'Non riesco a leggere il QR: prova con uno screenshot più nitido, o incolla il link qui sotto.' })
+                setMessaggio({ ok: false, testo: t('Non riesco a leggere il QR: prova con uno screenshot più nitido, o incolla il link qui sotto.') })
               }
             }}
           />
           {anteprima && qrUrl && (
             <span className="flex items-center gap-2 text-zinc-500">
-              <input type="checkbox" name="rimuoviQr" className="accent-red-600" /> Rimuovi QR
+              <input type="checkbox" name="rimuoviQr" className="accent-red-600" /> {t('Rimuovi QR')}
             </span>
           )}
         </label>
       </div>
       {messaggio && <p className={`text-sm ${messaggio.ok ? 'text-green-700 dark:text-green-400' : 'text-amber-700 dark:text-amber-400'}`}>{messaggio.testo}</p>}
       <label className="block space-y-1 text-sm">
-        <span className="font-medium">Link di pagamento</span>
+        <span className="font-medium">{t('Link di pagamento')}</span>
         <input
           name="satispayLink"
           type="url"
@@ -79,7 +81,7 @@ export function SatispaySetup({ link: linkIniziale, qrUrl }: { link?: string; qr
           onChange={(e) => setLink(e.target.value)}
           className={inputClass}
         />
-        <span className="block text-xs text-zinc-500">I giocatori lo apriranno con &quot;Paga con Satispay&quot;.</span>
+        <span className="block text-xs text-zinc-500">{t('I giocatori lo apriranno con “Paga con Satispay”.')}</span>
       </label>
     </div>
   )

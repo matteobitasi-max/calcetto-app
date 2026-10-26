@@ -3,9 +3,11 @@
 import { useActionState, useState } from 'react'
 import { inviaComunicazione, type AvvisoState } from '@/app/actions'
 import { buttonClass, inputClass } from './ui-classes'
+import { useT } from '@/components/lingua'
 
 // "Scrivi alla squadra": il capitano (o un organizzatore) manda una comunicazione a tutti.
 export function ScriviSquadra() {
+  const t = useT()
   const [testo, setTesto] = useState('')
   const [inviato, setInviato] = useState('')
   const [state, invia, pending] = useActionState(async (prev: AvvisoState, fd: FormData) => {
@@ -16,12 +18,12 @@ export function ScriviSquadra() {
     }
     return r
   }, undefined)
-  const whatsapp = (t: string) => `https://wa.me/?text=${encodeURIComponent(`📢 ${t}`)}`
+  const whatsapp = (msg: string) => `https://wa.me/?text=${encodeURIComponent(`📢 ${msg}`)}`
 
   return (
     <details className="group rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
       <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-3 text-sm font-semibold [&::-webkit-details-marker]:hidden">
-        📢 Scrivi alla squadra
+        📢 {t('Scrivi alla squadra')}
         <span className="text-zinc-400 transition group-open:rotate-180" aria-hidden>
           ▾
         </span>
@@ -33,7 +35,7 @@ export function ScriviSquadra() {
           maxLength={300}
           value={testo}
           onChange={(e) => setTesto(e.target.value)}
-          placeholder="Es. Stasera portate le pettorine scure 💪"
+          placeholder={t('Es. Stasera portate le pettorine scure 💪')}
           className={inputClass}
         />
         <div className="flex items-center justify-between gap-2">
@@ -47,21 +49,23 @@ export function ScriviSquadra() {
               aria-disabled={testo.trim().length < 2}
               className={`${buttonClass('secondary')} text-green-700 dark:text-green-400 ${testo.trim().length < 2 ? 'pointer-events-none opacity-50' : ''}`}
             >
-              💬 Anche su WhatsApp
+              💬 {t('Anche su WhatsApp')}
             </a>
             <button type="submit" disabled={pending || testo.trim().length < 2} className={buttonClass('primary')}>
-              {pending ? 'Invio…' : 'Invia a tutti'}
+              {pending ? t('Invio…') : t('Invia a tutti')}
             </button>
           </span>
         </div>
         {state?.error && <p className="text-sm text-red-600">{state.error}</p>}
         {state && !state.error && (
           <p className="text-sm text-green-700 dark:text-green-400">
-            ✓ Inviata{state.totali ? ` su ${state.inviate} dispositiv${state.inviate === 1 ? 'o' : 'i'}` : ''}.
-            {!state.totali && ' Nessuno ha le notifiche attive per le comunicazioni.'}{' '}
+            ✓{' '}
+            {state.totali
+              ? t.n(state.inviate ?? 0, 'Inviata su {n} dispositivo.', 'Inviata su {n} dispositivi.')
+              : `${t('Inviata.')} ${t('Nessuno ha le notifiche attive per le comunicazioni.')}`}{' '}
             {inviato && (
               <a href={whatsapp(inviato)} target="_blank" rel="noopener noreferrer" className="font-medium underline">
-                💬 Mandalo anche su WhatsApp
+                💬 {t('Mandalo anche su WhatsApp')}
               </a>
             )}
           </p>

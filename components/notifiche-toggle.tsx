@@ -5,6 +5,7 @@ import { FirebaseMessaging } from '@capacitor-firebase/messaging'
 import { attivaNotifiche, disattivaNotifiche } from '@/app/actions'
 import { isAppNativa, registraTelefono } from './notifiche-native'
 import { buttonClass } from './ui-classes'
+import { useT } from '@/components/lingua'
 
 type Stato = 'caricamento' | 'non_supportate' | 'serve_home' | 'aggiorna_app' | 'bloccate' | 'attive' | 'spente'
 
@@ -18,6 +19,7 @@ const isStandalone = () => window.matchMedia('(display-mode: standalone)').match
 
 // "banner": compare solo se le notifiche non sono attive. "impostazione": sempre, con interruttore.
 export function NotificheToggle({ variant }: { variant: 'banner' | 'impostazione' }) {
+  const t = useT()
   const [stato, setStato] = useState<Stato>('caricamento')
   const [busy, setBusy] = useState(false)
   const [nativa, setNativa] = useState(false)
@@ -90,7 +92,7 @@ export function NotificheToggle({ variant }: { variant: 'banner' | 'impostazione
 
   if (variant === 'banner' && stato !== 'spente' && stato !== 'serve_home') return null
   if (variant === 'impostazione' && stato === 'caricamento') {
-    return <div className="rounded-xl border border-zinc-200 p-4 text-sm text-zinc-500 dark:border-zinc-800">🔔 Notifiche…</div>
+    return <div className="rounded-xl border border-zinc-200 p-4 text-sm text-zinc-500 dark:border-zinc-800">🔔 {t('Notifiche…')}</div>
   }
 
   const box = 'flex flex-wrap items-center justify-between gap-3 rounded-xl border p-4 text-sm'
@@ -98,21 +100,21 @@ export function NotificheToggle({ variant }: { variant: 'banner' | 'impostazione
     case 'spente':
       return (
         <div className={`${box} border-green-200 bg-green-50 dark:border-green-900 dark:bg-green-950`}>
-          <span>🔔 Attiva le notifiche per sapere subito quando si aprono le convocazioni.</span>
+          <span>🔔 {t('Attiva le notifiche per sapere subito quando si aprono le convocazioni.')}</span>
           <button onClick={attiva} disabled={busy} className={buttonClass('primary')}>
-            {busy ? '…' : 'Attiva notifiche'}
+            {busy ? '…' : t('Attiva notifiche')}
           </button>
         </div>
       )
     case 'attive':
       return (
         <div className={`${box} border-zinc-200 dark:border-zinc-800`}>
-          <span>🔔 Notifiche attive su questo dispositivo</span>
+          <span>🔔 {t('Notifiche attive su questo dispositivo')}</span>
           {nativa ? (
-            <span className="text-xs text-zinc-500">Per disattivarle: Impostazioni del telefono → TheCap → Notifiche</span>
+            <span className="text-xs text-zinc-500">{t('Per disattivarle: Impostazioni del telefono → TheCap → Notifiche')}</span>
           ) : (
             <button onClick={disattiva} disabled={busy} className={buttonClass('secondary')}>
-              {busy ? '…' : 'Disattiva'}
+              {busy ? '…' : t('Disattiva')}
             </button>
           )}
         </div>
@@ -120,27 +122,26 @@ export function NotificheToggle({ variant }: { variant: 'banner' | 'impostazione
     case 'aggiorna_app':
       return (
         <div className={`${box} border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-300`}>
-          🔔 Per le notifiche aggiorna l&apos;app: iPhone da TestFlight (build 3 o successiva), Android dalla versione 1.2.
+          🔔 {t('Per le notifiche aggiorna l’app dallo store.')}
         </div>
       )
     case 'serve_home':
       return (
         <div className={`${box} border-zinc-200 dark:border-zinc-800`}>
           <span>
-            🔔 Per ricevere le notifiche su iPhone: tocca <b>Condividi</b> ⎋ e poi <b>Aggiungi alla schermata Home</b>, quindi
-            apri Calcetto da lì.
+            🔔 {t('Per ricevere le notifiche su iPhone: tocca Condividi ⎋ e poi “Aggiungi alla schermata Home”, quindi apri The Cap da lì.')}
           </span>
         </div>
       )
     case 'bloccate':
       return (
         <div className={`${box} border-zinc-200 text-zinc-500 dark:border-zinc-800`}>
-          🔕 Le notifiche sono bloccate:{' '}
-          {nativa ? 'riattivale da Impostazioni del telefono → TheCap → Notifiche.' : 'riattivale dalle impostazioni del browser per questo sito.'}
+          🔕 {t('Le notifiche sono bloccate:')}{' '}
+          {nativa ? t('riattivale da Impostazioni del telefono → TheCap → Notifiche.') : t('riattivale dalle impostazioni del browser per questo sito.')}
         </div>
       )
     case 'non_supportate':
-      return <div className={`${box} border-zinc-200 text-zinc-500 dark:border-zinc-800`}>Questo browser non supporta le notifiche.</div>
+      return <div className={`${box} border-zinc-200 text-zinc-500 dark:border-zinc-800`}>{t('Questo browser non supporta le notifiche.')}</div>
     default:
       return null
   }

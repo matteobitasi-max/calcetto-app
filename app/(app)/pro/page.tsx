@@ -4,6 +4,7 @@ import { LogoC } from '@/components/logo-c'
 import { requirePlayer } from '@/lib/player'
 import { legaPro } from '@/lib/pro'
 import { ButtonLink, Card, Loading, PageTitle } from '@/components/ui'
+import { getT } from '@/lib/lingua'
 
 export default function ProPage() {
   return (
@@ -56,20 +57,20 @@ const FUNZIONI: { titolo: string; voci: [ReactNode, string][]; link?: [string, s
 
 // Cosa comprende la versione Pro, e se è attiva nella lega in cui sono.
 async function Vetrina() {
-  const me = await requirePlayer()
+  const [me, t] = await Promise.all([requirePlayer(), getT()])
   const attiva = await legaPro(me.lega._id)
   return (
     <div className="space-y-4">
       <Card className={attiva ? 'border-green-600 bg-green-50 dark:bg-green-950' : ''}>
         {attiva ? (
           <p className="text-sm font-medium text-green-900 dark:text-green-200">
-            ✅ La versione Pro è attiva in <b>{me.lega.nome}</b>: tutto quello che vedi qui sotto è già disponibile.
+            ✅ {t('La versione Pro è attiva in {lega}: tutto quello che vedi qui sotto è già disponibile.', { lega: me.lega.nome })}
           </p>
         ) : (
           <p className="text-sm">
-            In <b>{me.lega.nome}</b> la versione Pro non è ancora attiva. Arriverà presto: se vuoi provarla con la tua lega,{' '}
+            {t('In {lega} la versione Pro non è ancora attiva. Arriverà presto: se vuoi provarla con la tua lega,', { lega: me.lega.nome })}{' '}
             <Link href="/supporto" className="font-semibold text-green-700 hover:underline dark:text-green-400">
-              scrivici
+              {t('scrivici')}
             </Link>
             .
           </p>
@@ -77,18 +78,18 @@ async function Vetrina() {
       </Card>
       {FUNZIONI.map((f) => (
         <Card key={f.titolo} className="space-y-3">
-          <h2 className="font-semibold">{f.titolo}</h2>
+          <h2 className="font-semibold">{t(f.titolo)}</h2>
           <ul className="space-y-2 text-sm text-zinc-600 dark:text-zinc-300">
             {f.voci.map(([icona, testo]) => (
               <li key={testo} className="flex gap-2">
                 <span className="flex w-6 shrink-0 justify-center">{icona}</span>
-                <span>{testo}</span>
+                <span>{t(testo)}</span>
               </li>
             ))}
           </ul>
           {attiva && f.link && (
             <ButtonLink href={f.link[0]} variant="secondary">
-              {f.link[1]} ›
+              {t(f.link[1])} ›
             </ButtonLink>
           )}
         </Card>

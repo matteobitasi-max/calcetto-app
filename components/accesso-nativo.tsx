@@ -6,6 +6,7 @@ import { Capacitor } from '@capacitor/core'
 import { SignIn } from '@clerk/nextjs'
 import { useEffect, useState } from 'react'
 import { SchermataUsaApp, browserDelTelefono } from './usa-app'
+import { useT } from '@/components/lingua'
 
 // Nelle app con il plugin Browser l'accesso si fa in una finestra del browser sopra l'app
 // (Google e Apple non lo permettono dentro l'app); le versioni vecchie usano ancora SignIn.
@@ -14,6 +15,7 @@ const accessoNelBrowser = () => Capacitor.isNativePlatform() && Capacitor.isPlug
 // La pagina di accesso: nell'app il pulsante "Accedi" (finestra del browser), dal browser del
 // telefono l'invito ad aprire l'app, dal computer (o di ritorno con il codice) il login di Clerk.
 export function AccessoNativo() {
+  const t = useT()
   const [modo, setModo] = useState<'app' | 'telefono' | 'clerk' | null>(null)
   const [aperto, setAperto] = useState(false)
 
@@ -40,12 +42,12 @@ export function AccessoNativo() {
         onClick={apri}
         className="w-full rounded-xl bg-green-600 px-6 py-4 text-lg font-semibold text-white shadow hover:bg-green-700"
       >
-        Accedi
+        {t('Accedi')}
       </button>
       <p className="text-sm text-zinc-500">
         {aperto
-          ? 'Completa l’accesso nella finestra che si è aperta: poi torni qui da solo.'
-          : 'Con Google, Apple o email. Si apre una finestra sicura del browser.'}
+          ? t('Completa l’accesso nella finestra che si è aperta: poi torni qui da solo.')
+          : t('Con Google, Apple o email. Si apre una finestra sicura del browser.')}
       </p>
     </div>
   )

@@ -11,12 +11,14 @@ import { ActionForm } from '@/components/action-form'
 import { PillSalva } from '@/components/pill-salva'
 import { Card, Field, Loading, PageTitle, inputClass } from '@/components/ui'
 import { SquadreEditor } from '../../squadre-editor'
+import { getT } from '@/lib/lingua'
 
 // L'organizzatore rinomina le squadre e sposta i giocatori: vale per le partite non ancora giocate.
-export default function SquadreTorneoPage({ params }: PageProps<'/tornei/[id]/squadre'>) {
+export default async function SquadreTorneoPage({ params }: PageProps<'/tornei/[id]/squadre'>) {
+  const t = await getT()
   return (
     <>
-      <PageTitle>Squadre del torneo</PageTitle>
+      <PageTitle>{t('Squadre del torneo')}</PageTitle>
       <Suspense fallback={<Loading />}>
         <Editor params={params} />
       </Suspense>
@@ -28,7 +30,7 @@ async function Editor({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const torneo = await getTorneo(id)
   if (!torneo) notFound()
-  await requireIn(torneo.legaId, 'organizzatore')
+  const [, t] = await Promise.all([requireIn(torneo.legaId, 'organizzatore'), getT()])
   if (!(await puoCreareTornei())) notFound()
 
   const nelTorneo = new Set(torneo.squadre.flatMap((s) => s.giocatori.map((g) => g._id)))
@@ -43,13 +45,13 @@ async function Editor({ params }: { params: Promise<{ id: string }> }) {
         ← {torneo.nome}
       </Link>
       <p className="text-sm text-zinc-500">
-        Le modifiche valgono per le partite ancora da giocare; quelle già giocate restano come sono.
-        {torneo.giocate > 0 && ` (${torneo.giocate} già giocat${torneo.giocate === 1 ? 'a' : 'e'})`}
+        {t('Le modifiche valgono per le partite ancora da giocare; quelle già giocate restano come sono.')}
+        {torneo.giocate > 0 && ` (${t.n(torneo.giocate, '{n} già giocata', '{n} già giocate')})`}
       </p>
       <ActionForm action={salvaSquadreTorneo.bind(null, torneo._id)} className="pb-20">
         <Card className="space-y-4">
-          <Field label="Giocatori massimi per squadra (facoltativo)">
-            <input name="maxGiocatori" type="number" min={1} max={50} defaultValue={torneo.maxGiocatori} placeholder="Nessun limite" className={inputClass} />
+          <Field label={t('Giocatori massimi per squadra (facoltativo)')}>
+            <input name="maxGiocatori" type="number" min={1} max={50} defaultValue={torneo.maxGiocatori} placeholder={t('Nessun limite')} className={inputClass} />
           </Field>
           <SquadreEditor
             rosa={rosa}
@@ -61,7 +63,7 @@ async function Editor({ params }: { params: Promise<{ id: string }> }) {
             squadraIniziale={squadraIniziale}
           />
         </Card>
-        <PillSalva label="Salva squadre" />
+        <PillSalva label={t('Salva squadre')} />
       </ActionForm>
     </div>
   )

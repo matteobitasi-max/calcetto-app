@@ -5,19 +5,21 @@ import type { FormState } from '@/app/actions'
 import { ActionForm } from '@/components/action-form'
 import { SubmitButton } from '@/components/submit-button'
 import { buttonClass } from '@/components/ui-classes'
+import { useT } from '@/components/lingua'
 
 export type Giocatore = { id: string; nome: string; foto: string | null; iniziali: string }
 type Squadra = { chiave: 'A' | 'B'; nome: string; colore: string; giocatori: Giocatore[] }
 
 function Stepper({ value, onChange, label }: { value: number; onChange: (n: number) => void; label: string }) {
+  const t = useT()
   const btn = 'h-8 w-8 rounded-full border border-zinc-300 text-lg leading-none hover:bg-zinc-100 disabled:opacity-30 dark:border-zinc-700 dark:hover:bg-zinc-800'
   return (
     <div className="flex items-center gap-2" aria-label={label}>
-      <button type="button" className={btn} disabled={value === 0} onClick={() => onChange(value - 1)} aria-label={`Togli un gol a ${label}`}>
+      <button type="button" className={btn} disabled={value === 0} onClick={() => onChange(value - 1)} aria-label={t('Togli un gol a {nome}', { nome: label })}>
         −
       </button>
       <span className={`w-5 text-center font-bold tabular-nums ${value ? '' : 'text-zinc-400'}`}>{value}</span>
-      <button type="button" className={btn} onClick={() => onChange(value + 1)} aria-label={`Aggiungi un gol a ${label}`}>
+      <button type="button" className={btn} onClick={() => onChange(value + 1)} aria-label={t('Aggiungi un gol a {nome}', { nome: label })}>
         +
       </button>
     </div>
@@ -43,12 +45,13 @@ export function RisultatoEditor({
   tabellone?: boolean
   passaIniziale?: 'A' | 'B'
 }) {
+  const t = useT()
   const [passa, setPassa] = useState(passaIniziale ?? '')
   const [gol, setGol] = useState(golIniziali)
   const [autogol, setAutogol] = useState(autogolIniziali)
   const [mvp, setMvp] = useState(mvpIniziale ?? '')
 
-  const punteggio = (s: Squadra) => s.giocatori.reduce((t, g) => t + (gol[g.id] ?? 0), 0) + autogol[s.chiave]
+  const punteggio = (s: Squadra) => s.giocatori.reduce((tot, g) => tot + (gol[g.id] ?? 0), 0) + autogol[s.chiave]
   const [a, b] = squadre
 
   return (
@@ -91,8 +94,8 @@ export function RisultatoEditor({
                 </li>
               ))}
               <li className="flex items-center gap-2 border-t border-zinc-200 pt-3 text-sm text-zinc-500 dark:border-zinc-800">
-                <span className="flex-1">Autogol avversari / altri</span>
-                <Stepper label={`autogol ${s.nome}`} value={autogol[s.chiave]} onChange={(n) => setAutogol({ ...autogol, [s.chiave]: n })} />
+                <span className="flex-1">{t('Autogol avversari / altri')}</span>
+                <Stepper label={`${t('autogol')} ${s.nome}`} value={autogol[s.chiave]} onChange={(n) => setAutogol({ ...autogol, [s.chiave]: n })} />
                 <input type="hidden" name={`autogol${s.chiave}`} value={autogol[s.chiave]} />
               </li>
             </ul>
@@ -107,13 +110,13 @@ export function RisultatoEditor({
             🫑 MVP: <b className="text-zinc-900 dark:text-zinc-100">{[...a.giocatori, ...b.giocatori].find((g) => g.id === mvp)?.nome}</b>
           </>
         ) : (
-          'Tocca il 🫑 accanto a un giocatore per sceglierlo come MVP.'
+          t('Tocca il 🫑 accanto a un giocatore per sceglierlo come MVP.')
         )}
       </p>
 
       {tabellone && punteggio(a) === punteggio(b) && (
         <div className="space-y-2 rounded-xl bg-amber-50 p-3 dark:bg-amber-950">
-          <p className="text-sm font-semibold text-amber-900 dark:text-amber-200">Pareggio: chi passa il turno (es. ai rigori)?</p>
+          <p className="text-sm font-semibold text-amber-900 dark:text-amber-200">{t('Pareggio: chi passa il turno (es. ai rigori)?')}</p>
           <div className="grid grid-cols-2 gap-2">
             {squadre.map((s) => (
               <label
@@ -130,8 +133,8 @@ export function RisultatoEditor({
         </div>
       )}
 
-      <SubmitButton className={`${buttonClass('primary')} w-full`} pendingText="Salvo…">
-        Salva risultato
+      <SubmitButton className={`${buttonClass('primary')} w-full`} pendingText={t('Salvo…')}>
+        {t('Salva risultato')}
       </SubmitButton>
     </ActionForm>
   )

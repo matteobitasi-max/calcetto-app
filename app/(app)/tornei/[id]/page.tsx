@@ -7,7 +7,8 @@ import { getPartiteTorneo, type Match } from '@/lib/matches'
 import { getTorneo, iscrizioniAperte } from '@/lib/tornei'
 import { classifica } from '@/lib/girone'
 import { nomeTurno, tabellone, type Incrocio } from '@/lib/tabellone'
-import { formatData } from '@/lib/dates'
+import { getT } from '@/lib/lingua'
+import type { T } from '@/lib/i18n'
 import { avatarUrl } from '@/lib/image'
 import { SubmitButton } from '@/components/submit-button'
 import { ButtonLink, Card, Loading, StatoBadge } from '@/components/ui'
@@ -27,7 +28,7 @@ async function Torneo({ params }: { params: Promise<{ id: string }> }) {
   const torneo = await getTorneo(id)
   const me = await membroDi(torneo?.legaId)
   if (!torneo || !me) notFound()
-  const partite = await getPartiteTorneo(torneo._id)
+  const [partite, t] = await Promise.all([getPartiteTorneo(torneo._id), getT()])
 
   const colore = new Map(torneo.squadre.map((s) => [s._key, s.colore]))
   const foto = new Map(torneo.squadre.map((s) => [s._key, avatarUrl(s.logo, 96)]))
@@ -61,10 +62,14 @@ async function Torneo({ params }: { params: Promise<{ id: string }> }) {
   const gironi = ibrido ? [...new Set(torneo.squadre.map((s) => s.girone).filter(Boolean))].sort() as string[] : []
   const formato =
     torneo.formato === 'eliminazione'
-      ? 'Eliminazione diretta'
+      ? t('Eliminazione diretta')
       : ibrido
-        ? `${gironi.length} gironi + tabellone (passa${(torneo.qualificate ?? 2) === 1 ? ' la prima' : 'no le prime 2'})`
-        : `Girone all'italiana${torneo.andataRitorno ? ' (andata e ritorno)' : ''}`
+        ? (torneo.qualificate ?? 2) === 1
+          ? t('{n} gironi + tabellone (passa la prima)', { n: gironi.length })
+          : t('{n} gironi + tabellone (passano le prime 2)', { n: gironi.length })
+        : torneo.andataRitorno
+          ? t('Girone all’italiana (andata e ritorno)')
+          : t('Girone all’italiana')
 
   // Classifica di un gruppo di squadre; `passano`: quante si qualificano (evidenziate).
   const tabellaClassifica = (squadre: typeof torneo.squadre, ms: Match[], passano = 0) => (
@@ -73,13 +78,13 @@ async function Torneo({ params }: { params: Promise<{ id: string }> }) {
         <thead className="text-xs text-zinc-500">
           <tr className="border-b border-zinc-200 dark:border-zinc-800">
             <th className="px-3 py-2 text-left font-medium">#</th>
-            <th className="py-2 text-left font-medium">Squadra</th>
-            <th className="px-1.5 py-2 font-medium">G</th>
-            <th className="px-1.5 py-2 font-medium">V</th>
-            <th className="px-1.5 py-2 font-medium">N</th>
-            <th className="px-1.5 py-2 font-medium">P</th>
-            <th className="px-1.5 py-2 font-medium">DR</th>
-            <th className="px-3 py-2 font-medium">Pt</th>
+            <th className="py-2 text-left font-medium">{t('Squadra')}</th>
+            <th className="px-1.5 py-2 font-medium">{t('G|giocate')}</th>
+            <th className="px-1.5 py-2 font-medium">{t('V|vinte')}</th>
+            <th className="px-1.5 py-2 font-medium">{t('N|pareggiate')}</th>
+            <th className="px-1.5 py-2 font-medium">{t('P|perse')}</th>
+            <th className="px-1.5 py-2 font-medium">{t('DR')}</th>
+            <th className="px-3 py-2 font-medium">{t('Pt')}</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
@@ -112,7 +117,8 @@ async function Torneo({ params }: { params: Promise<{ id: string }> }) {
     return [...perGiornata].map(([turno, lista]) => (
       <Card key={turno} className="divide-y divide-zinc-100 p-0 dark:divide-zinc-800">
         <p className="px-4 py-2 text-xs font-semibold uppercase tracking-wide text-zinc-500">
-          {prefisso}Giornata {turno}
+          {prefisso}
+          {t('Giornata {n}', { n: turno })}
         </p>
         {lista.map((m) => (
           <Link key={m._id} href={`/partite/${m._id}`} className="flex items-center justify-between gap-2 px-4 py-3 text-sm hover:bg-zinc-50 dark:hover:bg-zinc-800">
@@ -125,7 +131,7 @@ async function Torneo({ params }: { params: Promise<{ id: string }> }) {
                 <span className="truncate">{m.nomeB}</span>
               </span>
               <span className="block text-xs capitalize text-zinc-500">
-                {formatData(m.data, breve)} · {m.luogo}
+                {t.data(m.data, breve)} · {m.luogo}
               </span>
             </span>
             {m.stato === 'giocata' && m.risultato?.golA != null ? (
@@ -152,16 +158,16 @@ async function Torneo({ params }: { params: Promise<{ id: string }> }) {
     <div className="space-y-4 pb-8">
       <div>
         <Link href="/tornei" className="text-sm text-green-700 hover:underline dark:text-green-400">
-          ← Tornei
+          ← {t('Tornei')}
         </Link>
         <h1 className="mt-1 text-xl font-bold">🏆 {torneo.nome}</h1>
         <p className="text-sm text-zinc-500">
-          🏟️ {me.lega.nome} · {formato} · {giocate}/{partite.length} partite giocate
+          🏟️ {me.lega.nome} · {formato} · {t('{n}/{tot} partite giocate', { n: giocate, tot: partite.length })}
         </p>
         {me.isAdmin && (
           <div className="mt-2">
             <ButtonLink href={`/tornei/${torneo._id}/squadre`} variant="secondary">
-              ✏️ Squadre e giocatori
+              ✏️ {t('Squadre e giocatori')}
             </ButtonLink>
           </div>
         )}
@@ -169,7 +175,7 @@ async function Torneo({ params }: { params: Promise<{ id: string }> }) {
 
       {campione && (
         <Card className="border-2 border-amber-400 text-center">
-          <p className="text-xs font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-400">Vincitore</p>
+          <p className="text-xs font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-400">{t('Vincitore')}</p>
           <p className="flex items-center justify-center gap-2 text-xl font-bold">
             🏆 {stemma(campione, 36)} {nomeSquadra.get(campione)}
           </p>
@@ -178,9 +184,9 @@ async function Torneo({ params }: { params: Promise<{ id: string }> }) {
 
       <section className="space-y-2">
         <div className="flex items-center justify-between gap-2">
-          {titolo('Squadre')}
+          {titolo(t('Squadre'))}
           <span className={`text-xs font-semibold ${aperte ? 'text-green-700 dark:text-green-500' : 'text-zinc-500'}`}>
-            {aperte ? 'Iscrizioni aperte' : 'Iscrizioni chiuse'}
+            {aperte ? t('Iscrizioni aperte') : t('Iscrizioni chiuse')}
           </span>
         </div>
         <Card className="divide-y divide-zinc-100 p-0 dark:divide-zinc-800">
@@ -197,19 +203,18 @@ async function Torneo({ params }: { params: Promise<{ id: string }> }) {
                   <span className="min-w-0">
                     <span className="block truncate font-medium">
                       {s.nome}
-                      {mia && <span className="ml-1 text-xs font-normal text-green-700 dark:text-green-400">· la tua squadra</span>}
+                      {mia && <span className="ml-1 text-xs font-normal text-green-700 dark:text-green-400">· {t('la tua squadra')}</span>}
                     </span>
                     <span className="block truncate text-xs text-zinc-500">
-                      {nomeCapitano(s) && `🅒 ${nomeCapitano(s)} · `}
-                      {s.giocatori.length}
-                      {torneo.maxGiocatori ? `/${torneo.maxGiocatori}` : ''} giocator{s.giocatori.length === 1 ? 'e' : 'i'}
+                      {nomeCapitano(s) && `🅐 ${nomeCapitano(s)} · `}
+                      {t.n(s.giocatori.length, '{n}{max} giocatore', '{n}{max} giocatori', { max: torneo.maxGiocatori ? `/${torneo.maxGiocatori}` : '' })}
                     </span>
                   </span>
                 </span>
                 {/* Matita: l'organizzatore su tutte le squadre, il capitano sulla sua */}
                 {me.isAdmin || s.capitanoId === me._id ? (
                   <span
-                    aria-label={`Gestisci ${s.nome}`}
+                    aria-label={t('Gestisci {squadra}', { squadra: s.nome })}
                     className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-zinc-100 text-base dark:bg-zinc-800"
                   >
                     ✏️
@@ -224,7 +229,7 @@ async function Torneo({ params }: { params: Promise<{ id: string }> }) {
         {me.isAdmin && (
           <form action={chiudiIscrizioni.bind(null, torneo._id, !torneo.iscrizioniChiuse)} className="text-right">
             <SubmitButton className="text-xs font-medium text-zinc-500 hover:underline" pendingText="…">
-              {torneo.iscrizioniChiuse ? '🔓 Riapri le iscrizioni' : '🔒 Chiudi le iscrizioni'}
+              {torneo.iscrizioniChiuse ? `🔓 ${t('Riapri le iscrizioni')}` : `🔒 ${t('Chiudi le iscrizioni')}`}
             </SubmitButton>
           </form>
         )}
@@ -232,15 +237,15 @@ async function Torneo({ params }: { params: Promise<{ id: string }> }) {
 
       {conTabellone && (
         <section className="space-y-2">
-          {titolo(ibrido ? 'Fase finale' : 'Tabellone')}
+          {titolo(ibrido ? t('Fase finale') : t('Tabellone'))}
           {tab.length ? (
             <div className="-mx-4 overflow-x-auto px-4 pb-2">
               <div className="flex gap-3">
-                {tab.map((incroci, t) => (
-                  <div key={t} className="flex w-56 shrink-0 flex-col justify-around gap-3">
-                    <p className="text-center text-xs font-semibold uppercase tracking-wide text-zinc-500">{nomeTurno(t + 1, tab.length)}</p>
+                {tab.map((incroci, i) => (
+                  <div key={i} className="flex w-56 shrink-0 flex-col justify-around gap-3">
+                    <p className="text-center text-xs font-semibold uppercase tracking-wide text-zinc-500">{nomeTurno(i + 1, tab.length, t)}</p>
                     {incroci.map((inc) => (
-                      <IncrocioCard key={inc.posizione} inc={inc} nome={nomeSquadra} stemma={stemma} />
+                      <IncrocioCard key={inc.posizione} inc={inc} nome={nomeSquadra} stemma={stemma} t={t} />
                     ))}
                   </div>
                 ))}
@@ -248,8 +253,9 @@ async function Torneo({ params }: { params: Promise<{ id: string }> }) {
             </div>
           ) : (
             <Card className="text-sm text-zinc-500">
-              Il tabellone si crea da solo quando sono finite tutte le partite dei gironi: passa
-              {(torneo.qualificate ?? 2) === 1 ? ' la prima' : 'no le prime 2'} di ogni girone, con incroci tra gironi diversi.
+              {(torneo.qualificate ?? 2) === 1
+                ? t('Il tabellone si crea da solo quando sono finite tutte le partite dei gironi: passa la prima di ogni girone, con incroci tra gironi diversi.')
+                : t('Il tabellone si crea da solo quando sono finite tutte le partite dei gironi: passano le prime 2 di ogni girone, con incroci tra gironi diversi.')}
             </Card>
           )}
         </section>
@@ -257,14 +263,14 @@ async function Torneo({ params }: { params: Promise<{ id: string }> }) {
 
       {torneo.formato === 'girone' && (
         <section className="space-y-2">
-          {titolo('Classifica')}
+          {titolo(t('Classifica'))}
           {tabellaClassifica(torneo.squadre, deiGironi)}
         </section>
       )}
 
       {gironi.map((l) => (
         <section key={l} className="space-y-2">
-          {titolo(`Girone ${l}`)}
+          {titolo(t('Girone {g}', { g: l }))}
           {tabellaClassifica(
             torneo.squadre.filter((s) => s.girone === l),
             deiGironi.filter((m) => m.girone === l),
@@ -275,7 +281,7 @@ async function Torneo({ params }: { params: Promise<{ id: string }> }) {
 
       {marcatori.length > 0 && (
         <section className="space-y-2">
-          {titolo('Marcatori')}
+          {titolo(t('Marcatori'))}
           <Card className="divide-y divide-zinc-100 p-0 dark:divide-zinc-800">
             {marcatori.map(([pid, n]) => {
               const g = giocatori.get(pid)!
@@ -296,14 +302,14 @@ async function Torneo({ params }: { params: Promise<{ id: string }> }) {
 
       {torneo.formato === 'girone' && (
         <section className="space-y-2">
-          {titolo('Giornate')}
+          {titolo(t('Giornate'))}
           {listaGiornate(deiGironi)}
         </section>
       )}
       {gironi.map((l) => (
         <section key={l} className="space-y-2">
-          {titolo(`Partite del girone ${l}`)}
-          {listaGiornate(deiGironi.filter((m) => m.girone === l), `Girone ${l} · `)}
+          {titolo(t('Partite del girone {g}', { g: l }))}
+          {listaGiornate(deiGironi.filter((m) => m.girone === l), `${t('Girone {g}', { g: l })} · `)}
         </section>
       ))}
 
@@ -311,10 +317,10 @@ async function Torneo({ params }: { params: Promise<{ id: string }> }) {
         <form action={eliminaTorneo.bind(null, torneo._id)} className="text-center">
           <SubmitButton
             className="text-sm text-red-600 hover:underline"
-            pendingText="Elimino…"
-            confirm={`Eliminare "${torneo.nome}" con tutte le sue partite, anche quelle già giocate?`}
+            pendingText={t('Elimino…')}
+            confirm={t('Eliminare “{nome}” con tutte le sue partite, anche quelle già giocate?', { nome: torneo.nome })}
           >
-            Elimina il torneo
+            {t('Elimina il torneo')}
           </SubmitButton>
         </form>
       )}
@@ -333,13 +339,13 @@ function StemmaSquadra({ colore, foto, size }: { colore?: string; foto?: string 
 }
 
 // Un incrocio del tabellone: le due squadre (o chi deve ancora arrivare), il risultato e chi passa.
-function IncrocioCard({ inc, nome, stemma }: { inc: Incrocio<Match>; nome: Map<string, string>; stemma: (chiave: string | undefined) => ReactNode }) {
+function IncrocioCard({ inc, nome, stemma, t }: { inc: Incrocio<Match>; nome: Map<string, string>; stemma: (chiave: string | undefined) => ReactNode; t: T }) {
   const m = inc.partita
   const riga = (chiave: string | undefined, gol: number | undefined) => (
     <div className={`flex items-center justify-between gap-2 px-3 py-1.5 text-sm ${chiave && inc.vincitore === chiave ? 'font-bold' : ''}`}>
       <span className="flex min-w-0 items-center gap-1.5">
         {stemma(chiave)}
-        <span className={`truncate ${chiave ? '' : 'italic text-zinc-400'}`}>{chiave ? nome.get(chiave) : inc.bye ? '—' : 'da decidere'}</span>
+        <span className={`truncate ${chiave ? '' : 'italic text-zinc-400'}`}>{chiave ? nome.get(chiave) : inc.bye ? '—' : t('da decidere')}</span>
       </span>
       {gol != null && <span className="tabular-nums">{gol}</span>}
     </div>
@@ -352,12 +358,12 @@ function IncrocioCard({ inc, nome, stemma }: { inc: Incrocio<Match>; nome: Map<s
       {riga(inc.b, giocata ? m!.risultato!.golB : undefined)}
       <p className="border-t border-zinc-100 px-3 py-1 text-[11px] capitalize text-zinc-500 dark:border-zinc-800">
         {inc.bye
-          ? 'passa direttamente'
+          ? t('passa direttamente')
           : giocata && m!.risultato!.golA === m!.risultato!.golB
-            ? `pareggio · passa ${nome.get(inc.vincitore ?? '') ?? '?'}`
+            ? t('pareggio · passa {squadra}', { squadra: nome.get(inc.vincitore ?? '') ?? '?' })
             : m
-              ? formatData(m.data, breve)
-              : 'in attesa dei risultati'}
+              ? t.data(m.data, breve)
+              : t('in attesa dei risultati')}
       </p>
     </>
   )

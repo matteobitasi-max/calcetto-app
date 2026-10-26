@@ -10,12 +10,10 @@ import { avatarUrl, immagineUrl } from '@/lib/image'
 import { FotoZoom } from './foto-zoom'
 import { Medaglia } from './medaglia'
 import { buttonClass, inputClass } from './ui-classes'
+import { getT } from '@/lib/lingua'
 
 export { buttonClass, inputClass }
-
-export function Card({ className = '', ...props }: ComponentProps<'section'>) {
-  return <section className={`rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-700 dark:bg-zinc-900 dark:shadow-lg dark:shadow-black/40 ${className}`} {...props} />
-}
+export { Card, Field } from './ui-base'
 
 export function PageTitle({ children, action }: { children: ReactNode; action?: ReactNode }) {
   return (
@@ -28,17 +26,6 @@ export function PageTitle({ children, action }: { children: ReactNode; action?: 
 
 export function ButtonLink({ variant = 'primary', ...props }: ComponentProps<typeof Link> & { variant?: 'primary' | 'secondary' }) {
   return <Link className={buttonClass(variant)} {...props} />
-}
-
-// group: per controlli composti (es. il calendario) che non possono stare dentro un <label>.
-export function Field({ label, children, group = false }: { label: string; children: ReactNode; group?: boolean }) {
-  const Tag = group ? 'div' : 'label'
-  return (
-    <Tag className="block space-y-1 text-sm">
-      <span className="font-medium">{label}</span>
-      {children}
-    </Tag>
-  )
 }
 
 const RISPOSTA: Record<Risposta | 'nessuna', [string, string]> = {
@@ -61,16 +48,18 @@ function Badge({ label, className }: { label: string; className: string }) {
   return <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${className}`}>{label}</span>
 }
 
-export const RispostaBadge = ({ risposta }: { risposta?: Risposta }) => {
+export const RispostaBadge = async ({ risposta }: { risposta?: Risposta }) => {
+  const t = await getT()
   const [label, cls] = RISPOSTA[risposta ?? 'nessuna'] ?? RISPOSTA.nessuna
-  return <Badge label={label} className={cls} />
+  return <Badge label={t(label)} className={cls} />
 }
 
 // L'etichetta segue la finestra vera delle convocazioni, non solo lo stato salvato.
-export const StatoBadge = ({ match }: { match: { stato: Stato; aperturaConvocazioni: string; chiusuraConvocazioni: string } }) => {
+export const StatoBadge = async ({ match }: { match: { stato: Stato; aperturaConvocazioni: string; chiusuraConvocazioni: string } }) => {
+  const t = await getT()
   const f = match.stato === 'aperta' ? finestra(match) : null
   const [label, cls] = STATO[f === 'non_ancora' || f === 'scaduta' ? f : match.stato] ?? STATO.aperta
-  return <Badge label={label} className={cls} />
+  return <Badge label={t(label)} className={cls} />
 }
 
 // Colore del voto: da 8,5 viola, da 6,5 verde, da 5 giallo, da 2 rosso, sotto il 2 nero
@@ -95,10 +84,11 @@ export function Overall({ player, grande = false }: { player: Player; grande?: b
 }
 
 // Forma del giocatore (Pro, da −1 a +1): freccia accanto al voto, solo se si vede davvero.
-export function FrecciaForma({ forma }: { forma: number }) {
+export async function FrecciaForma({ forma }: { forma: number }) {
   if (Math.abs(forma) < 0.15) return null
+  const t = await getT()
   const su = forma > 0
-  const testo = `Forma ${su ? '+' : '−'}${Math.abs(forma).toLocaleString('it-IT', { maximumFractionDigits: 1 })}`
+  const testo = t('Forma {segno}{valore}', { segno: su ? '+' : '−', valore: t.numero(Math.abs(forma), { maximumFractionDigits: 1 }) })
   return (
     <span title={testo} aria-label={testo} className={`shrink-0 text-sm font-bold ${su ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
       {su ? '↑' : '↓'}
@@ -146,38 +136,40 @@ function FasciaCapitano() {
 }
 
 // L'organizzatore della lega: il pallino arancione con la "A", toccandolo si apre la spiegazione.
-export function IconaOrganizzatore() {
+export async function IconaOrganizzatore() {
+  const t = await getT()
   return (
     <Medaglia
       emoji={<PallinoAdmin size={56} />}
-      titolo="Organizzatore"
-      testo="Gestisce la lega: crea le partite, apre e chiude le convocazioni, fa le squadre, inserisce i risultati e invita i giocatori."
+      titolo={t('Organizzatore')}
+      testo={t('Gestisce la lega: crea le partite, apre e chiude le convocazioni, fa le squadre, inserisce i risultati e invita i giocatori.')}
       className="shrink-0 rounded-md"
     >
-      <PallinoAdmin size={22} />
+      <PallinoAdmin size={22} title={t('Organizzatore')} />
     </Medaglia>
   )
 }
 
 // Il badge del giocatore: toccandolo si apre la spiegazione.
-export function PlayerBadge({ badge }: { badge?: Badge }) {
+export async function PlayerBadge({ badge }: { badge?: Badge }) {
   if (!badge || !BADGE[badge]) return null
+  const t = await getT()
   const simbolo = badge === 'capitano' ? <FasciaCapitano /> : BADGE[badge].emoji
   return (
     <Medaglia
       emoji={badge === 'capitano' ? <span className="inline-block scale-[2.5] py-3"><FasciaCapitano /></span> : simbolo}
-      titolo={BADGE[badge].label}
-      testo={BADGE[badge].descrizione}
+      titolo={t(BADGE[badge].label)}
+      testo={t(BADGE[badge].descrizione)}
       className={`inline-flex shrink-0 items-center gap-1 rounded-full px-1.5 py-0.5 text-[11px] font-semibold ring-1 ${STILE_BADGE[badge]}`}
     >
-      {simbolo} {BADGE[badge].label}
+      {simbolo} {t(BADGE[badge].label)}
     </Medaglia>
   )
 }
 
 // mostraAccesso: nella rosa segnala chi non ha ancora fatto l'accesso all'app.
 // `prima`: accanto al voto, a sinistra (es. gol e MVP), così i voti restano allineati a destra.
-export function PlayerRow({
+export async function PlayerRow({
   player,
   prima,
   right,
@@ -194,6 +186,7 @@ export function PlayerRow({
   /** Pro: forma del giocatore, freccia accanto al voto. */
   forma?: number
 }) {
+  const t = await getT()
   return (
     <div className={`flex items-center gap-3 ${mio ? '-mx-1.5 rounded-lg bg-green-50 px-1.5 py-1 dark:bg-green-950/50' : ''}`}>
       <Avatar player={player} />
@@ -209,9 +202,9 @@ export function PlayerRow({
         </div>
         {(player.ruolo || (mostraAccesso && player.collegato === false)) && (
           <div className="text-xs text-zinc-500">
-            {player.ruolo && <span className="capitalize">{player.ruolo}</span>}
+            {player.ruolo && <span className="capitalize">{t(player.ruolo)}</span>}
             {player.ruolo && mostraAccesso && player.collegato === false && ' · '}
-            {mostraAccesso && player.collegato === false && <span className="text-amber-700 dark:text-amber-400">⏳ non ha ancora fatto l&apos;accesso</span>}
+            {mostraAccesso && player.collegato === false && <span className="text-amber-700 dark:text-amber-400">⏳ {t('non ha ancora fatto l\u2019accesso')}</span>}
           </div>
         )}
       </Link>
@@ -223,18 +216,19 @@ export function PlayerRow({
   )
 }
 
-export function SkillBars({ player }: { player: Player }) {
+export async function SkillBars({ player }: { player: Player }) {
+  const t = await getT()
   return (
     <ul className="space-y-2">
       {(Object.entries(SKILLS) as [Skill, string][]).map(([key, label]) => {
         const value = player.caratteristiche?.[key] ?? 0
         return (
           <li key={key} className="grid grid-cols-[6rem_1fr_2rem] items-center gap-2 text-sm">
-            <span>{label}</span>
+            <span>{t(label)}</span>
             <span className="h-2 rounded bg-zinc-200 dark:bg-zinc-800">
               <span className="block h-2 rounded bg-green-600" style={{ width: `${value * 10}%` }} />
             </span>
-            <span className="text-right tabular-nums">{value.toLocaleString('it-IT')}</span>
+            <span className="text-right tabular-nums">{t.numero(value)}</span>
           </li>
         )
       })}
@@ -242,6 +236,7 @@ export function SkillBars({ player }: { player: Player }) {
   )
 }
 
-export function Loading() {
-  return <p className="animate-pulse text-sm text-zinc-500">Caricamento…</p>
+export async function Loading() {
+  const t = await getT()
+  return <p className="animate-pulse text-sm text-zinc-500">{t('Caricamento…')}</p>
 }

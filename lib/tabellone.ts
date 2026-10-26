@@ -29,9 +29,11 @@ export function partitePerTurno(squadre: number) {
   return out
 }
 
-export function nomeTurno(turno: number, turni: number) {
-  const mancanti = turni - turno
-  return ['Finale', 'Semifinali', 'Quarti di finale', 'Ottavi di finale', 'Sedicesimi di finale'][mancanti] ?? `Turno ${turno}`
+// `t`: nella lingua dell'utente (altrimenti in italiano).
+export function nomeTurno(turno: number, turni: number, t?: (testo: string, vars?: { n: number }) => string) {
+  const nome = ['Finale', 'Semifinali', 'Quarti di finale', 'Ottavi di finale', 'Sedicesimi di finale'][turni - turno]
+  if (t) return nome ? t(nome) : t('Turno {n}', { n: turno })
+  return nome ?? `Turno ${turno}`
 }
 
 /** Primo turno di base (teste di serie): le squadre in un ordine che tiene lontane le più forti. */

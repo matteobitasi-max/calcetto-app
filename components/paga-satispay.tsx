@@ -1,6 +1,7 @@
 'use client'
 
 import { useTransition } from 'react'
+import { useT } from './lingua'
 
 // Il segno di Satispay: quadratino rosso con la S.
 export function IconaSatispay({ size = 28 }: { size?: number }) {
@@ -28,6 +29,7 @@ export function PagaSatispay({
   segnaPagato: () => Promise<void>
   variante: 'icona' | 'pulsante'
 }) {
+  const t = useT()
   const [pending, startTransition] = useTransition()
   const paga = () => startTransition(() => segnaPagato())
 
@@ -38,7 +40,7 @@ export function PagaSatispay({
         target="_blank"
         rel="noopener noreferrer"
         onClick={paga}
-        title={`Paga ${quota} € con Satispay`}
+        title={t('Paga {quota} € con Satispay', { quota })}
         aria-disabled={pending}
         className={
           variante === 'icona'
@@ -46,7 +48,7 @@ export function PagaSatispay({
             : 'inline-flex items-center gap-2 rounded-lg bg-[#ef4136] px-4 py-2 text-sm font-medium text-white hover:bg-[#d63a30]'
         }
       >
-        {variante === 'icona' ? <IconaSatispay /> : <>💳 Paga {quota} € con Satispay</>}
+        {variante === 'icona' ? <IconaSatispay /> : <>💳 {t('Paga {quota} € con Satispay', { quota })}</>}
       </a>
     )
   }
@@ -56,14 +58,14 @@ export function PagaSatispay({
       type="button"
       onClick={paga}
       disabled={pending}
-      title={`Paga ${quota} €`}
+      title={t('Paga {quota} €', { quota })}
       className={
         variante === 'icona'
           ? 'rounded-full bg-green-600 px-3 py-1 text-xs font-semibold text-white hover:bg-green-700 disabled:opacity-50'
           : 'inline-flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50'
       }
     >
-      {pending ? '…' : variante === 'icona' ? 'Paga' : `💶 Paga ${quota} €`}
+      {pending ? '…' : variante === 'icona' ? t('Paga') : `💶 ${t('Paga {quota} €', { quota })}`}
     </button>
   )
 }

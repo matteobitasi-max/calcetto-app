@@ -2,6 +2,7 @@
 
 import { useRef, type ReactNode } from 'react'
 import { shrinkImage } from '@/lib/shrink-image'
+import { useT } from '@/components/lingua'
 
 // Stile di una voce del menu (per le voci aggiunte con `altro`).
 export const voceMenuFoto = 'flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left font-medium hover:bg-zinc-100 dark:hover:bg-zinc-800'
@@ -18,6 +19,7 @@ export function useSceltaFoto({
   onFoto: (foto: File) => void
   altro?: ReactNode
 }) {
+  const t = useT()
   const dialog = useRef<HTMLDialogElement>(null)
   const fotocamera = useRef<HTMLInputElement>(null)
   const libreria = useRef<HTMLInputElement>(null)
@@ -44,14 +46,14 @@ export function useSceltaFoto({
       >
         <p className="px-4 pb-2 pt-1 text-center text-sm text-zinc-500">{titolo}</p>
         <button type="button" className={voceMenuFoto} onClick={() => scegli(fotocamera.current)}>
-          📷 Scatta una foto
+          📷 {t('Scatta una foto')}
         </button>
         <button type="button" className={voceMenuFoto} onClick={() => scegli(libreria.current)}>
-          🖼️ Scegli dalla libreria
+          🖼️ {t('Scegli dalla libreria')}
         </button>
         {altro}
         <button type="button" className={`${voceMenuFoto} justify-center text-zinc-500`} onClick={chiudi}>
-          Annulla
+          {t('Annulla')}
         </button>
       </dialog>
       <input ref={fotocamera} type="file" accept="image/*" capture="environment" hidden onChange={carica} />

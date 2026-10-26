@@ -3,6 +3,7 @@
 import { startTransition, useActionState, useRef, useState } from 'react'
 import type { FormState } from '@/app/actions'
 import { useSceltaFoto, voceMenuFoto } from './scelta-foto'
+import { useT } from '@/components/lingua'
 
 // L'immagine della lega nell'intestazione: toccandola si apre ingrandita.
 // Per l'organizzatore (con `cambia`) si apre invece un menu: scatta una foto,
@@ -19,6 +20,7 @@ export function LegaZoom({
   grande: string | null
   cambia?: (prev: FormState, fd: FormData) => Promise<FormState>
 }) {
+  const t = useT()
   const zoom = useRef<HTMLDialogElement>(null)
   const [state, formAction, pending] = useActionState(cambia ?? (async () => undefined), undefined)
   const [anteprima, setAnteprima] = useState<string | null>(null)
@@ -31,7 +33,7 @@ export function LegaZoom({
   )
 
   const scelta = useSceltaFoto({
-    titolo: `Immagine di ${nome}`,
+    titolo: t('Immagine di {nome}', { nome }),
     onFoto: (foto) => {
       setAnteprima(URL.createObjectURL(foto))
       const fd = new FormData()
@@ -60,7 +62,7 @@ export function LegaZoom({
           onClick={() => (cambia ? scelta.apri() : grande && zoom.current?.showModal())}
           disabled={pending}
           className="relative h-10 w-10 shrink-0 overflow-hidden rounded-xl shadow ring-2 ring-white dark:ring-zinc-800"
-          aria-label={cambia ? `Cambia l'immagine di ${nome}` : grande ? `Ingrandisci l'immagine di ${nome}` : nome}
+          aria-label={cambia ? t('Cambia l’immagine di {nome}', { nome }) : grande ? t('Ingrandisci l’immagine di {nome}', { nome }) : nome}
         >
           {/* eslint-disable-next-line @next/next/no-img-element -- immagine già ridimensionata dal CDN di Sanity */}
           {immagine ? <img src={immagine} alt="" className="h-full w-full object-cover" /> : iniziale}
@@ -93,7 +95,7 @@ export function LegaZoom({
               type="button"
               onClick={() => zoom.current?.close()}
               className="absolute -right-3 -top-3 flex h-9 w-9 items-center justify-center rounded-full bg-white text-lg text-zinc-900 shadow-lg"
-              aria-label="Chiudi"
+              aria-label={t('Chiudi')}
             >
               ✕
             </button>

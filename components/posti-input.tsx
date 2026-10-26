@@ -1,5 +1,6 @@
 'use client'
 
+import { useT } from './lingua'
 import { useState } from 'react'
 import { inputClass } from './ui-classes'
 import { MAX_GIOCATORI, MAX_ISCRITTI } from '@/lib/limiti'
@@ -18,13 +19,14 @@ const chip = (attivo: boolean) =>
 // Numero di giocatori in lista: deciso dalle convocazioni (pari alla chiusura),
 // oppure fisso con le scorciatoie per i formati più comuni o un valore libero.
 export function PostiInput({ defaultValue = 10, defaultAutomatico = true }: { defaultValue?: number; defaultAutomatico?: boolean }) {
+  const t = useT()
   const [automatico, setAutomatico] = useState(defaultAutomatico)
   const [value, setValue] = useState(defaultValue)
   return (
     <div className="space-y-2">
       <div className="flex flex-wrap gap-2">
         <button type="button" onClick={() => setAutomatico(true)} className={chip(automatico)}>
-          📋 In base alle convocazioni
+          📋 {t('In base alle convocazioni')}
         </button>
         {PRESET.map(([n, label]) => (
           <button
@@ -45,8 +47,7 @@ export function PostiInput({ defaultValue = 10, defaultAutomatico = true }: { de
           <input type="hidden" name="postiAutomatici" value="on" />
           <input type="hidden" name="postiDisponibili" value={MAX_ISCRITTI} />
           <p className="text-xs text-zinc-500">
-            Si convoca chi vuole. Quando chiudi le convocazioni il numero diventa pari: 18 iscritti → 9 contro 9, 11 iscritti → 5
-            contro 5 e l&apos;ultimo in lista d&apos;attesa.
+            {t('Si convoca chi vuole. Quando chiudi le convocazioni il numero diventa pari: 18 iscritti → 9 contro 9, 11 iscritti → 5 contro 5 e l’ultimo in lista d’attesa.')}
           </p>
         </>
       ) : (

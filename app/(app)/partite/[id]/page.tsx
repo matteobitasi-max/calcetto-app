@@ -7,7 +7,8 @@ import { finestra, formatoInCorso, getMatch, getPlayers, orarioPartita, ordinati
 import { getCollegamento, stravaConfigurato } from '@/lib/strava'
 import { KmPartita } from '@/components/km-partita'
 import { MeteoPartita } from '@/components/meteo-partita'
-import { formatData, giornoPartita, oraPartita } from '@/lib/dates'
+import { getT } from '@/lib/lingua'
+import type { T } from '@/lib/i18n'
 import { aggiungiDaAttesa, allungaFinestra, apriConvocazioni, cambiaSquadra, cambiaStato, convocaGiocatore, scegliLega, rimettiInAttesa, togliDallaPartita, togliDallaSquadra } from '@/app/actions'
 import { Countdown } from '@/components/countdown'
 import { ApriConvocazioni } from '@/components/apri-convocazioni'
@@ -34,7 +35,7 @@ async function MatchDetail({ params }: { params: Promise<{ id: string }> }) {
   // Le partite si vedono solo tra membri della lega; vale la mia scheda in quella lega.
   const player = await membroDi(match?.legaId)
   if (!match || !player) notFound()
-  const [rosa, attiva] = await Promise.all([getPlayers(match.legaId), getCurrentPlayer()])
+  const [rosa, attiva, t] = await Promise.all([getPlayers(match.legaId), getCurrentPlayer(), getT()])
 
   const count = presenti(match).length
   const formato = formatoInCorso(match)
@@ -53,17 +54,17 @@ async function MatchDetail({ params }: { params: Promise<{ id: string }> }) {
           className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-amber-50 p-3 text-sm text-amber-900 dark:bg-amber-950 dark:text-amber-200"
         >
           <span>
-            Questa partita è della lega <b>{player.lega.nome}</b>
+            {t('Questa partita è della lega')} <b>{player.lega.nome}</b>
           </span>
-          <SubmitButton className={buttonClass('secondary')}>Passa a questa lega</SubmitButton>
+          <SubmitButton className={buttonClass('secondary')}>{t('Passa a questa lega')}</SubmitButton>
         </form>
       )}
       <Card className="space-y-2">
         <div className="flex items-start justify-between gap-2">
           <h1 className="text-lg font-bold leading-tight">
-            <span className="block capitalize">{giornoPartita(match.data)}</span>
+            <span className="block capitalize">{t.giorno(match.data)}</span>
             <span className="block">
-              Inizio {oraPartita(match.data)}
+              {t('Inizio {ora}', { ora: t.ora(match.data) })}
               <Suspense>
                 <MeteoPartita citta={player.lega.citta} data={match.data} compatto />
               </Suspense>
@@ -76,33 +77,33 @@ async function MatchDetail({ params }: { params: Promise<{ id: string }> }) {
           <Link href={`/tornei/${match.torneo._id}`} className="block text-sm font-semibold text-amber-700 hover:underline dark:text-amber-400">
             🏆 {match.torneo.nome} ·{' '}
             {match.fase === 'eliminazione' || match.torneo.formato === 'eliminazione'
-              ? `Tabellone · turno ${match.turno}`
-              : `${match.girone ? `Girone ${match.girone} · ` : ''}Giornata ${match.turno}`}{' '}
+              ? t('Tabellone · turno {n}', { n: match.turno ?? 1 })
+              : `${match.girone ? `${t('Girone {g}', { g: match.girone })} · ` : ''}${t('Giornata {n}', { n: match.turno ?? 1 })}`}{' '}
             · {match.nomeA} – {match.nomeB}
           </Link>
         )}
         <p className="text-sm text-zinc-500">
           📍 {match.luogo}
-          {match.quota != null && ` · ${match.quota} € a testa`}
+          {match.quota != null && ` · ${t('{quota} € a testa', { quota: match.quota })}`}
         </p>
 
         {match.note && <p className="whitespace-pre-line text-sm">{match.note}</p>}
         <FinestraInfo match={match} />
         {match.serieId && (
           <p className="text-sm text-zinc-500">
-            🔁 Partita ricorrente
+            🔁 {t('Partita ricorrente')}
             {player.isAdmin && (
               <>
                 {' · '}
                 <Link href={`/partite/ricorrenti/${match.serieId}`} className="text-green-700 hover:underline dark:text-green-400">
-                  modifica la serie
+                  {t('modifica la serie')}
                 </Link>
               </>
             )}
           </p>
         )}
         {match.stato === 'giocata' && match.risultato?.golA != null && <Tabellino match={match} />}
-        {canEnterResults(player) && <RisultatoAzione match={match} />}
+        {canEnterResults(player) && <RisultatoAzione match={match} t={t} />}
         <div className="border-t border-zinc-200 pt-3 empty:hidden dark:border-zinc-800">
           {!player.ospite && <RispostaButtons match={match} playerId={player._id} />}
         </div>
@@ -110,44 +111,44 @@ async function MatchDetail({ params }: { params: Promise<{ id: string }> }) {
 
       <KmCard match={match} me={player} rosa={rosa} />
 
-      {player.isAdmin && match.stato !== 'giocata' && <AdminPanel match={match} whatsappUrl={await whatsappUrl(match, player.lega.nome)} />}
+      {player.isAdmin && match.stato !== 'giocata' && <AdminPanel match={match} whatsappUrl={await whatsappUrl(match, player.lega.nome, t)} t={t} />}
 
       {match.squadraA.length + match.squadraB.length > 0 && (
-        <Squadre match={match} mioId={player._id} gestisci={!!player.isAdmin && match.stato === 'chiusa'} />
+        <Squadre match={match} mioId={player._id} gestisci={!!player.isAdmin && match.stato === 'chiusa'} t={t} />
       )}
 
       {player.isAdmin && <Cassa match={match} mioId={player._id} />}
 
       <Card>
         <h2 className="mb-3 font-semibold">
-          Convocati{' '}
+          {t('Convocati')}{' '}
           <span className="font-normal text-zinc-500">
-            · {formato ? `${formato.iscritti} iscritti` : `${count}/${match.postiDisponibili}`}
+            · {formato ? t('{n} iscritti', { n: formato.iscritti }) : `${count}/${match.postiDisponibili}`}
           </span>
           {aggiunti > 0 && (
             <span className="ml-1 text-xs font-normal text-zinc-500">
-              ({match.postiDisponibili - aggiunti} + {aggiunti} aggiunt{aggiunti === 1 ? 'o' : 'i'})
+              ({match.postiDisponibili - aggiunti} + {t.n(aggiunti, '{n} aggiunto', '{n} aggiunti')})
             </span>
           )}
         </h2>
         {formato && (
           <p className="mb-3 rounded-lg bg-zinc-50 p-2 text-xs text-zinc-600 dark:bg-zinc-950 dark:text-zinc-400">
-            📋 Numero in base alle convocazioni: <TestoFormato f={formato} />
+            📋 {t('Numero in base alle convocazioni:')} <TestoFormato f={formato} t={t} />
           </p>
         )}
-        <Gruppo titolo="In lista" match={match} risposta="presente" numerati gestisci={gestisci} me={player} mioId={player._id} />
-        <Gruppo titolo="Lista d'attesa" match={match} risposta="riserva" numerati gestisci={gestisci} mioId={player._id} />
-        <Gruppo titolo="Non ci sono" match={match} risposta="assente" convoca={convoca} mioId={player._id} />
+        <Gruppo titolo={t('In lista')} match={match} risposta="presente" numerati gestisci={gestisci} me={player} mioId={player._id} t={t} />
+        <Gruppo titolo={t('Lista d’attesa')} match={match} risposta="riserva" numerati gestisci={gestisci} mioId={player._id} t={t} />
+        <Gruppo titolo={t('Non ci sono')} match={match} risposta="assente" convoca={convoca} mioId={player._id} t={t} />
         {mancanti.length > 0 && (
           <div>
             <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-zinc-500">
-              Non hanno ancora risposto ({mancanti.length})
+              {t('Non hanno ancora risposto ({n})', { n: mancanti.length })}
             </h3>
             <ul className="space-y-2 opacity-60">
               {mancanti.map((p) => (
                 <li key={p._id}>
                   {convoca ? (
-                    <SwipeRiga destra={{ azione: convocaGiocatore.bind(null, match._id, p._id), label: 'Convoca' }}>
+                    <SwipeRiga destra={{ azione: convocaGiocatore.bind(null, match._id, p._id), label: t('Convoca') }}>
                       <PlayerRow player={p} />
                     </SwipeRiga>
                   ) : (
@@ -158,7 +159,7 @@ async function MatchDetail({ params }: { params: Promise<{ id: string }> }) {
             </ul>
           </div>
         )}
-        {match.convocazioni.length === 0 && mancanti.length === 0 && <p className="text-sm text-zinc-500">Nessuna risposta.</p>}
+        {match.convocazioni.length === 0 && mancanti.length === 0 && <p className="text-sm text-zinc-500">{t('Nessuna risposta.')}</p>}
       </Card>
     </div>
   )
@@ -173,7 +174,9 @@ function Gruppo({
   convoca,
   me,
   mioId,
+  t,
 }: {
+  t: T
   titolo: string
   match: Match
   risposta: Risposta
@@ -209,19 +212,19 @@ function Gruppo({
               right={
                 <>
                   {c.aggiunto && risposta === 'presente' && (
-                    <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-xs text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">aggiunto</span>
+                    <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-xs text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">{t('aggiunto')}</span>
                   )}
                   {gestisci && risposta === 'riserva' && (
                     <form action={aggiungiDaAttesa.bind(null, match._id, c._key)}>
-                      <SubmitButton className={`${buttonClass('secondary')} px-2 py-1 text-xs`} title="Mettilo in lista: i partecipanti salgono di uno">
-                        ➕ Aggiungi
+                      <SubmitButton className={`${buttonClass('secondary')} px-2 py-1 text-xs`} title={t('Mettilo in lista: i partecipanti salgono di uno')}>
+                        ➕ {t('Aggiungi')}
                       </SubmitButton>
                     </form>
                   )}
                   {gestisci && risposta === 'presente' && c.aggiunto && (
                     <form action={rimettiInAttesa.bind(null, match._id, c._key)}>
-                      <SubmitButton className="rounded px-2 py-1 text-xs text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800" title="Rimettilo in lista d'attesa">
-                        ↩ In attesa
+                      <SubmitButton className="rounded px-2 py-1 text-xs text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800" title={t('Rimettilo in lista d’attesa')}>
+                        ↩ {t('In attesa')}
                       </SubmitButton>
                     </form>
                   )}
@@ -234,7 +237,7 @@ function Gruppo({
               {numerati && <span className="w-5 text-right text-xs tabular-nums text-zinc-400">{c.posizione}</span>}
               <div className="min-w-0 flex-1">
                 {convoca ? (
-                  <SwipeRiga destra={{ azione: convocaGiocatore.bind(null, match._id, c.giocatore._id), label: 'Convoca' }}>{riga}</SwipeRiga>
+                  <SwipeRiga destra={{ azione: convocaGiocatore.bind(null, match._id, c.giocatore._id), label: t('Convoca') }}>{riga}</SwipeRiga>
                 ) : (
                   riga
                 )}
@@ -247,14 +250,14 @@ function Gruppo({
   )
 }
 
-function Squadre({ match, mioId, gestisci }: { match: Match; mioId: string; gestisci: boolean }) {
+function Squadre({ match, mioId, gestisci, t }: { match: Match; mioId: string; gestisci: boolean; t: T }) {
   const teams: ['A' | 'B', Player[], string][] = [
     ['A', match.squadraA, 'border-t-blue-500'],
     ['B', match.squadraB, 'border-t-orange-500'],
   ]
   const mia = match.squadraA.some((p) => p._id === mioId) ? 'A' : match.squadraB.some((p) => p._id === mioId) ? 'B' : null
   // Nelle partite dei tornei le squadre hanno un nome.
-  const nome = (l: 'A' | 'B') => (l === 'A' ? match.nomeA : match.nomeB) ?? nomeSquadra(l)
+  const nome = (l: 'A' | 'B') => (l === 'A' ? match.nomeA : match.nomeB) ?? nomeSquadra(l, t)
   const inSquadra = new Set([...match.squadraA, ...match.squadraB].map((p) => p._id))
   const senzaSquadra = presenti(match)
     .map((c) => c.giocatore)
@@ -263,8 +266,8 @@ function Squadre({ match, mioId, gestisci }: { match: Match; mioId: string; gest
     <div className="space-y-3">
       {mia && match.stato !== 'giocata' && (
         <p className={`rounded-xl p-3 text-center text-sm font-medium text-white ${mia === 'A' ? 'bg-blue-600' : 'bg-orange-500'}`}>
-          {match.torneo ? `La tua squadra: ${nome(mia)}` : `Sei nella ${nomeSquadra(mia)}`}
-          {match.pettorine === mia && ' · 🦺 porta la pettorina!'}
+          {match.torneo ? t('La tua squadra: {squadra}', { squadra: nome(mia) }) : t('Sei nella {squadra}', { squadra: nome(mia) })}
+          {match.pettorine === mia && ` · 🦺 ${t('porta la pettorina!')}`}
         </p>
       )}
       <div className="grid gap-4 sm:grid-cols-2">
@@ -275,9 +278,9 @@ function Squadre({ match, mioId, gestisci }: { match: Match; mioId: string; gest
               <h2 className="mb-3 flex items-center justify-between gap-2 font-semibold">
                 <span>
                   {nome(lettera)}
-                  {match.pettorine === lettera && <span className="ml-2 rounded-full bg-zinc-100 px-2 py-0.5 text-xs font-normal dark:bg-zinc-800">🦺 pettorine</span>}
+                  {match.pettorine === lettera && <span className="ml-2 rounded-full bg-zinc-100 px-2 py-0.5 text-xs font-normal dark:bg-zinc-800">🦺 {t('pettorine')}</span>}
                 </span>
-                <span className="text-sm font-normal text-zinc-500">forza {totale.toFixed(1)}</span>
+                <span className="text-sm font-normal text-zinc-500">{t('forza')} {t.numero(totale, { minimumFractionDigits: 1, maximumFractionDigits: 1 })}</span>
               </h2>
               <ul className="space-y-2">
                 {mioInCima(players, mioId, (p) => p._id).map((p) => (
@@ -285,8 +288,8 @@ function Squadre({ match, mioId, gestisci }: { match: Match; mioId: string; gest
                     {gestisci ? (
                       // swipe a sinistra: torna tra quelli da allocare; a destra: passa nell'altra squadra
                       <SwipeRiga
-                        sinistra={{ azione: togliDallaSquadra.bind(null, match._id, p._id), label: 'Togli' }}
-                        destra={{ azione: cambiaSquadra.bind(null, match._id, p._id, lettera === 'A' ? 'B' : 'A'), label: 'Scambia' }}
+                        sinistra={{ azione: togliDallaSquadra.bind(null, match._id, p._id), label: t('Togli') }}
+                        destra={{ azione: cambiaSquadra.bind(null, match._id, p._id, lettera === 'A' ? 'B' : 'A'), label: t('Scambia') }}
                       >
                         <PlayerRow player={p} mio={p._id === mioId} prima={<Prestazione match={match} playerId={p._id} />} />
                       </SwipeRiga>
@@ -302,16 +305,16 @@ function Squadre({ match, mioId, gestisci }: { match: Match; mioId: string; gest
       </div>
       {gestisci && senzaSquadra.length > 0 && (
         <Card className="space-y-2 border-dashed">
-          <h2 className="font-semibold">Senza squadra</h2>
-          <p className="text-xs text-zinc-500">In lista ma non ancora in una squadra: scegli dove metterli, o fai swipe a sinistra per toglierli dalla partita.</p>
+          <h2 className="font-semibold">{t('Senza squadra')}</h2>
+          <p className="text-xs text-zinc-500">{t('In lista ma non ancora in una squadra: scegli dove metterli, o fai swipe a sinistra per toglierli dalla partita.')}</p>
           <ul className="space-y-2">
             {senzaSquadra.map((p) => (
               <li key={p._id}>
                 <SwipeRiga
                   sinistra={{
                     azione: togliDallaPartita.bind(null, match._id, p._id),
-                    label: 'Elimina',
-                    confirm: `Togliere ${displayName(p)} dalla partita? Passa tra i “non ci sono”.`,
+                    label: t('Elimina'),
+                    confirm: t('Togliere {nome} dalla partita? Passa tra i “non ci sono”.', { nome: displayName(p) }),
                   }}
                 >
                   <PlayerRow
@@ -341,21 +344,21 @@ function Squadre({ match, mioId, gestisci }: { match: Match; mioId: string; gest
   )
 }
 
-async function whatsappUrl(match: Match, legaNome: string) {
+async function whatsappUrl(match: Match, legaNome: string, t: T) {
   const breve = { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' } as const
   const testo = [
-    `⚽ *Convocazioni aperte!* · ${legaNome}`,
-    `📅 ${formatData(match.data, breve)}`,
+    `⚽ *${t('Convocazioni aperte!')}* · ${legaNome}`,
+    `📅 ${t.data(match.data, breve)}`,
     `📍 ${match.luogo}`,
-    `👥 ${match.postiDisponibili} posti${match.quota != null ? ` · ${match.quota} €` : ''}`,
-    `⏳ Rispondi entro ${formatData(match.chiusuraConvocazioni, breve)}`,
+    `👥 ${t('{n} posti', { n: match.postiDisponibili })}${match.quota != null ? ` · ${match.quota} €` : ''}`,
+    `⏳ ${t('Rispondi entro {data}', { data: t.data(match.chiusuraConvocazioni, breve) })}`,
     '',
     `👉 ${await baseUrl()}/partite/${match._id}`,
   ].join('\n')
   return `https://wa.me/?text=${encodeURIComponent(testo)}`
 }
 
-function AdminPanel({ match, whatsappUrl }: { match: Match; whatsappUrl: string }) {
+function AdminPanel({ match, whatsappUrl, t }: { match: Match; whatsappUrl: string; t: T }) {
   const count = presenti(match).length
   const fin = finestra(match)
   const scaduta = fin === 'scaduta'
@@ -369,19 +372,19 @@ function AdminPanel({ match, whatsappUrl }: { match: Match; whatsappUrl: string 
 
   return (
     <Card className="space-y-4 border-dashed">
-      <h2 className="font-semibold">Gestione organizzatore</h2>
+      <h2 className="font-semibold">{t('Gestione organizzatore')}</h2>
 
       {(fin === 'non_ancora' || fin === 'aperta') && (
         <div className="space-y-2">
           <ApriConvocazioni
             action={apriConvocazioni.bind(null, match._id)}
-            label={fin === 'non_ancora' ? '📣 Apri convocazioni' : '🔔 Avvisa di nuovo'}
-            conferma={fin === 'non_ancora' ? 'Aprire adesso le convocazioni e avvisare tutti?' : 'Mandare di nuovo la notifica a tutti?'}
+            label={fin === 'non_ancora' ? `📣 ${t('Apri convocazioni')}` : `🔔 ${t('Avvisa di nuovo')}`}
+            conferma={fin === 'non_ancora' ? t('Aprire adesso le convocazioni e avvisare tutti?') : t('Mandare di nuovo la notifica a tutti?')}
             whatsappUrl={whatsappUrl}
           />
           {match.notificaInviataIl && (
             <p className="text-xs text-zinc-500">
-              Giocatori avvisati {formatData(match.notificaInviataIl, { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+              {t('Giocatori avvisati {data}', { data: t.data(match.notificaInviataIl, { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) })}
             </p>
           )}
         </div>
@@ -389,15 +392,15 @@ function AdminPanel({ match, whatsappUrl }: { match: Match; whatsappUrl: string 
 
       {match.stato === 'aperta' && (
         <div className="space-y-2">
-          <p className="text-xs text-zinc-500">⚖️ Le formazioni si fanno dopo aver chiuso le convocazioni.</p>
-          {scaduta && <p className="text-sm text-amber-700 dark:text-amber-400">Il tempo per convocarsi è finito: chiudi le convocazioni per fare le squadre, oppure allunga la finestra.</p>}
+          <p className="text-xs text-zinc-500">⚖️ {t('Le formazioni si fanno dopo aver chiuso le convocazioni.')}</p>
+          {scaduta && <p className="text-sm text-amber-700 dark:text-amber-400">{t('Il tempo per convocarsi è finito: chiudi le convocazioni per fare le squadre, oppure allunga la finestra.')}</p>}
           {new Date(match.chiusuraConvocazioni) < new Date(match.data) && (
             <div className="flex flex-wrap items-center gap-2 text-sm">
-              <span className="text-zinc-500">⏱ Allunga la finestra:</span>
+              <span className="text-zinc-500">⏱ {t('Allunga la finestra:')}</span>
               {(
                 [
-                  [60, '+1 ora'],
-                  [1440, '+1 giorno'],
+                  [60, t('+1 ora')],
+                  [1440, t('+1 giorno')],
                 ] as const
               ).map(([minuti, label]) => (
                 <form key={minuti} action={allungaFinestra.bind(null, match._id, minuti)}>
@@ -407,9 +410,9 @@ function AdminPanel({ match, whatsappUrl }: { match: Match; whatsappUrl: string 
             </div>
           )}
           <div className="flex flex-wrap gap-2">
-            {statoForm('chiusa', '🔒 Chiudi convocazioni', scaduta ? 'primary' : 'secondary', scaduta ? undefined : 'Chiudere le convocazioni prima della scadenza?')}
+            {statoForm('chiusa', `🔒 ${t('Chiudi convocazioni')}`, scaduta ? 'primary' : 'secondary', scaduta ? undefined : t('Chiudere le convocazioni prima della scadenza?'))}
             <ButtonLink href={`/partite/${match._id}/modifica`} variant="secondary">
-              Modifica
+              {t('Modifica')}
             </ButtonLink>
           </div>
         </div>
@@ -421,10 +424,10 @@ function AdminPanel({ match, whatsappUrl }: { match: Match; whatsappUrl: string 
           <div className="flex flex-wrap gap-2">
             {count >= 2 && new Date() < risultatoDa(match) && (
               <ButtonLink href={`/partite/${match._id}/formazioni`} variant={match.squadraA.length ? 'secondary' : 'primary'}>
-                ⚖️ {match.squadraA.length ? 'Modifica formazioni' : 'Fai le formazioni'}
+                ⚖️ {match.squadraA.length ? t('Modifica formazioni') : t('Fai le formazioni')}
               </ButtonLink>
             )}
-            {statoForm('aperta', 'Riapri convocazioni', 'secondary')}
+            {statoForm('aperta', t('Riapri convocazioni'), 'secondary')}
           </div>
         </>
       )}
@@ -432,8 +435,8 @@ function AdminPanel({ match, whatsappUrl }: { match: Match; whatsappUrl: string 
 
       <div className="flex flex-wrap gap-2 border-t border-zinc-200 pt-4 dark:border-zinc-800">
         {match.stato === 'annullata'
-          ? statoForm('aperta', 'Ripristina partita', 'secondary')
-          : match.stato !== 'giocata' && statoForm('annullata', 'Annulla partita', 'danger', 'Annullare la partita?')}
+          ? statoForm('aperta', t('Ripristina partita'), 'secondary')
+          : match.stato !== 'giocata' && statoForm('annullata', t('Annulla partita'), 'danger', t('Annullare la partita?'))}
       </div>
     </Card>
   )
@@ -445,7 +448,7 @@ async function KmCard({ match, me, rosa }: { match: Match; me: Membro; rosa: Pla
   const inLista = presenti(match).some((c) => c.giocatore._id === me._id)
   const mostroMiei = match.stato !== 'annullata' && inLista && !me.ospite && new Date() >= fine
   if (!mostroMiei && match.distanze.length === 0) return null
-  const utente = mostroMiei ? await getUtente() : null
+  const [utente, t] = await Promise.all([mostroMiei ? getUtente() : null, getT()])
   const collegato = !!(utente && stravaConfigurato() && (await getCollegamento(utente.id)))
   const nomi = new Map([...rosa, ...presenti(match).map((c) => c.giocatore)].map((p) => [p._id, displayName(p)]))
   const classifica = [...match.distanze].sort((a, b) => b.km - a.km)
@@ -464,15 +467,15 @@ async function KmCard({ match, me, rosa }: { match: Match; me: Membro; rosa: Pla
       )}
       {classifica.length > 0 && (
         <div className={mostroMiei ? 'border-t border-zinc-200 pt-3 dark:border-zinc-800' : ''}>
-          <h2 className="mb-2 font-semibold">🏃 Km percorsi</h2>
+          <h2 className="mb-2 font-semibold">🏃 {t('Km percorsi')}</h2>
           <ol className="space-y-1 text-sm">
             {classifica.map((d, i) => (
               <li key={d.giocatoreId} className={`flex justify-between ${d.giocatoreId === me._id ? 'font-bold' : ''}`}>
                 <span>
                   <span className="mr-2 tabular-nums text-zinc-400">{i + 1}</span>
-                  {nomi.get(d.giocatoreId) ?? 'Giocatore'}
+                  {nomi.get(d.giocatoreId) ?? t('Giocatore')}
                 </span>
-                <span className="tabular-nums">{d.km.toLocaleString('it-IT', { maximumFractionDigits: 2 })} km</span>
+                <span className="tabular-nums">{t.numero(d.km, { maximumFractionDigits: 2 })} km</span>
               </li>
             ))}
           </ol>
@@ -483,18 +486,19 @@ async function KmCard({ match, me, rosa }: { match: Match; me: Membro; rosa: Pla
 }
 
 // Gol, MVP e km del giocatore in questa partita (i km accanto al voto).
-function Prestazione({ match, playerId }: { match: Match; playerId: string }) {
+async function Prestazione({ match, playerId }: { match: Match; playerId: string }) {
   const gol = match.marcatori.find((m) => m.giocatoreId === playerId)?.gol ?? 0
   const km = match.distanze.find((d) => d.giocatoreId === playerId)?.km
   if (!gol && match.mvpId !== playerId && km == null) return null
+  const t = await getT()
   return (
     // gol e MVP, poi i km subito accanto al voto
     <span className="flex shrink-0 items-center gap-1.5 text-sm">
-      {gol > 0 && <span title={`${gol} gol`}>⚽{gol > 1 && <sub>{gol}</sub>}</span>}
+      {gol > 0 && <span title={t('{n} gol', { n: gol })}>⚽{gol > 1 && <sub>{gol}</sub>}</span>}
       {match.mvpId === playerId && <span title="MVP">🫑</span>}
       {km != null && (
-        <span title="Km percorsi" className="whitespace-nowrap text-xs font-semibold text-zinc-600 dark:text-zinc-300">
-          {km.toLocaleString('it-IT', { maximumFractionDigits: 1 })} km
+        <span title={t('Km percorsi')} className="whitespace-nowrap text-xs font-semibold text-zinc-600 dark:text-zinc-300">
+          {t.numero(km, { maximumFractionDigits: 1 })} km
         </span>
       )}
     </span>
@@ -502,30 +506,30 @@ function Prestazione({ match, playerId }: { match: Match; playerId: string }) {
 }
 
 // Pulsante per risultato, marcatori e MVP: attivo 1 minuto dopo la fine della partita.
-function RisultatoAzione({ match }: { match: Match }) {
+function RisultatoAzione({ match, t }: { match: Match; t: T }) {
   if (match.stato === 'annullata' || !match.squadraA.length || !match.squadraB.length) return null
   const da = risultatoDa(match)
   if (new Date() < da) {
     if (match.stato !== 'chiusa') return null
     return (
       <p className="text-sm text-zinc-500">
-        📝 Risultato inseribile tra <Countdown target={da.toISOString()} />
+        📝 {t('Risultato inseribile tra')} <Countdown target={da.toISOString()} />
       </p>
     )
   }
   return (
     <ButtonLink href={`/partite/${match._id}/risultato`} variant={match.stato === 'giocata' ? 'secondary' : 'primary'}>
-      {match.stato === 'giocata' ? '✏️ Modifica risultato' : '📝 Inserisci risultato, marcatori e MVP'}
+      {match.stato === 'giocata' ? `✏️ ${t('Modifica risultato')}` : `📝 ${t('Inserisci risultato, marcatori e MVP')}`}
     </ButtonLink>
   )
 }
 
-function TestoFormato({ f }: { f: NonNullable<ReturnType<typeof formatoInCorso>> }) {
-  if (f.iscritti < 2) return <>in base alle convocazioni</>
+function TestoFormato({ f, t }: { f: NonNullable<ReturnType<typeof formatoInCorso>>; t: T }) {
+  if (f.iscritti < 2) return <>{t('in base alle convocazioni')}</>
   return (
     <>
-      se si chiudesse ora: {f.perSquadra} contro {f.perSquadra}
-      {f.inAttesa > 0 && ` (${f.inAttesa} in lista d'attesa)`}
+      {t('se si chiudesse ora: {n} contro {n}', { n: f.perSquadra })}
+      {f.inAttesa > 0 && ` (${t('{n} in lista d’attesa', { n: f.inAttesa })})`}
     </>
   )
 }

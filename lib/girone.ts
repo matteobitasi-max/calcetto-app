@@ -58,23 +58,26 @@ export function classifica(
 
 // Nomi e colori proposti per le squadre.
 export const SQUADRE_PREDEFINITE = [
-  { nome: 'Rossi', colore: '#dc2626' },
-  { nome: 'Blu', colore: '#2563eb' },
-  { nome: 'Verdi', colore: '#16a34a' },
-  { nome: 'Gialli', colore: '#eab308' },
-  { nome: 'Neri', colore: '#27272a' },
-  { nome: 'Bianchi', colore: '#a1a1aa' },
-  { nome: 'Arancioni', colore: '#ea580c' },
-  { nome: 'Viola', colore: '#9333ea' },
-  { nome: 'Celesti', colore: '#38bdf8' },
-  { nome: 'Rosa', colore: '#ec4899' },
-  { nome: 'Granata', colore: '#7f1d1d' },
-  { nome: 'Grigi', colore: '#6b7280' },
-  { nome: 'Turchesi', colore: '#14b8a6' },
-  { nome: 'Lime', colore: '#84cc16' },
-  { nome: 'Marroni', colore: '#92400e' },
-  { nome: 'Oro', colore: '#ca8a04' },
+  { nome: 'Rossi', en: 'Reds', colore: '#dc2626' },
+  { nome: 'Blu', en: 'Blues', colore: '#2563eb' },
+  { nome: 'Verdi', en: 'Greens', colore: '#16a34a' },
+  { nome: 'Gialli', en: 'Yellows', colore: '#eab308' },
+  { nome: 'Neri', en: 'Blacks', colore: '#27272a' },
+  { nome: 'Bianchi', en: 'Whites', colore: '#a1a1aa' },
+  { nome: 'Arancioni', en: 'Oranges', colore: '#ea580c' },
+  { nome: 'Viola', en: 'Purples', colore: '#9333ea' },
+  { nome: 'Celesti', en: 'Sky Blues', colore: '#38bdf8' },
+  { nome: 'Rosa', en: 'Pinks', colore: '#ec4899' },
+  { nome: 'Granata', en: 'Maroons', colore: '#7f1d1d' },
+  { nome: 'Grigi', en: 'Greys', colore: '#6b7280' },
+  { nome: 'Turchesi', en: 'Turquoises', colore: '#14b8a6' },
+  { nome: 'Lime', en: 'Limes', colore: '#84cc16' },
+  { nome: 'Marroni', en: 'Browns', colore: '#92400e' },
+  { nome: 'Oro', en: 'Golds', colore: '#ca8a04' },
 ]
+
+// Nome proposto per la squadra n. `i`, nella lingua dell'app.
+export const nomePredefinito = (i: number, lingua: string) => (lingua === 'en' ? SQUADRE_PREDEFINITE[i]?.en : SQUADRE_PREDEFINITE[i]?.nome) ?? ''
 
 // ---------- Gironi + tabellone ----------
 

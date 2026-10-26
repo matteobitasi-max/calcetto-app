@@ -2,6 +2,7 @@ import 'server-only'
 import { sanity } from './sanity'
 import { addDays, isoToRomeLocal, romeLocalToISO } from './dates'
 import { descriviRicorrenza } from './ricorrenza'
+import type { T } from './i18n'
 
 export type Series = {
   _id: string
@@ -116,4 +117,4 @@ export async function contaFutureConRisposte(seriesId: string) {
   )
 }
 
-export const descriviSerie = (s: Series) => descriviRicorrenza(s)
+export const descriviSerie = (s: Series, t: T) => descriviRicorrenza(s, t)

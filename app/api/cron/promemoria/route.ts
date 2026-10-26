@@ -1,7 +1,6 @@
 import { timingSafeEqual } from 'node:crypto'
 import { sanity } from '@/lib/sanity'
 import { inviaAGiocatori } from '@/lib/push'
-import { formatData } from '@/lib/dates'
 
 // Promemoria 30 minuti prima della chiusura delle convocazioni, a chi non ha ancora risposto.
 // Lo chiama ogni 5 minuti un servizio esterno (cron-job.org) con "Authorization: Bearer <CRON_SECRET>".
@@ -36,12 +35,15 @@ export async function GET(request: Request) {
     const minuti = Math.max(1, Math.round((new Date(p.chiusura).getTime() - ora.getTime()) / 60_000))
     const r = await inviaAGiocatori(
       p.mancanti,
-      {
-        title: `⏳ ${p.lega}: convocazioni chiudono tra ${minuti} minuti`,
-        body: `Partita di ${formatData(p.data, { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })} · ${p.luogo}. Ci sei?`,
+      (t) => ({
+        title: `⏳ ${p.lega}: ${t('convocazioni chiudono tra {n} minuti', { n: minuti })}`,
+        body: t('Partita di {data} · {luogo}. Ci sei?', {
+          data: t.data(p.data, { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' }),
+          luogo: p.luogo,
+        }),
         url: `/partite/${p._id}`,
         tag: `promemoria-${p._id}`,
-      },
+      }),
       'convocazioni',
     ).catch(() => ({ inviate: 0, totali: p.mancanti.length }))
     esiti.push({ partita: p._id, destinatari: p.mancanti.length, ...r })

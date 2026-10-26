@@ -2,9 +2,11 @@
 
 import { useEffect, useState } from 'react'
 import { Salute, impostaKmAutomatici, kmAutomatici, nomeSalute, saluteDisponibile } from '@/lib/salute'
+import { useT } from '@/components/lingua'
 
 // Nel mio account (solo nell'app): km delle partite presi da soli da Apple Salute / Health Connect.
 export function SaluteAccount() {
+  const t = useT()
   const [disponibile, setDisponibile] = useState(false)
   const [attivi, setAttivi] = useState(false)
   const [pending, setPending] = useState(false)
@@ -43,18 +45,21 @@ export function SaluteAccount() {
     <div className="space-y-3 px-4 py-3 text-sm">
       {/* sempre visibile nell'app: cosa legge The Cap da Apple Health / Health Connect e perché */}
       <div>
-        <p className="font-semibold">❤️ {ios ? 'Apple Health (Salute)' : 'Health Connect'}</p>
+        <p className="font-semibold">❤️ {ios ? t('Apple Health (Salute)') : 'Health Connect'}</p>
         <p className="mt-1 text-xs text-zinc-500">
-          The Cap legge da {ios ? 'Apple Health (l\u2019app Salute)' : 'Health Connect'} <b>solo la distanza camminata e corsa</b>{' '}
-          registrata durante l&apos;orario delle tue partite, per mostrare i km che hai percorso. Non scrive nulla e non legge
-          altri dati di salute. Puoi cambiare il permesso quando vuoi
-          {ios ? ' da Impostazioni → Salute → Accesso ai dati e dispositivi → TheCap.' : ' dalle impostazioni di Health Connect.'}
+          {t(
+            'The Cap legge da {app} solo la distanza camminata e corsa registrata durante l’orario delle tue partite, per mostrare i km che hai percorso. Non scrive nulla e non legge altri dati di salute.',
+            { app: ios ? t('Apple Health (l’app Salute)') : 'Health Connect' },
+          )}{' '}
+          {ios
+            ? t('Puoi cambiare il permesso quando vuoi da Impostazioni → Salute → Accesso ai dati e dispositivi → TheCap.')
+            : t('Puoi cambiare il permesso quando vuoi dalle impostazioni di Health Connect.')}
         </p>
       </div>
       <label className="flex cursor-pointer items-center justify-between gap-3">
         <span>
-          <span className="font-medium">Km automatici da {nome}</span>
-          <span className="block text-xs text-zinc-500">Dopo ogni partita, aprendo l&apos;app, i tuoi km compaiono da soli accanto al tuo nome.</span>
+          <span className="font-medium">{t('Km automatici da {app}', { app: nome })}</span>
+          <span className="block text-xs text-zinc-500">{t('Dopo ogni partita, aprendo l’app, i tuoi km compaiono da soli accanto al tuo nome.')}</span>
         </span>
         <input type="checkbox" checked={attivi} disabled={pending} onChange={cambia} className="h-5 w-5 shrink-0 accent-green-600" />
       </label>

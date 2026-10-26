@@ -7,7 +7,9 @@ import { classifica } from '@/lib/punteggio'
 import { TROFEI, trofeiLega, type IdTrofeo } from '@/lib/trofei'
 import { Medaglia } from '@/components/medaglia'
 import { SaluteAccount } from '@/components/salute-account'
-import { formatData } from '@/lib/dates'
+import { getT } from '@/lib/lingua'
+import type { T } from '@/lib/i18n'
+import { ScegliLingua } from '@/components/scegli-lingua'
 import { immagineUrl } from '@/lib/image'
 import { caricaFoto } from '@/app/actions'
 import { AvatarUpload } from '@/components/avatar-upload'
@@ -22,12 +24,13 @@ export async function ProfiloGiocatore({ id }: { id: string }) {
   // Le schede si vedono solo tra membri della stessa lega.
   const me = await membroDi(player?.legaId)
   if (!player || !me) notFound()
-  const [stats, storico, partite, kmTotali, trofeiTutti] = await Promise.all([
+  const [stats, storico, partite, kmTotali, trofeiTutti, t] = await Promise.all([
     getPlayerStats(id, me.lega._id),
     getStorico(id),
     getPartitePunteggio(me.lega._id),
     getKmTotali(me.lega._id),
     trofeiLega(me.lega._id),
+    getT(),
   ])
   const trofei = trofeiTutti.get(id) ?? {}
   const inClassifica = classifica(partite).find((r) => r.id === player._id)
@@ -38,18 +41,18 @@ export async function ProfiloGiocatore({ id }: { id: string }) {
   const mio = me._id === player._id
   const cambiaFoto = canEdit || mio
   const ruoli = [
-    player.isAdmin && 'organizzatore',
-    !player.isAdmin && player.puoInserireRisultati && 'refertatore',
+    player.isAdmin && t('organizzatore'),
+    !player.isAdmin && player.puoInserireRisultati && t('refertatore'),
   ]
 
   return (
     <div className="space-y-4">
-      {mio && <p className="text-sm font-medium text-green-700 dark:text-green-400">Il mio profilo</p>}
+      {mio && <p className="text-sm font-medium text-green-700 dark:text-green-400">{t('Il mio profilo')}</p>}
       <Card className="relative">
         {canEdit && (
           <Link
             href={`/giocatori/${player._id}/modifica`}
-            aria-label="Modifica giocatore"
+            aria-label={t('Modifica giocatore')}
             className="absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-full text-lg hover:bg-zinc-100 dark:hover:bg-zinc-800"
           >
             ✏️
@@ -68,60 +71,60 @@ export async function ProfiloGiocatore({ id }: { id: string }) {
             {player.soprannome && <p className="text-sm text-zinc-500">{fullName}</p>}
             <PlayerBadge badge={player.badge} />
             <p className="text-sm leading-snug text-zinc-500 first-letter:uppercase">
-              {[player.ruolo, player.piede && `piede ${player.piede}`, player.dataNascita && `${eta(player.dataNascita)} anni`, ...ruoli, player.attivo === false && 'non attivo']
+              {[player.ruolo && t(player.ruolo), player.piede && t('piede {piede}', { piede: t(player.piede) }), player.dataNascita && t('{n} anni', { n: eta(player.dataNascita) }), ...ruoli, player.attivo === false && t('non attivo')]
                 .filter(Boolean)
                 .join(' · ')}
             </p>
-            {player.collegato === false && <p className="text-xs text-amber-700 dark:text-amber-400">⏳ non ha ancora fatto l&apos;accesso</p>}
+            {player.collegato === false && <p className="text-xs text-amber-700 dark:text-amber-400">⏳ {t('non ha ancora fatto l’accesso')}</p>}
           </div>
           <div className="flex shrink-0 flex-col items-center gap-1 pt-6">
             <Overall player={player} grande />
             {inClassifica ? (
               <p className="text-center text-xs leading-tight text-zinc-500">
-                <b className="text-zinc-700 dark:text-zinc-200">{inClassifica.posizione}°</b> in classifica
+                <b className="text-zinc-700 dark:text-zinc-200">{t('{n}°', { n: inClassifica.posizione })}</b> {t('in classifica')}
                 <br />
-                {new Intl.NumberFormat('it-IT', { maximumFractionDigits: 2 }).format(inClassifica.punti)} pt
+                {t.numero(inClassifica.punti, { maximumFractionDigits: 2 })} {t('pt')}
               </p>
             ) : (
-              <p className="text-xs text-zinc-400">voto</p>
+              <p className="text-xs text-zinc-400">{t('voto')}</p>
             )}
           </div>
         </div>
         {me.isAdmin && (
           <Link href={`/giocatori/${player._id}/unisci`} className="mt-3 block text-right text-xs text-zinc-500 hover:underline">
-            🔗 Unisci un doppione
+            🔗 {t('Unisci un doppione')}
           </Link>
         )}
       </Card>
 
-      <Statistiche stats={stats} km={kmTotali.get(id)} />
+      <Statistiche stats={stats} km={kmTotali.get(id)} t={t} />
 
       <Card>
-        <h2 className="mb-1 font-semibold">🏅 Trofei</h2>
+        <h2 className="mb-1 font-semibold">🏅 {t('Trofei')}</h2>
         <p className="mb-3 text-xs text-zinc-500">
-          {Object.keys(trofei).length} su {Object.keys(TROFEI).length} sbloccati · tocca un trofeo per sapere cos&apos;è
+          {t('{n} su {tot} sbloccati · tocca un trofeo per sapere cos’è', { n: Object.keys(trofei).length, tot: Object.keys(TROFEI).length })}
         </p>
         <div className="grid grid-cols-3 gap-2">
-          {(Object.keys(TROFEI) as IdTrofeo[]).map((t) => (
-            <Trofeo key={t} id={t} sbloccato={trofei[t]} />
+          {(Object.keys(TROFEI) as IdTrofeo[]).map((tr) => (
+            <Trofeo key={tr} id={tr} sbloccato={trofei[tr]} t={t} />
           ))}
         </div>
       </Card>
 
       <Card>
-        <h2 className="mb-3 font-semibold">Caratteristiche</h2>
+        <h2 className="mb-3 font-semibold">{t('Caratteristiche')}</h2>
         <SkillBars player={player} />
       </Card>
 
-      <Storico partite={storico} mio={mio} />
+      <Storico partite={storico} mio={mio} t={t} />
 
       {mio && (
         <div className="space-y-3">
           <Card className="space-y-3">
-            <h2 className="font-semibold">🔔 Notifiche</h2>
+            <h2 className="font-semibold">🔔 {t('Notifiche')}</h2>
             <NotificheToggle variant="impostazione" />
             <div>
-              <p className="text-xs text-zinc-500">Cosa vuoi ricevere da {me.lega.nome}:</p>
+              <p className="text-xs text-zinc-500">{t('Cosa vuoi ricevere da {lega}:', { lega: me.lega.nome })}</p>
               <PreferenzeNotifiche iniziali={player.notifiche} />
             </div>
           </Card>
@@ -129,19 +132,23 @@ export async function ProfiloGiocatore({ id }: { id: string }) {
           <Card className="p-0! empty:hidden">
             <SaluteAccount />
           </Card>
+          <Card className="space-y-3">
+            <h2 className="font-semibold">🌍 {t('Lingua')}</h2>
+            <ScegliLingua />
+          </Card>
           <Card className="divide-y divide-zinc-100 p-0! text-sm dark:divide-zinc-800">
             <Link href="/account" className="flex items-center justify-between px-4 py-3 hover:bg-zinc-50 dark:hover:bg-zinc-800">
-              👤 Il mio account (nome, telefono, nascita, ruolo, piede) <span className="text-zinc-400">›</span>
+              👤 {t('Il mio account (nome, telefono, nascita, ruolo, piede)')} <span className="text-zinc-400">›</span>
             </Link>
             <Link href="/privacy" className="flex items-center justify-between px-4 py-3 hover:bg-zinc-50 dark:hover:bg-zinc-800">
-              🔒 Privacy policy <span className="text-zinc-400">›</span>
+              🔒 {t('Privacy policy')} <span className="text-zinc-400">›</span>
             </Link>
             <Link href="/supporto" className="flex items-center justify-between px-4 py-3 hover:bg-zinc-50 dark:hover:bg-zinc-800">
-              💬 Supporto <span className="text-zinc-400">›</span>
+              💬 {t('Supporto')} <span className="text-zinc-400">›</span>
             </Link>
           </Card>
           <SignOutButton redirectUrl="/sign-in">
-            <button className={`${buttonClass('secondary')} w-full`}>Esci</button>
+            <button className={`${buttonClass('secondary')} w-full`}>{t('Esci')}</button>
           </SignOutButton>
           <EliminaAccount />
         </div>
@@ -150,22 +157,22 @@ export async function ProfiloGiocatore({ id }: { id: string }) {
   )
 }
 
-function Statistiche({ stats: s, km }: { stats: PlayerStats; km?: { km: number; partite: number } }) {
+function Statistiche({ stats: s, km, t }: { stats: PlayerStats; km?: { km: number; partite: number }; t: T }) {
   if (s.giocate === 0) {
-    return <Card className="text-sm text-zinc-500">Le statistiche compariranno dopo la prima partita con il risultato.</Card>
+    return <Card className="text-sm text-zinc-500">{t('Le statistiche compariranno dopo la prima partita con il risultato.')}</Card>
   }
   const pct = (n: number) => Math.round((n / s.giocate) * 100)
-  const media = (n: number) => (n / s.giocate).toFixed(1)
+  const media = (n: number) => t.numero(n / s.giocate, { minimumFractionDigits: 1, maximumFractionDigits: 1 })
 
   return (
     <Card className="space-y-4">
-      <h2 className="font-semibold">Statistiche</h2>
+      <h2 className="font-semibold">{t('Statistiche')}</h2>
       <dl className="grid grid-cols-4 gap-2 text-center">
         {(
           [
-            ['Partite', s.giocate, ''],
-            ['Vittorie', `${pct(s.vinte)}%`, 'text-green-600'],
-            ['Gol', s.gol, ''],
+            [t('Partite'), s.giocate, ''],
+            [t('Vittorie'), `${pct(s.vinte)}%`, 'text-green-600'],
+            [t('Gol'), s.gol, ''],
             ['MVP 🫑', s.mvp, 'text-amber-500'],
           ] as const
         ).map(([label, value, cls]) => (
@@ -183,24 +190,24 @@ function Statistiche({ stats: s, km }: { stats: PlayerStats; km?: { km: number; 
           <span className="bg-red-500" style={{ width: `${pct(s.perse)}%` }} />
         </div>
         <p className="flex justify-between text-xs text-zinc-500">
-          <span className="text-green-700 dark:text-green-400">{s.vinte} vinte</span>
-          <span>{s.pari} pari</span>
-          <span className="text-red-600">{s.perse} perse</span>
+          <span className="text-green-700 dark:text-green-400">{t('{n} vinte', { n: s.vinte })}</span>
+          <span>{t('{n} pari', { n: s.pari })}</span>
+          <span className="text-red-600">{t('{n} perse', { n: s.perse })}</span>
         </p>
       </div>
 
       <dl className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm sm:grid-cols-4">
         {(
           [
-            ['Gol fatti', s.gol],
-            ['Gol a partita', media(s.gol)],
-            ['Gol subiti', s.gs],
-            ['Subiti a partita', media(s.gs)],
+            [t('Gol fatti'), s.gol],
+            [t('Gol a partita'), media(s.gol)],
+            [t('Gol subiti'), s.gs],
+            [t('Subiti a partita'), media(s.gs)],
             // km solo se ce ne sono (da Apple Salute): la media è sulle partite con i km
             ...(km
               ? ([
-                  ['🏃 Km totali', km.km.toLocaleString('it-IT', { maximumFractionDigits: 1 })],
-                  ['Km a partita', (km.km / km.partite).toLocaleString('it-IT', { maximumFractionDigits: 1 })],
+                  [`🏃 ${t('Km totali')}`, t.numero(km.km, { maximumFractionDigits: 1 })],
+                  [t('Km a partita'), t.numero(km.km / km.partite, { maximumFractionDigits: 1 })],
                 ] as const)
               : []),
           ] as const
@@ -220,20 +227,21 @@ const ESITO = {
   P: 'bg-zinc-400 text-white',
   S: 'bg-red-500 text-white',
 }
+const LETTERA = { V: 'V|vittorie', P: 'P|pari', S: 'S|sconfitte' } as const
 
 // mio: nel mio profilo i gol della mia squadra sono in grassetto quando ho vinto.
-function Storico({ partite, mio }: { partite: PartitaGiocata[]; mio: boolean }) {
+function Storico({ partite, mio, t }: { partite: PartitaGiocata[]; mio: boolean; t: T }) {
   if (partite.length === 0) return null
   return (
     <Card>
       <h2 className="mb-3 flex items-center justify-between font-semibold">
-        Ultime partite
+        {t('Ultime partite')}
         <span className="flex gap-1">
           {[...partite].reverse().map((p) => {
             const e = p.fatti > p.subiti ? 'V' : p.fatti < p.subiti ? 'S' : 'P'
             return (
               <span key={p._id} className={`flex h-5 w-5 items-center justify-center rounded text-[10px] font-bold ${ESITO[e]}`}>
-                {e}
+                {t(LETTERA[e])}
               </span>
             )
           })}
@@ -245,9 +253,9 @@ function Storico({ partite, mio }: { partite: PartitaGiocata[]; mio: boolean }) 
           return (
             <li key={p._id}>
               <Link href={`/partite/${p._id}`} className="flex items-center gap-3 py-2 text-sm hover:bg-zinc-50 dark:hover:bg-zinc-800">
-                <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded text-xs font-bold ${ESITO[e]}`}>{e}</span>
+                <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded text-xs font-bold ${ESITO[e]}`}>{t(LETTERA[e])}</span>
                 <span className="min-w-0 flex-1">
-                  <span className="block capitalize">{formatData(p.data, { weekday: 'short', day: 'numeric', month: 'short' })}</span>
+                  <span className="block capitalize">{t.data(p.data, { weekday: 'short', day: 'numeric', month: 'short' })}</span>
                   <span className="block truncate text-xs text-zinc-500">{p.luogo}</span>
                 </span>
                 <span className="text-right">
@@ -271,24 +279,25 @@ function Storico({ partite, mio }: { partite: PartitaGiocata[]; mio: boolean }) 
 }
 
 // Un trofeo: sbloccato a colori (con quante volte), da sbloccare in grigio. Toccandolo si apre la spiegazione.
-function Trofeo({ id, sbloccato }: { id: IdTrofeo; sbloccato?: { il: string; volte: number } }) {
-  const t = TROFEI[id]
+function Trofeo({ id, sbloccato, t }: { id: IdTrofeo; sbloccato?: { il: string; volte: number }; t: T }) {
+  const tr = TROFEI[id]
   const dettaglio = sbloccato
-    ? `Sbloccato il ${formatData(sbloccato.il, { day: 'numeric', month: 'long', year: 'numeric' })}${sbloccato.volte > 1 ? ` · ${sbloccato.volte} volte` : ''}`
-    : '🔒 Ancora da sbloccare'
+    ? t('Sbloccato il {data}', { data: t.data(sbloccato.il, { day: 'numeric', month: 'long', year: 'numeric' }) }) +
+      (sbloccato.volte > 1 ? ` · ${t('{n} volte', { n: sbloccato.volte })}` : '')
+    : `🔒 ${t('Ancora da sbloccare')}`
   return (
     <Medaglia
-      emoji={t.emoji}
-      titolo={t.nome}
-      testo={t.descrizione}
+      emoji={tr.emoji}
+      titolo={t(tr.nome)}
+      testo={t(tr.descrizione)}
       dettaglio={dettaglio}
       // tutti i riquadri della stessa misura, anche con nomi su due righe o senza "×N"
       className={`flex h-28 w-full flex-col items-center justify-center gap-1 rounded-xl p-2 text-center ${
         sbloccato ? 'bg-amber-50 ring-1 ring-amber-300 dark:bg-amber-950/40 dark:ring-amber-700' : 'bg-zinc-50 opacity-50 grayscale dark:bg-zinc-950'
       }`}
     >
-      <span className="text-3xl">{t.emoji}</span>
-      <span className="flex h-8 items-center text-xs font-semibold leading-tight">{t.nome}</span>
+      <span className="text-3xl">{tr.emoji}</span>
+      <span className="flex h-8 items-center text-xs font-semibold leading-tight">{t(tr.nome)}</span>
       <span className={`text-[11px] text-zinc-500 ${sbloccato && sbloccato.volte > 1 ? '' : 'invisible'}`}>×{sbloccato?.volte ?? 1}</span>
     </Medaglia>
   )

@@ -24,6 +24,8 @@ export const pushSubscription = defineType({
       fields: [defineField({ name: 'p256dh', type: 'string' }), defineField({ name: 'auth', type: 'string' })],
     }),
     defineField({ name: 'dispositivo', type: 'string' }),
+    defineField({ name: 'lingua', description: 'Lingua delle notifiche su questo dispositivo (it, en)', type: 'string' }),
+    defineField({ name: 'lingua', description: 'Lingua delle notifiche su questo dispositivo (it, en)', type: 'string' }),
   ],
   preview: {
     select: { tipo: 'tipo', nome: 'giocatore.nome', cognome: 'giocatore.cognome', dispositivo: 'dispositivo', media: 'giocatore.foto' },

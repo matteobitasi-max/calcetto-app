@@ -1,9 +1,12 @@
 import type { Metadata } from 'next'
+import { getT } from '@/lib/lingua'
 import { CONTATTO_EMAIL, TITOLARE } from '@/lib/contatti'
 
 export const metadata: Metadata = { title: 'Privacy · TheCap' }
 
-export default function PrivacyPage() {
+export default async function PrivacyPage() {
+  const t = await getT()
+  if (t.lingua === 'en') return <InEnglish />
   return (
     <>
       <h1>Informativa sulla privacy</h1>
@@ -73,6 +76,80 @@ export default function PrivacyPage() {
 
       <h2>Minori</h2>
       <p>L&apos;app è pensata per persone dai 14 anni in su.</p>
+    </>
+  )
+}
+
+// English version.
+function InEnglish() {
+  return (
+    <>
+      <h1>Privacy policy</h1>
+      <p>Last updated: October 2026.</p>
+      <p>
+        TheCap is an app to organise five-a-side football matches among friends: call-ups, line-ups, results and fees. The data controller
+        is <b>{TITOLARE}</b>, reachable at <a href={`mailto:${CONTATTO_EMAIL}`}>{CONTATTO_EMAIL}</a>.
+      </p>
+
+      <h2>What data we process</h2>
+      <ul>
+        <li>
+          <b>Account</b>: email or phone number, first and last name, used to sign in.
+        </li>
+        <li>
+          <b>Player card</b>: name, nickname, photo, position, foot, age (if you enter your date of birth), badge and technical attributes,
+          entered by you or by your league&apos;s organisers and visible only to league members. The app owner can access a league&apos;s
+          data only for support and moderation (for example to fix a mistake or help an organiser).
+        </li>
+        <li>
+          <b>League activity</b>: call-up replies, teams, goals, MVPs, stats and fee payment status. The app does not process payment
+          data: payments happen outside the app (e.g. Satispay).
+        </li>
+        <li>
+          <b>Notifications</b>: a technical device identifier, if you turn on notifications, and your notification preferences.
+        </li>
+        <li>
+          <b>Distance run</b>: the km of each match, visible to league members. Only if you choose to, we take them from <b>Apple Health</b>{' '}
+          (the iPhone Health app) or <b>Health Connect</b> (Android): the walking/running distance recorded during the match, nothing else.
+          Health data is never used for advertising or sold. Alternatively from <b>Strava</b> (the distance of the activity recorded during
+          the match). For Strava we keep the connection to your account, which you can remove any time from &ldquo;My account&rdquo;.
+        </li>
+        <li>
+          <b>Technical cookies</b>: to keep you signed in and remember your active league and language. No profiling or advertising cookies.
+        </li>
+      </ul>
+
+      <h2>Why we process it</h2>
+      <p>
+        Only to make the app work (performance of the service you request): sign-in, managing leagues and matches, sending notifications.
+        We don&apos;t sell data, and we don&apos;t do advertising or profiling.
+      </p>
+
+      <h2>Who processes it for us</h2>
+      <ul>
+        <li>
+          <b>Clerk</b> (sign-in and accounts) · <b>Sanity</b> (data storage) · <b>Vercel</b> (app servers) · <b>Google Firebase</b> and the
+          notification services of <b>Apple</b> and <b>Google</b> (notifications) · <b>Strava</b> (only if you connect it, for km).
+        </li>
+        <li>Some of these providers may process data outside the EU, with the safeguards required by the GDPR.</li>
+      </ul>
+
+      <h2>How long we keep it</h2>
+      <p>
+        As long as you have an account. If you delete it, we delete your account and personal data; in the results of matches already
+        played you remain as &quot;Former player&quot;, with no name or photo, so that other people&apos;s stats stay correct.
+      </p>
+
+      <h2>Your rights</h2>
+      <p>
+        You can request access, rectification, erasure, restriction and portability of your data, and object to processing. You can delete
+        your account at any time from the app: <b>Profile → Delete account</b>, or by writing to{' '}
+        <a href={`mailto:${CONTATTO_EMAIL}`}>{CONTATTO_EMAIL}</a>. You can also contact the Italian Data Protection Authority (Garante per
+        la protezione dei dati personali).
+      </p>
+
+      <h2>Minors</h2>
+      <p>The app is intended for people aged 14 and over.</p>
     </>
   )
 }

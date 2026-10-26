@@ -2,6 +2,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { Suspense } from 'react'
 import { getUtente } from '@/lib/player'
+import { getT } from '@/lib/lingua'
 
 // Pagine prima di entrare in una lega: logo grande e contenuto al centro,
 // con il mio account in alto a destra.
@@ -19,14 +20,14 @@ export default function IngressoLayout({ children }: LayoutProps<'/'>) {
 
 // La mia foto (o iniziale) in alto a destra: apre "Il mio account".
 async function MioAccount() {
-  const utente = await getUtente()
+  const [utente, t] = await Promise.all([getUtente(), getT()])
   if (!utente) return null
   const iniziale = (utente.nome || utente.emails[0] || '?').slice(0, 1).toUpperCase()
   return (
     <Link
       href="/account"
-      title="Il mio account"
-      aria-label="Il mio account"
+      title={t('Il mio account')}
+      aria-label={t('Il mio account')}
       className="absolute right-4 top-[max(1rem,var(--safe-area-inset-top,env(safe-area-inset-top)))] flex h-10 w-10 items-center justify-center overflow-hidden rounded-full bg-zinc-200 font-semibold text-zinc-700 ring-2 ring-green-600 ring-offset-2 ring-offset-zinc-50 dark:bg-zinc-800 dark:text-zinc-200 dark:ring-offset-zinc-950"
     >
       {/* eslint-disable-next-line @next/next/no-img-element -- foto dell'account (Google/Apple) */}

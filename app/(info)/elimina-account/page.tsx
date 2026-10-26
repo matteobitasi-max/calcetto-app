@@ -1,11 +1,14 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
+import { getT } from '@/lib/lingua'
 import { CONTATTO_EMAIL } from '@/lib/contatti'
 
 export const metadata: Metadata = { title: 'Elimina account · TheCap' }
 
 // Pagina pubblica per la richiesta di eliminazione dell'account (richiesta da Google Play).
-export default function EliminaAccountPage() {
+export default async function EliminaAccountPage() {
+  const t = await getT()
+  if (t.lingua === 'en') return <InEnglish />
   return (
     <>
       <h1>Eliminare il tuo account TheCap</h1>
@@ -40,6 +43,47 @@ export default function EliminaAccountPage() {
       <p>
         Nei risultati delle partite già giocate resti come &quot;Ex giocatore&quot;, senza nome né foto, perché statistiche e classifiche degli
         altri restino corrette. Non conserviamo altri dati personali.
+      </p>
+    </>
+  )
+}
+
+// English version.
+function InEnglish() {
+  return (
+    <>
+      <h1>Delete your TheCap account</h1>
+      <p>You can delete your account at any time, in one of these ways:</p>
+
+      <h2>From the app or the website</h2>
+      <ul>
+        <li>Open TheCap and sign in.</li>
+        <li>
+          Tap your photo at the top right to open your <b>Profile</b>.
+        </li>
+        <li>
+          At the bottom of the page tap <b>Delete account</b> and confirm.
+        </li>
+      </ul>
+      <p>
+        <Link href="/profilo">Sign in and go to your profile →</Link>
+      </p>
+
+      <h2>By email</h2>
+      <p>
+        Write to <a href={`mailto:${CONTATTO_EMAIL}?subject=TheCap account deletion`}>{CONTATTO_EMAIL}</a> from the address you sign in
+        with (or stating your phone number): we delete the account within 30 days.
+      </p>
+
+      <h2>What is deleted</h2>
+      <ul>
+        <li>The sign-in account (email, phone, password).</li>
+        <li>Name, nickname, photo, contacts and preferences on your cards in every league.</li>
+        <li>The devices registered for notifications.</li>
+      </ul>
+      <p>
+        In the results of matches already played you remain as &quot;Former player&quot;, with no name or photo, so that other people&apos;s
+        stats and standings stay correct. We keep no other personal data.
       </p>
     </>
   )

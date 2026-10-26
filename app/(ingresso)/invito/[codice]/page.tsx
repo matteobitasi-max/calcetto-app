@@ -7,6 +7,7 @@ import { avatarUrl } from '@/lib/image'
 import type { SanityImage } from '@/lib/roster'
 import { SubmitButton } from '@/components/submit-button'
 import { Card, Loading, buttonClass } from '@/components/ui'
+import { getT } from '@/lib/lingua'
 
 export default function InvitoPage({ params }: PageProps<'/invito/[codice]'>) {
   return (
@@ -17,6 +18,7 @@ export default function InvitoPage({ params }: PageProps<'/invito/[codice]'>) {
 }
 
 async function Invito({ params }: { params: Promise<{ codice: string }> }) {
+  const t = await getT()
   const { codice } = await params
   const lega = await sanity.fetch<{ _id: string; nome: string; logo?: SanityImage; giocatori: number } | null>(
     `*[_type == "league" && codiceInvito == $codice][0]{_id, nome, logo, "giocatori": count(*[_type == "player" && lega._ref == ^._id && attivo != false])}`,
@@ -26,10 +28,10 @@ async function Invito({ params }: { params: Promise<{ codice: string }> }) {
   if (!lega) {
     return (
       <Card className="space-y-3 text-center">
-        <h1 className="text-lg font-semibold">Invito non valido</h1>
-        <p className="text-sm text-zinc-500">Il link è sbagliato oppure l&apos;organizzatore l&apos;ha cambiato. Chiedigliene uno nuovo.</p>
+        <h1 className="text-lg font-semibold">{t('Invito non valido')}</h1>
+        <p className="text-sm text-zinc-500">{t('Il link è sbagliato oppure l’organizzatore l’ha cambiato. Chiedigliene uno nuovo.')}</p>
         <Link href="/benvenuto" className="text-sm text-green-700 hover:underline dark:text-green-400">
-          Vai alla pagina iniziale
+          {t('Vai alla pagina iniziale')}
         </Link>
       </Card>
     )
@@ -45,20 +47,20 @@ async function Invito({ params }: { params: Promise<{ codice: string }> }) {
         <img src={logo} alt="" width={80} height={80} className="mx-auto h-20 w-20 rounded-2xl object-cover" />
       )}
       <div>
-        <p className="text-sm text-zinc-500">Sei stato invitato in</p>
+        <p className="text-sm text-zinc-500">{t('Sei stato invitato in')}</p>
         <h1 className="text-2xl font-bold">{lega.nome}</h1>
         <p className="text-sm text-zinc-500">
-          {lega.giocatori} giocator{lega.giocatori === 1 ? 'e' : 'i'} nella rosa
+          {t.n(lega.giocatori, '{n} giocatore nella rosa', '{n} giocatori nella rosa')}
         </p>
       </div>
       {giaDentro ? (
         <form action={scegliLega.bind(null, lega._id, '/')}>
-          <SubmitButton className={`${buttonClass('primary')} w-full`}>Fai già parte della lega: apri</SubmitButton>
+          <SubmitButton className={`${buttonClass('primary')} w-full`}>{t('Fai già parte della lega: apri')}</SubmitButton>
         </form>
       ) : (
         <form action={uniscitiConInvito.bind(null, codice)}>
-          <SubmitButton className={`${buttonClass('primary')} w-full`} pendingText="Entro…">
-            ⚽ Entra nella lega
+          <SubmitButton className={`${buttonClass('primary')} w-full`} pendingText={t('Entro…')}>
+            ⚽ {t('Entra nella lega')}
           </SubmitButton>
         </form>
       )}

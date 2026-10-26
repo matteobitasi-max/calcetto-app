@@ -2,7 +2,8 @@
 
 import { useRef, useState } from 'react'
 import { useSceltaFoto } from '@/components/scelta-foto'
-import { SQUADRE_PREDEFINITE } from '@/lib/girone'
+import { SQUADRE_PREDEFINITE, nomePredefinito } from '@/lib/girone'
+import { useT } from '@/components/lingua'
 
 export type GiocatoreRosa = { id: string; nome: string; forza: number; ruolo?: string }
 
@@ -20,10 +21,11 @@ export function FotoSquadra({
   nome: string
   onAnteprima?: (url: string) => void
 }) {
+  const t = useT()
   const input = useRef<HTMLInputElement>(null)
   const [anteprima, setAnteprima] = useState(attuale ?? null)
   const scelta = useSceltaFoto({
-    titolo: `Foto di ${nome}`,
+    titolo: t('Foto di {nome}', { nome }),
     onFoto: (foto) => {
       const dt = new DataTransfer()
       dt.items.add(foto)
@@ -39,7 +41,7 @@ export function FotoSquadra({
       <button
         type="button"
         onClick={scelta.apri}
-        aria-label={`Foto di ${nome}`}
+        aria-label={t('Foto di {nome}', { nome })}
         className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full text-lg text-white"
         style={{ background: colore }}
       >
@@ -79,6 +81,7 @@ export function SquadreEditor({
   /** Avvisa quando si sceglie la foto di una squadra (anteprima). */
   onFoto?: (squadra: number, url: string) => void
 }) {
+  const t = useT()
   const [nomi, setNomi] = useState(() => SQUADRE_PREDEFINITE.map((s, i) => nomiIniziali[i] ?? s.nome))
   const [squadraDi, setSquadraDi] = useState<Record<string, string>>(squadraIniziale)
   const [capitani, setCapitani] = useState<(string | undefined)[]>(capitaniIniziali)
@@ -122,7 +125,7 @@ export function SquadreEditor({
             type="button"
             onClick={() => setCapitani((v) => Object.assign([...v], { [Number(sq)]: p.id }))}
             aria-pressed={capitano}
-            title={capitano ? 'Capitano della squadra' : 'Fai capitano'}
+            title={capitano ? t('Capitano della squadra') : t('Fai capitano')}
             className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[11px] font-bold ${
               capitano ? 'bg-orange-500 text-white' : 'border border-zinc-300 text-zinc-400 hover:border-orange-500 hover:text-orange-600 dark:border-zinc-600'
             }`}
@@ -137,13 +140,13 @@ export function SquadreEditor({
         name={`squadra_${p.id}`}
         value={di(p.id)}
         onChange={(e) => sposta(p.id, e.target.value)}
-        aria-label={`Squadra di ${p.nome}`}
+        aria-label={t('Squadra di {nome}', { nome: p.nome })}
         className="w-28 shrink-0 truncate rounded-lg border border-zinc-200 bg-white px-2 py-1 text-xs dark:border-zinc-700 dark:bg-zinc-900"
       >
-        <option value="">Fuori dal torneo</option>
+        <option value="">{t('Fuori dal torneo')}</option>
         {Array.from({ length: numSquadre }, (_, i) => (
           <option key={i} value={i}>
-            → {nomi[i] || SQUADRE_PREDEFINITE[i].nome}
+            → {nomi[i] || nomePredefinito(i, t.lingua)}
           </option>
         ))}
       </select>
@@ -158,14 +161,14 @@ export function SquadreEditor({
       ))}
       <div className="flex items-center justify-between gap-2">
         <p className="text-xs text-zinc-500">
-          Sposta i giocatori dal loro menu, oppure tocca “Bilancia”. La <b>A</b> sceglie il capitano: invita i compagni con il link della squadra.
+          {t('Sposta i giocatori dal loro menu, oppure tocca “Bilancia”. La A sceglie il capitano: invita i compagni con il link della squadra.')}
         </p>
         <button
           type="button"
           onClick={bilancia}
           className="shrink-0 rounded-full bg-zinc-100 px-3 py-1.5 text-xs font-semibold hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700"
         >
-          ⚖️ Bilancia
+          ⚖️ {t('Bilancia')}
         </button>
       </div>
 
@@ -181,7 +184,7 @@ export function SquadreEditor({
                   name={`foto_${i}`}
                   attuale={fotoIniziali[i]}
                   colore={colore(i)}
-                  nome={nomi[i] || `squadra ${i + 1}`}
+                  nome={nomi[i] || t('squadra {n}', { n: i + 1 })}
                   onAnteprima={(url) => onFoto?.(i, url)}
                 />
                 <div className="min-w-0 flex-1">
@@ -195,11 +198,13 @@ export function SquadreEditor({
                 }}
                     required
                     maxLength={30}
-                    aria-label={`Nome squadra ${i + 1}`}
+                    aria-label={t('Nome squadra {n}', { n: i + 1 })}
                     className="w-full rounded-md bg-zinc-50 px-2 py-1 font-semibold outline-none focus:ring-2 focus:ring-green-600 dark:bg-zinc-800"
                   />
                   <p className={`px-2 text-xs ${m.length ? 'text-zinc-500' : 'text-red-600'}`}>
-                    {m.length ? `${m.length} giocator${m.length === 1 ? 'e' : 'i'} · forza media ${media.toFixed(1)}` : 'Nessun giocatore'}
+                    {m.length
+                      ? `${t.n(m.length, '{n} giocatore', '{n} giocatori')} · ${t('forza media {n}', { n: t.numero(media, { minimumFractionDigits: 1, maximumFractionDigits: 1 }) })}`
+                      : t('Nessun giocatore')}
                   </p>
                 </div>
               </div>
@@ -211,7 +216,7 @@ export function SquadreEditor({
 
       {fuori.length > 0 && (
         <div className="rounded-xl border border-dashed border-zinc-300 p-3 dark:border-zinc-700">
-          <p className="text-sm font-semibold">Fuori dal torneo ({fuori.length})</p>
+          <p className="text-sm font-semibold">{t('Fuori dal torneo ({n})', { n: fuori.length })}</p>
           <ul className="mt-1 divide-y divide-zinc-100 dark:divide-zinc-800">{fuori.map(riga)}</ul>
         </div>
       )}

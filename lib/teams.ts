@@ -3,7 +3,9 @@ import { SKILLS, type Player, type Skill } from './roster'
 // Le due squadre di una partita si chiamano Squadra 1 e Squadra 2 (dentro restano A e B);
 // nei tornei hanno il nome della squadra del torneo.
 export const numeroSquadra = (l: 'A' | 'B') => (l === 'A' ? 1 : 2)
-export const nomeSquadra = (l: 'A' | 'B') => `Squadra ${numeroSquadra(l)}`
+// `t`: nella lingua dell'utente (altrimenti in italiano).
+export const nomeSquadra = (l: 'A' | 'B', t?: (testo: string, vars: { n: number }) => string) =>
+  t ? t('Squadra {n}', { n: numeroSquadra(l) }) : `Squadra ${numeroSquadra(l)}`
 
 // Pesi per le formazioni: cervello, scatto, fiato e tecnica contano di più.
 export const PESI: Record<Skill, number> = {

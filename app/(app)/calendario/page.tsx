@@ -2,13 +2,14 @@ import Link from 'next/link'
 import { Suspense } from 'react'
 import { getMemberships, requirePlayer } from '@/lib/player'
 import { finestra, getMatchesBetween, presenti, type Match, type Stato } from '@/lib/matches'
-import { formatData, isoToRomeLocal } from '@/lib/dates'
+import { isoToRomeLocal } from '@/lib/dates'
+import { getT } from '@/lib/lingua'
+import { inizialiGiorni, type T } from '@/lib/i18n'
 import { assicuraRicorrenze } from '@/lib/series'
 import { Card, Loading, StatoBadge } from '@/components/ui'
 import { avatarUrl } from '@/lib/image'
 import { FiltroLega } from './filtro-lega'
 
-const GIORNI = ['L', 'M', 'M', 'G', 'V', 'S', 'D']
 const DAY = 86_400_000
 
 const COLORE: Record<Stato | 'non_ancora' | 'scaduta', string> = {
@@ -37,16 +38,16 @@ export default function CalendarioPage({ searchParams }: PageProps<'/calendario'
 const pad = (n: number) => String(n).padStart(2, '0')
 
 async function Calendario({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
-  const [{ mese, lega, giorno }, , mie] = await Promise.all([searchParams, requirePlayer(), getMemberships()])
+  const [{ mese, lega, giorno }, , mie, t] = await Promise.all([searchParams, requirePlayer(), getMemberships(), getT()])
   // Solo le leghe di cui faccio parte (non quella in cui il super admin è entrato da ospite):
   // di default tutte, o quella scelta dalla tendina.
   const membri = mie
   if (!membri.length) {
     return (
       <Card className="space-y-2 text-center text-sm text-zinc-500">
-        <p>Non fai parte di nessuna lega, quindi non ci sono partite da mostrare.</p>
+        <p>{t('Non fai parte di nessuna lega, quindi non ci sono partite da mostrare.')}</p>
         <Link href="/benvenuto" className="font-medium text-green-700 hover:underline dark:text-green-400">
-          Crea una lega o entra in una →
+          {t('Crea una lega o entra in una →')}
         </Link>
       </Card>
     )
@@ -83,7 +84,7 @@ async function Calendario({ searchParams }: { searchParams: Promise<Record<strin
   const url = (q: { mese?: string; giorno?: string }) =>
     `/calendario?mese=${q.mese ?? meseCorrente}${scelta === 'tutte' ? '' : `&lega=${scelta}`}${q.giorno ? `&giorno=${q.giorno}` : ''}`
   const giornoScelto = typeof giorno === 'string' && giorno.startsWith(`${meseCorrente}-`) && /^\d{4}-\d{2}-\d{2}$/.test(giorno) ? giorno : null
-  const titolo = new Intl.DateTimeFormat('it-IT', { month: 'long', year: 'numeric', timeZone: 'UTC' }).format(inizio)
+  const titolo = new Intl.DateTimeFormat(t.locale, { month: 'long', year: 'numeric', timeZone: 'UTC' }).format(inizio)
 
   return (
     <div className="space-y-4">
@@ -96,17 +97,17 @@ async function Calendario({ searchParams }: { searchParams: Promise<Record<strin
       )}
       <Card>
         <div className="mb-4 flex items-center justify-between">
-          <Link href={url({ mese: prec })} className="rounded-lg px-3 py-1 text-lg hover:bg-zinc-100 dark:hover:bg-zinc-800" aria-label="Mese precedente">
+          <Link href={url({ mese: prec })} className="rounded-lg px-3 py-1 text-lg hover:bg-zinc-100 dark:hover:bg-zinc-800" aria-label={t('Mese precedente')}>
             ‹
           </Link>
           <h1 className="text-lg font-bold capitalize">{titolo}</h1>
-          <Link href={url({ mese: succ })} className="rounded-lg px-3 py-1 text-lg hover:bg-zinc-100 dark:hover:bg-zinc-800" aria-label="Mese successivo">
+          <Link href={url({ mese: succ })} className="rounded-lg px-3 py-1 text-lg hover:bg-zinc-100 dark:hover:bg-zinc-800" aria-label={t('Mese successivo')}>
             ›
           </Link>
         </div>
 
         <div className="grid grid-cols-7 gap-1 text-center text-xs font-medium text-zinc-500">
-          {GIORNI.map((g, i) => (
+          {inizialiGiorni(t.locale).map((g, i) => (
             <div key={i}>{g}</div>
           ))}
         </div>
@@ -137,11 +138,11 @@ async function Calendario({ searchParams }: { searchParams: Promise<Record<strin
         </div>
 
         <div className="mt-4 flex flex-wrap gap-x-4 gap-y-1 text-xs text-zinc-500">
-          <span><span className="mr-1 inline-block h-2 w-2 rounded-full bg-zinc-300" />in programma</span>
-          <span><span className="mr-1 inline-block h-2 w-2 rounded-full bg-green-600" />convocazioni aperte</span>
-          <span><span className="mr-1 inline-block h-2 w-2 rounded-full bg-blue-600" />convocazioni chiuse</span>
-          <span><span className="mr-1 inline-block h-2 w-2 rounded-full bg-zinc-400" />giocata</span>
-          <span>· tocca un giorno per vederne le partite</span>
+          <span><span className="mr-1 inline-block h-2 w-2 rounded-full bg-zinc-300" />{t('in programma')}</span>
+          <span><span className="mr-1 inline-block h-2 w-2 rounded-full bg-green-600" />{t('convocazioni aperte')}</span>
+          <span><span className="mr-1 inline-block h-2 w-2 rounded-full bg-blue-600" />{t('convocazioni chiuse')}</span>
+          <span><span className="mr-1 inline-block h-2 w-2 rounded-full bg-zinc-400" />{t('giocata')}</span>
+          <span>· {t('tocca un giorno per vederne le partite')}</span>
         </div>
       </Card>
 
@@ -152,17 +153,18 @@ async function Calendario({ searchParams }: { searchParams: Promise<Record<strin
           nomeLega={nomeLega}
           organizzo={giornoScelto >= oggi ? organizzo.map((x) => ({ id: x.lega._id, nome: x.lega.nome })) : []}
           chiudi={url({})}
+          t={t}
         />
       )}
 
       <Card className="divide-y divide-zinc-200 p-0 dark:divide-zinc-800">
         {delMese.length === 0 ? (
-          <p className="p-4 text-sm text-zinc-500">Nessuna partita in questo mese.</p>
+          <p className="p-4 text-sm text-zinc-500">{t('Nessuna partita in questo mese.')}</p>
         ) : (
           delMese.map((match) => (
             <Link key={match._id} href={`/partite/${match._id}`} className="flex items-center justify-between gap-2 px-4 py-3 text-sm hover:bg-zinc-50 dark:hover:bg-zinc-800">
               <span className="min-w-0">
-                <span className="block font-medium capitalize">{formatData(match.data, { weekday: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+                <span className="block font-medium capitalize">{t.data(match.data, { weekday: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
                 <span className="block truncate text-zinc-500">
                   {piuLeghe && <b className="font-semibold">{nomeLega.get(match.legaId)} · </b>}
                   {match.luogo} · {presenti(match).length}/{match.postiDisponibili}
@@ -184,7 +186,9 @@ function GiornoScelto({
   nomeLega,
   organizzo,
   chiudi,
+  t,
 }: {
+  t: T
   giorno: string
   partite: Match[]
   nomeLega: Map<string, string>
@@ -194,18 +198,18 @@ function GiornoScelto({
   return (
     <Card className="divide-y divide-zinc-200 border-2 border-green-600 p-0 dark:divide-zinc-800">
       <div className="flex items-center justify-between gap-2 px-4 py-3">
-        <h2 className="font-bold capitalize">{formatData(`${giorno}T12:00:00Z`, { weekday: 'long', day: 'numeric', month: 'long' })}</h2>
-        <Link href={chiudi} scroll={false} aria-label="Chiudi" className="rounded-lg px-2 text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800">
+        <h2 className="font-bold capitalize">{t.data(`${giorno}T12:00:00Z`, { weekday: 'long', day: 'numeric', month: 'long' })}</h2>
+        <Link href={chiudi} scroll={false} aria-label={t('Chiudi')} className="rounded-lg px-2 text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800">
           ✕
         </Link>
       </div>
-      {partite.length === 0 && <p className="px-4 py-3 text-sm text-zinc-500">Nessuna partita in questo giorno.</p>}
+      {partite.length === 0 && <p className="px-4 py-3 text-sm text-zinc-500">{t('Nessuna partita in questo giorno.')}</p>}
       {partite.map((match) => (
         <Link key={match._id} href={`/partite/${match._id}`} className="flex items-center justify-between gap-2 px-4 py-3 text-sm hover:bg-zinc-50 dark:hover:bg-zinc-800">
           <span className="min-w-0">
             <span className="block font-semibold">🏟️ {nomeLega.get(match.legaId)}</span>
             <span className="block truncate text-zinc-500">
-              {formatData(match.data, { hour: '2-digit', minute: '2-digit' })} · {match.luogo} · {presenti(match).length}/{match.postiDisponibili}
+              {t.ora(match.data)} · {match.luogo} · {presenti(match).length}/{match.postiDisponibili}
             </span>
           </span>
           <StatoBadge match={match} />
@@ -219,14 +223,14 @@ function GiornoScelto({
               href={`/partite/nuova?giorno=${giorno}&lega=${l.id}`}
               className="rounded-full bg-green-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-green-700"
             >
-              ＋ Nuova partita{organizzo.length > 1 && ` · ${l.nome}`}
+              ＋ {t('Nuova partita')}{organizzo.length > 1 && ` · ${l.nome}`}
             </Link>
           ))}
           <Link
             href={`/tornei/nuovo?giorno=${giorno}${organizzo.length === 1 ? `&lega=${organizzo[0].id}` : ''}`}
             className="rounded-full bg-zinc-100 px-3 py-1.5 text-xs font-semibold hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700"
           >
-            🏆 Torneo da questo giorno
+            🏆 {t('Torneo da questo giorno')}
           </Link>
         </div>
       )}

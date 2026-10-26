@@ -5,9 +5,10 @@ import { useEffect, useRef, useState, useTransition } from 'react'
 import { scegliLega } from '@/app/actions'
 import { LogoC } from './logo-c'
 import { PallinoAdmin } from './pallino-admin'
+import { useT } from './lingua'
 
 // Pallino "A" accanto alle leghe in cui sono organizzatore.
-export const Admin = () => <PallinoAdmin title="Sei organizzatore" />
+export const Admin = () => <PallinoAdmin title={useT()('Sei organizzatore')} />
 
 /** `organizzatore`: sono organizzatore di questa lega (mostra il pallino "A"). */
 export type LegaVoce = { id: string; nome: string; logo: string | null; organizzatore?: boolean }
@@ -41,6 +42,7 @@ export function LegaMenu({
   titolare?: boolean
   ospite?: boolean
 }) {
+  const t = useT()
   const [open, setOpen] = useState(false)
   const [pending, startTransition] = useTransition()
   const box = useRef<HTMLDivElement>(null)
@@ -69,7 +71,7 @@ export function LegaMenu({
         aria-haspopup="menu"
         aria-expanded={open}
       >
-        <span className="truncate font-semibold">{pending ? 'Cambio lega…' : corrente.nome}</span>
+        <span className="truncate font-semibold">{pending ? t('Cambio lega…') : corrente.nome}</span>
         {!pending && corrente.organizzatore && <Admin />}
         <span className="text-xs text-zinc-500" aria-hidden>
           ▾
@@ -85,7 +87,7 @@ export function LegaMenu({
         <div role="menu" className="absolute left-0 z-30 mt-1 w-72 rounded-xl border border-zinc-200 bg-white p-2 shadow-lg dark:border-zinc-700 dark:bg-zinc-900">
           {altre.length > 0 && (
             <>
-              <p className="px-3 pb-1 pt-1 text-xs font-semibold uppercase tracking-wide text-zinc-500">Le mie leghe</p>
+              <p className="px-3 pb-1 pt-1 text-xs font-semibold uppercase tracking-wide text-zinc-500">{t('Le mie leghe')}</p>
               {altre.map((l) => (
                 <button
                   key={l.id}
@@ -107,23 +109,23 @@ export function LegaMenu({
           )}
           {organizzatore && (
             <Link href="/lega" role="menuitem" className={voce} onClick={() => setOpen(false)}>
-              ⚙️ Impostazioni lega
+              ⚙️ {t('Impostazioni lega')}
             </Link>
           )}
           {titolare && (
             <Link href="/leghe" role="menuitem" className={voce} onClick={() => setOpen(false)}>
-              👑 Tutte le leghe
+              👑 {t('Tutte le leghe')}
             </Link>
           )}
           <Link href="/benvenuto" role="menuitem" className={voce} onClick={() => setOpen(false)}>
-            ➕ Crea o entra in una lega
+            ➕ {t('Crea o entra in una lega')}
           </Link>
           {/* I tornei sono una sezione a sé: quelli di tutte le mie leghe, non solo della lega attiva */}
           <hr className="my-2 border-zinc-200 dark:border-zinc-800" />
           <Link href="/tornei" role="menuitem" className={`${voce} font-semibold`} onClick={() => setOpen(false)}>
             <span className="flex h-6 w-6 shrink-0 items-center justify-center">🏆</span>
-            <span className="flex-1">I miei tornei</span>
-            <span className="text-xs font-normal text-zinc-400">tutte le leghe</span>
+            <span className="flex-1">{t('I miei tornei')}</span>
+            <span className="text-xs font-normal text-zinc-400">{t('tutte le leghe')}</span>
           </Link>
           <Link href="/pro" role="menuitem" className={`${voce} font-semibold`} onClick={() => setOpen(false)}>
             <span className="flex h-6 w-6 shrink-0 items-center justify-center">

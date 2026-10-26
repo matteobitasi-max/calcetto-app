@@ -4,11 +4,14 @@ import { displayName, requirePlayer, type Player } from '@/lib/player'
 import { getAllStats, getKmTotali, getPartitePunteggio, getPlayers, type PlayerStats } from '@/lib/matches'
 import { PUNTI, classifica, type RigaClassifica } from '@/lib/punteggio'
 import { Avatar, Card, Loading, PageTitle, PlayerBadge } from '@/components/ui'
+import { getT } from '@/lib/lingua'
+import type { T } from '@/lib/i18n'
 
-export default function ClassificaPage() {
+export default async function ClassificaPage() {
+  const t = await getT()
   return (
     <>
-      <PageTitle>Classifica</PageTitle>
+      <PageTitle>{t('Classifica')}</PageTitle>
       <Suspense fallback={<Loading />}>
         <Classifiche />
       </Suspense>
@@ -19,7 +22,7 @@ export default function ClassificaPage() {
 type Riga = { player: Player; s: PlayerStats }
 
 async function Classifiche() {
-  const me = await requirePlayer()
+  const [me, t] = await Promise.all([requirePlayer(), getT()])
   const [players, stats, partite, km] = await Promise.all([
     getPlayers(me.lega._id),
     getAllStats(me.lega._id),
@@ -32,45 +35,46 @@ async function Classifiche() {
   })
 
   if (righe.length === 0) {
-    return <Card className="text-sm text-zinc-500">Le classifiche compariranno dopo la prima partita con il risultato.</Card>
+    return <Card className="text-sm text-zinc-500">{t('Le classifiche compariranno dopo la prima partita con il risultato.')}</Card>
   }
 
   const perc = (s: PlayerStats) => Math.round((s.vinte / s.giocate) * 100)
+  const uno = (n: number) => t.numero(n, { minimumFractionDigits: 1, maximumFractionDigits: 1 })
 
   const giocatori = new Map(players.map((p) => [p._id, p]))
   const generale = classifica(partite).filter((r) => giocatori.has(r.id))
 
   return (
     <div className="space-y-4">
-      <Generale righe={generale} giocatori={giocatori} mioId={me._id} />
+      <Generale righe={generale} giocatori={giocatori} mioId={me._id} t={t} />
       <Tabella
         mioId={me._id}
-        titolo="⚽ Marcatori"
+        titolo={`⚽ ${t('Marcatori')}`}
         righe={righe.filter((r) => r.s.gol > 0).sort((a, b) => b.s.gol - a.s.gol || a.s.giocate - b.s.giocate)}
         valore={(s) => s.gol}
-        dettaglio={(s) => `${(s.gol / s.giocate).toFixed(1)} a partita`}
+        dettaglio={(s) => t('{n} a partita', { n: uno(s.gol / s.giocate) })}
       />
       <Tabella
         mioId={me._id}
         titolo="🫑 MVP"
         righe={righe.filter((r) => r.s.mvp > 0).sort((a, b) => b.s.mvp - a.s.mvp || a.s.giocate - b.s.giocate)}
         valore={(s) => s.mvp}
-        dettaglio={(s) => `su ${s.giocate} partite`}
+        dettaglio={(s) => t('su {n} partite', { n: s.giocate })}
       />
       <Tabella
         mioId={me._id}
-        titolo="🏆 Vittorie"
+        titolo={`🏆 ${t('Vittorie')}`}
         righe={[...righe].sort((a, b) => perc(b.s) - perc(a.s) || b.s.giocate - a.s.giocate)}
         valore={(s) => `${perc(s)}%`}
-        dettaglio={(s) => `${s.vinte}V ${s.pari}P ${s.perse}S`}
+        dettaglio={(s) => `${s.vinte}${t('V|vittorie')} ${s.pari}${t('P|pari')} ${s.perse}${t('S|sconfitte')}`}
       />
-      <KmPercorsi km={km} giocatori={giocatori} mioId={me._id} />
+      <KmPercorsi km={km} giocatori={giocatori} mioId={me._id} t={t} />
       <Tabella
         mioId={me._id}
-        titolo="🧱 Meno gol subiti"
+        titolo={`🧱 ${t('Meno gol subiti')}`}
         righe={[...righe].sort((a, b) => a.s.gs / a.s.giocate - b.s.gs / b.s.giocate)}
-        valore={(s) => (s.gs / s.giocate).toFixed(1)}
-        dettaglio={(s) => `${s.gs} GS in ${s.giocate} partite`}
+        valore={(s) => uno(s.gs / s.giocate)}
+        dettaglio={(s) => t('{gs} GS in {n} partite', { gs: s.gs, n: s.giocate })}
       />
     </div>
   )
@@ -114,15 +118,15 @@ function Tabella({
 }
 
 // Km totali corsi nelle partite (inseriti a mano o presi da Strava / Apple Salute).
-function KmPercorsi({ km, giocatori, mioId }: { km: Map<string, { km: number; partite: number }>; giocatori: Map<string, Player>; mioId: string }) {
+function KmPercorsi({ km, giocatori, mioId, t }: { km: Map<string, { km: number; partite: number }>; giocatori: Map<string, Player>; mioId: string; t: T }) {
   const righe = [...km.entries()].filter(([id]) => giocatori.has(id)).sort((a, b) => b[1].km - a[1].km)
   if (righe.length === 0) return null
-  const fmt = (n: number) => n.toLocaleString('it-IT', { maximumFractionDigits: 1 })
+  const fmt = (n: number) => t.numero(n, { maximumFractionDigits: 1 })
   return (
     <Card>
-      <h2 className="mb-3 font-semibold">🏃 Km percorsi</h2>
+      <h2 className="mb-3 font-semibold">🏃 {t('Km percorsi')}</h2>
       <ol className="space-y-2">
-        {righe.slice(0, 10).map(([id, t], i) => {
+        {righe.slice(0, 10).map(([id, k], i) => {
           const player = giocatori.get(id)!
           return (
             <li key={id} className={`flex items-center gap-3 rounded-lg px-1 py-1 ${id === mioId ? 'bg-green-50 dark:bg-green-950' : ''}`}>
@@ -131,10 +135,10 @@ function KmPercorsi({ km, giocatori, mioId }: { km: Map<string, { km: number; pa
               <Link href={`/giocatori/${id}`} className="min-w-0 flex-1 hover:underline">
                 <span className={`block truncate text-sm ${id === mioId ? 'font-extrabold' : 'font-medium'}`}>{displayName(player)}</span>
                 <span className="block text-xs text-zinc-500">
-                  {fmt(t.km / t.partite)} km a partita · {t.partite} partit{t.partite === 1 ? 'a' : 'e'}
+                  {t('{km} km a partita', { km: fmt(k.km / k.partite) })} · {t.n(k.partite, '{n} partita', '{n} partite')}
                 </span>
               </Link>
-              <span className="text-lg font-bold tabular-nums">{fmt(t.km)}</span>
+              <span className="text-lg font-bold tabular-nums">{fmt(k.km)}</span>
             </li>
           )
         })}
@@ -143,38 +147,37 @@ function KmPercorsi({ km, giocatori, mioId }: { km: Map<string, { km: number; pa
   )
 }
 
-const numero = (n: number) => new Intl.NumberFormat('it-IT', { maximumFractionDigits: 2 }).format(n)
-const conSegno = (n: number) => (n > 0 ? '+' : '') + numero(n)
-
-function Freccia({ r }: { r: RigaClassifica }) {
-  if (r.posizionePrima == null) return <span title="Nuovo in classifica">🆕</span>
+function Freccia({ r, t }: { r: RigaClassifica; t: T }) {
+  if (r.posizionePrima == null) return <span title={t('Nuovo in classifica')}>🆕</span>
   const salti = r.posizionePrima - r.posizione
   if (salti > 0)
     return (
-      <span className="font-bold text-green-600" title={`Su di ${salti} posizion${salti === 1 ? 'e' : 'i'}`}>
+      <span className="font-bold text-green-600" title={t.n(salti, 'Su di {n} posizione', 'Su di {n} posizioni')}>
         ↑{salti > 1 && <sub>{salti}</sub>}
       </span>
     )
   if (salti < 0)
     return (
-      <span className="font-bold text-red-600" title={`Giù di ${-salti} posizion${salti === -1 ? 'e' : 'i'}`}>
+      <span className="font-bold text-red-600" title={t.n(-salti, 'Giù di {n} posizione', 'Giù di {n} posizioni')}>
         ↓{salti < -1 && <sub>{-salti}</sub>}
       </span>
     )
   return (
-    <span className="font-bold text-zinc-400" title="Stessa posizione">
+    <span className="font-bold text-zinc-400" title={t('Stessa posizione')}>
       =
     </span>
   )
 }
 
 // Classifica generale a punti, con l'andamento rispetto alla partita precedente.
-function Generale({ righe, giocatori, mioId }: { righe: RigaClassifica[]; giocatori: Map<string, Player>; mioId: string }) {
+function Generale({ righe, giocatori, mioId, t }: { righe: RigaClassifica[]; giocatori: Map<string, Player>; mioId: string; t: T }) {
   if (righe.length === 0) return null
+  const numero = (n: number) => t.numero(n, { maximumFractionDigits: 2 })
+  const conSegno = (n: number) => (n > 0 ? '+' : '') + numero(n)
   return (
     <Card>
-      <h2 className="mb-1 font-semibold">🏅 Classifica generale</h2>
-      <p className="mb-3 text-xs text-zinc-500">Punti totali · freccia: rispetto a prima dell&apos;ultima partita</p>
+      <h2 className="mb-1 font-semibold">🏅 {t('Classifica generale')}</h2>
+      <p className="mb-3 text-xs text-zinc-500">{t('Punti totali · freccia: rispetto a prima dell’ultima partita')}</p>
       <ol className="space-y-2">
         {righe.map((r) => {
           const p = giocatori.get(r.id)!
@@ -182,7 +185,7 @@ function Generale({ righe, giocatori, mioId }: { righe: RigaClassifica[]; giocat
             <li key={r.id} className={`flex items-center gap-2 rounded-lg px-1 py-1 ${r.id === mioId ? 'bg-green-50 dark:bg-green-950' : ''}`}>
               <span className="w-5 text-right text-sm font-semibold tabular-nums text-zinc-500">{r.posizione}</span>
               <span className="w-6 text-center text-sm">
-                <Freccia r={r} />
+                <Freccia r={r} t={t} />
               </span>
               <Avatar player={p} size={32} />
               <Link href={`/giocatori/${p._id}`} className="min-w-0 flex-1 hover:underline">
@@ -191,8 +194,8 @@ function Generale({ righe, giocatori, mioId }: { righe: RigaClassifica[]; giocat
                   <PlayerBadge badge={p.badge} />
                 </span>
                 <span className="block text-xs text-zinc-500">
-                  {r.giocate} partit{r.giocate === 1 ? 'a' : 'e'}
-                  {r.ultima != null && ` · ultima ${conSegno(r.ultima)}`}
+                  {t.n(r.giocate, '{n} partita', '{n} partite')}
+                  {r.ultima != null && ` · ${t('ultima {punti}', { punti: conSegno(r.ultima) })}`}
                 </span>
               </Link>
               <span className="text-lg font-bold tabular-nums">{numero(r.punti)}</span>
@@ -201,11 +204,12 @@ function Generale({ righe, giocatori, mioId }: { righe: RigaClassifica[]; giocat
         })}
       </ol>
       <details className="mt-3 text-xs text-zinc-500">
-        <summary className="cursor-pointer">Come si calcola</summary>
+        <summary className="cursor-pointer">{t('Come si calcola')}</summary>
         <p className="mt-2">
-          Per ogni partita: vittoria {conSegno(PUNTI.vittoria)}, pareggio {conSegno(PUNTI.pareggio)}, sconfitta 0, ogni gol fatto{' '}
-          {conSegno(PUNTI.gol)}, MVP 🫑 {conSegno(PUNTI.mvp)}, ogni gol subito dalla squadra {conSegno(PUNTI.golSubito)}. A pari punti
-          è davanti chi ha giocato meno partite.
+          {t(
+            'Per ogni partita: vittoria {v}, pareggio {p}, sconfitta 0, ogni gol fatto {g}, MVP 🫑 {mvp}, ogni gol subito dalla squadra {gs}. A pari punti è davanti chi ha giocato meno partite.',
+            { v: conSegno(PUNTI.vittoria), p: conSegno(PUNTI.pareggio), g: conSegno(PUNTI.gol), mvp: conSegno(PUNTI.mvp), gs: conSegno(PUNTI.golSubito) },
+          )}
         </p>
       </details>
     </Card>

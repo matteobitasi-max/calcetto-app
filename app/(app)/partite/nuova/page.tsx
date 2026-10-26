@@ -5,12 +5,14 @@ import { getCurrentPlayer, getMemberships, requireAdmin, requireIn } from '@/lib
 import { avatarUrl } from '@/lib/image'
 import { Admin, Stemma } from '@/components/lega-menu'
 import { Card, Loading, PageTitle } from '@/components/ui'
+import { getT } from '@/lib/lingua'
 import { MatchForm } from '../match-form'
 
-export default function NuovaPartitaPage({ searchParams }: PageProps<'/partite/nuova'>) {
+export default async function NuovaPartitaPage({ searchParams }: PageProps<'/partite/nuova'>) {
+  const t = await getT()
   return (
     <>
-      <PageTitle>Nuova partita</PageTitle>
+      <PageTitle>{t('Nuova partita')}</PageTitle>
       <Suspense fallback={<Loading />}>
         <Form searchParams={searchParams} />
       </Suspense>
@@ -19,7 +21,7 @@ export default function NuovaPartitaPage({ searchParams }: PageProps<'/partite/n
 }
 
 async function Form({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
-  const [{ giorno, lega, scegli }, mie, attiva] = await Promise.all([searchParams, getMemberships(), getCurrentPlayer()])
+  const [{ giorno, lega, scegli }, mie, attiva, t] = await Promise.all([searchParams, getMemberships(), getCurrentPlayer(), getT()])
   const giornoScelto = typeof giorno === 'string' ? giorno : undefined
   const organizzate = mie.filter((m) => m.isAdmin)
 
@@ -27,7 +29,7 @@ async function Form({ searchParams }: { searchParams: Promise<Record<string, str
   if (typeof lega !== 'string' && organizzate.length > 1 && (scegli || !attiva?.isAdmin)) {
     return (
       <Card className="space-y-1">
-        <p className="px-3 pb-1 font-semibold">In quale lega?</p>
+        <p className="px-3 pb-1 font-semibold">{t('In quale lega?')}</p>
         {organizzate.map((m) => (
           <Link
             key={m.lega._id}
@@ -55,7 +57,7 @@ async function Form({ searchParams }: { searchParams: Promise<Record<string, str
     <>
       {mie.length > 1 && (
         <p className="mb-3 text-sm text-zinc-500">
-          Nella lega <b>{admin.lega.nome}</b>
+          {t('Nella lega')} <b>{admin.lega.nome}</b>
           {organizzate.length > 1 && (
             <>
               {' · '}
@@ -63,13 +65,13 @@ async function Form({ searchParams }: { searchParams: Promise<Record<string, str
                 href={`/partite/nuova?scegli=1${giornoScelto ? `&giorno=${giornoScelto}` : ''}`}
                 className="font-medium text-green-700 hover:underline dark:text-green-400"
               >
-                Cambia
+                {t('Cambia')}
               </Link>
             </>
           )}
         </p>
       )}
-      <MatchForm action={salvaPartita.bind(null, null)} giorno={giornoScelto} legaId={admin.lega._id} submitLabel="Crea partita" />
+      <MatchForm action={salvaPartita.bind(null, null)} giorno={giornoScelto} legaId={admin.lega._id} submitLabel={t('Crea partita')} />
     </>
   )
 }

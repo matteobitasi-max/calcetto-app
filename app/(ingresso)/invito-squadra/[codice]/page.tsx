@@ -8,6 +8,7 @@ import type { SanityImage } from '@/lib/roster'
 import { iscrizioniAperte } from '@/lib/tornei'
 import { SubmitButton } from '@/components/submit-button'
 import { Card, Loading, buttonClass } from '@/components/ui'
+import { getT } from '@/lib/lingua'
 
 // Invito del capitano: si entra nella lega (se serve) e direttamente nella sua squadra del torneo.
 export default function InvitoSquadraPage({ params }: PageProps<'/invito-squadra/[codice]'>) {
@@ -19,6 +20,7 @@ export default function InvitoSquadraPage({ params }: PageProps<'/invito-squadra
 }
 
 async function Invito({ params }: { params: Promise<{ codice: string }> }) {
+  const t = await getT()
   const { codice } = await params
   const c = codice.toUpperCase()
   const torneo = await sanity.fetch<{
@@ -40,10 +42,10 @@ async function Invito({ params }: { params: Promise<{ codice: string }> }) {
   if (!torneo?.squadra) {
     return (
       <Card className="space-y-3 text-center">
-        <h1 className="text-lg font-semibold">Invito non valido</h1>
-        <p className="text-sm text-zinc-500">Il link è sbagliato. Chiedine uno nuovo al capitano.</p>
+        <h1 className="text-lg font-semibold">{t('Invito non valido')}</h1>
+        <p className="text-sm text-zinc-500">{t('Il link è sbagliato. Chiedine uno nuovo al capitano.')}</p>
         <Link href="/benvenuto" className="text-sm text-green-700 hover:underline dark:text-green-400">
-          Vai alla pagina iniziale
+          {t('Vai alla pagina iniziale')}
         </Link>
       </Card>
     )
@@ -66,26 +68,26 @@ async function Invito({ params }: { params: Promise<{ codice: string }> }) {
       )}
       <div>
         <p className="text-sm text-zinc-500">
-          {squadra.capitano ? `${squadra.capitano} ti invita` : 'Sei stato invitato'} nella squadra
+          {squadra.capitano ? t('{nome} ti invita nella squadra', { nome: squadra.capitano }) : t('Sei stato invitato nella squadra')}
         </p>
         <h1 className="text-2xl font-bold">{squadra.nome}</h1>
         <p className="text-sm text-zinc-500">
-          🏆 {torneo.nome} · 🏟️ {torneo.legaNome} · {squadra.giocatori.length}
-          {torneo.maxGiocatori ? `/${torneo.maxGiocatori}` : ''} giocator{squadra.giocatori.length === 1 ? 'e' : 'i'}
+          🏆 {torneo.nome} · 🏟️ {torneo.legaNome} ·{' '}
+          {t.n(squadra.giocatori.length, '{n}{max} giocatore', '{n}{max} giocatori', { max: torneo.maxGiocatori ? `/${torneo.maxGiocatori}` : '' })}
         </p>
       </div>
       {giaDentro ? (
         <Link href={`/tornei/${torneo._id}`} className={`${buttonClass('primary')} w-full justify-center`}>
-          Sei già in squadra: apri il torneo
+          {t('Sei già in squadra: apri il torneo')}
         </Link>
       ) : !aperte ? (
-        <p className="rounded-lg bg-amber-50 p-3 text-sm text-amber-800 dark:bg-amber-950 dark:text-amber-300">Le iscrizioni a questo torneo sono chiuse.</p>
+        <p className="rounded-lg bg-amber-50 p-3 text-sm text-amber-800 dark:bg-amber-950 dark:text-amber-300">{t('Le iscrizioni a questo torneo sono chiuse.')}</p>
       ) : piena ? (
-        <p className="rounded-lg bg-amber-50 p-3 text-sm text-amber-800 dark:bg-amber-950 dark:text-amber-300">La squadra è al completo.</p>
+        <p className="rounded-lg bg-amber-50 p-3 text-sm text-amber-800 dark:bg-amber-950 dark:text-amber-300">{t('La squadra è al completo.')}</p>
       ) : (
         <form action={entraInSquadra.bind(null, c)}>
-          <SubmitButton className={`${buttonClass('primary')} w-full`} pendingText="Entro…">
-            🏆 Entra nella squadra
+          <SubmitButton className={`${buttonClass('primary')} w-full`} pendingText={t('Entro…')}>
+            🏆 {t('Entra nella squadra')}
           </SubmitButton>
         </form>
       )}

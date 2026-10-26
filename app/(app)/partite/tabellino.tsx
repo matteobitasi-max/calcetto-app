@@ -1,14 +1,16 @@
 import { displayName, type Player } from '@/lib/player'
 import type { Match } from '@/lib/matches'
+import { getT } from '@/lib/lingua'
 
 // Risultato con i marcatori sotto ogni squadra e l'MVP.
-export function Tabellino({ match }: { match: Match }) {
+export async function Tabellino({ match }: { match: Match }) {
+  const t = await getT()
   const tutti = new Map([...match.squadraA, ...match.squadraB].map((p) => [p._id, p]))
   const marcatori = (squadra: Player[], autogol?: number) => [
     ...match.marcatori
       .filter((m) => squadra.some((p) => p._id === m.giocatoreId))
       .map((m) => `${displayName(tutti.get(m.giocatoreId)!)}${m.gol > 1 ? ` ×${m.gol}` : ''}`),
-    ...(autogol ? [`autogol${autogol > 1 ? ` ×${autogol}` : ''}`] : []),
+    ...(autogol ? [`${t('autogol')}${autogol > 1 ? ` ×${autogol}` : ''}`] : []),
   ]
   const mvp = match.mvpId ? tutti.get(match.mvpId) : undefined
   return (

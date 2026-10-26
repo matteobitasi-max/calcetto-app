@@ -2,12 +2,14 @@ import { Suspense } from 'react'
 import { salvaGiocatore } from '@/app/actions'
 import { requireAdmin } from '@/lib/player'
 import { Loading, PageTitle } from '@/components/ui'
+import { getT } from '@/lib/lingua'
 import { PlayerForm } from '../player-form'
 
-export default function NuovoGiocatorePage() {
+export default async function NuovoGiocatorePage() {
+  const t = await getT()
   return (
     <>
-      <PageTitle>Nuovo giocatore</PageTitle>
+      <PageTitle>{t('Nuovo giocatore')}</PageTitle>
       <Suspense fallback={<Loading />}>
         <Form />
       </Suspense>
@@ -16,6 +18,6 @@ export default function NuovoGiocatorePage() {
 }
 
 async function Form() {
-  await requireAdmin()
-  return <PlayerForm action={salvaGiocatore.bind(null, null)} submitLabel="Aggiungi alla rosa" />
+  const [, t] = await Promise.all([requireAdmin(), getT()])
+  return <PlayerForm action={salvaGiocatore.bind(null, null)} submitLabel={t('Aggiungi alla rosa')} />
 }

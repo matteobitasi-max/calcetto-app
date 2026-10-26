@@ -1,5 +1,6 @@
 'use client'
 
+import { useT } from './lingua'
 import { useContext, useEffect, useId, useRef, useState, useSyncExternalStore } from 'react'
 import { useFormStatus } from 'react-dom'
 import { EsitoModulo } from './action-form'
@@ -27,7 +28,8 @@ const firma = (form: HTMLFormElement) =>
 // che la contiene è diverso da com'era, sparisce se si torna come prima o dopo un salvataggio
 // riuscito. Confronta il contenuto dopo ogni tocco, così vede anche calendari e selettori.
 // `quando="completo"` (moduli nuovi): compare invece quando tutti i campi obbligatori sono compilati.
-export function PillSalva({ label = 'Salva', quando = 'modificato' }: { label?: string; quando?: 'modificato' | 'completo' }) {
+export function PillSalva({ label, quando = 'modificato' }: { label?: string; quando?: 'modificato' | 'completo' }) {
+  const t = useT()
   const id = useId()
   const segnaposto = useRef<HTMLSpanElement>(null)
   const iniziale = useRef<string | null>(null)
@@ -102,10 +104,10 @@ export function PillSalva({ label = 'Salva', quando = 'modificato' }: { label?: 
         }`}
       >
         {pending ? (
-          'Salvo…'
+          t('Salvo…')
         ) : (
           <>
-            <span className="text-base leading-none">✓</span> {label}
+            <span className="text-base leading-none">✓</span> {label ?? t('Salva')}
           </>
         )}
       </button>

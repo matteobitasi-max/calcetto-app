@@ -12,7 +12,7 @@ import { baseUrl } from '@/lib/url'
 import { cercaCitta } from '@/lib/meteo'
 import { MAX_GIOCATORI, MAX_ISCRITTI, formatoDaIscritti } from '@/lib/limiti'
 import { riscriviPartita, type MatchDaUnire } from '@/lib/unisci'
-import { daysBetween, formatData, romeLocalToISO } from '@/lib/dates'
+import { daysBetween, romeLocalToISO } from '@/lib/dates'
 import { inviaAGiocatori, inviaATutti, rimuoviIscrizione, salvaIscrizione, salvaTokenNativo, type PushSub } from '@/lib/push'
 import { assicuraRicorrenze, getSeries, occurrenceId, rimuoviFutureVuote, type Series } from '@/lib/series'
 import { iscrizioniAperte, puoCreareTornei } from '@/lib/tornei'
@@ -20,6 +20,11 @@ import { LETTERE_GIRONI, SQUADRE_PREDEFINITE, classifica, giornate, incrociGiron
 import { daCreare, primoTurnoTeste, primoTurnoValido, tabellone } from '@/lib/tabellone'
 import { nomeSquadra } from '@/lib/teams'
 import { formaDellaLega, legaPro } from '@/lib/pro'
+import { COOKIE_LINGUA, isLingua, type T } from '@/lib/i18n'
+import { getLingua, getT } from '@/lib/lingua'
+
+// Un messaggio per l'utente nella sua lingua.
+const tr = async (testo: string, vars?: Record<string, string | number>) => (await getT())(testo, vars)
 import { PARTITE_PER_REVISIONE, passoVoto } from '@/lib/forma'
 
 export type FormState = { error?: string } | undefined
@@ -180,13 +185,13 @@ export async function salvaPartita(matchId: string | null, _prev: FormState, for
   const quota = num(formData, 'quota')
   const note = str(formData, 'note')
 
-  if (!Number.isInteger(durata) || durata < 10 || durata > 300) return { error: 'Durata non valida (10-300 minuti).' }
+  if (!Number.isInteger(durata) || durata < 10 || durata > 300) return { error: await tr('Durata non valida (10-300 minuti).') }
   const durataFinestra = Math.max(15, Math.round(num(formData, 'durataFinestraMinuti') ?? 120))
-  if (!data || !luogo || !apertura || !chiusura) return { error: 'Compila data e ora della partita, campo e inizio delle convocazioni.' }
-  if (apertura >= data) return { error: 'Le convocazioni devono aprirsi prima della partita.' }
-  if (chiusura <= apertura) return { error: 'La chiusura delle convocazioni deve essere dopo l’apertura.' }
-  if (chiusura > data) return { error: 'Le convocazioni devono chiudersi prima della partita.' }
-  if (!Number.isInteger(posti) || posti < 2) return { error: 'Servono almeno 2 posti.' }
+  if (!data || !luogo || !apertura || !chiusura) return { error: await tr('Compila data e ora della partita, campo e inizio delle convocazioni.') }
+  if (apertura >= data) return { error: await tr('Le convocazioni devono aprirsi prima della partita.') }
+  if (chiusura <= apertura) return { error: await tr('La chiusura delle convocazioni deve essere dopo l’apertura.') }
+  if (chiusura > data) return { error: await tr('Le convocazioni devono chiudersi prima della partita.') }
+  if (!Number.isInteger(posti) || posti < 2) return { error: await tr('Servono almeno 2 posti.') }
   // Oltre il limite si va solo aggiungendo persone dalla lista d'attesa: in modifica
   // si può lasciare il numero raggiunto così, ma non aumentarlo ancora.
   const attuale = matchId
@@ -198,7 +203,7 @@ export async function salvaPartita(matchId: string | null, _prev: FormState, for
   // In base alle convocazioni: aperte fino al massimo; a convocazioni chiuse il numero è già deciso.
   if (automatici) posti = attuale?.stato === 'chiusa' ? postiAttuali : MAX_ISCRITTI
   if (!automatici && posti > Math.max(MAX_GIOCATORI, postiAttuali)) {
-    return { error: `Massimo ${MAX_GIOCATORI} giocatori: per andare oltre aggiungi le persone dalla lista d\u2019attesa.` }
+    return { error: await tr('Massimo {n} giocatori: per andare oltre aggiungi le persone dalla lista d’attesa.', { n: MAX_GIOCATORI }) }
   }
 
   // Partita ricorrente: si salva il modello e le partite vengono generate da lì.
@@ -207,7 +212,7 @@ export async function salvaPartita(matchId: string | null, _prev: FormState, for
     const [apGiorno, apOra] = str(formData, 'aperturaConvocazioni').split('T')
     const [chGiorno, chOra] = str(formData, 'chiusuraConvocazioni').split('T')
     const fineData = str(formData, 'fineData')
-    if (fineData && fineData < giorno) return { error: 'La data di fine deve essere dopo la prima partita.' }
+    if (fineData && fineData < giorno) return { error: await tr('La data di fine deve essere dopo la prima partita.') }
     const serie = await sanity.create({
       _type: 'series',
       lega,
@@ -311,15 +316,15 @@ export async function salvaFormazioni(
 ): Promise<FormState> {
   const { lega } = await requireForDoc(matchId, 'organizzatore')
   const match = await getMatch(matchId)
-  if (!match) return { error: 'Partita non trovata.' }
-  if (match.stato !== 'chiusa') return { error: 'Le formazioni si fanno dopo aver chiuso le convocazioni.' }
+  if (!match) return { error: await tr('Partita non trovata.') }
+  if (match.stato !== 'chiusa') return { error: await tr('Le formazioni si fanno dopo aver chiuso le convocazioni.') }
 
   const inLista = new Set(presenti(match).map((c) => c.giocatore._id))
   const scelti = [...a, ...b]
-  if (new Set(scelti).size !== scelti.length) return { error: 'Un giocatore è in tutte e due le squadre.' }
-  if (scelti.some((id) => !inLista.has(id))) return { error: 'C\u2019è un giocatore che non è in lista.' }
-  if (scelti.length !== inLista.size) return { error: 'Assegna tutti i giocatori in lista a una squadra.' }
-  if (!a.length || !b.length) return { error: 'Servono due squadre.' }
+  if (new Set(scelti).size !== scelti.length) return { error: await tr('Un giocatore è in tutte e due le squadre.') }
+  if (scelti.some((id) => !inLista.has(id))) return { error: await tr('C\u2019è un giocatore che non è in lista.') }
+  if (scelti.length !== inLista.size) return { error: await tr('Assegna tutti i giocatori in lista a una squadra.') }
+  if (!a.length || !b.length) return { error: await tr('Servono due squadre.') }
 
   const pettorine = opzioni.pettorine === 'A' || opzioni.pettorine === 'B' ? opzioni.pettorine : null
   const patch = sanity.patch(matchId).set({ squadraA: a.map(ref), squadraB: b.map(ref) })
@@ -330,24 +335,28 @@ export async function salvaFormazioni(
 
   // Formazioni ufficiali: ognuno riceve la sua squadra, e chi porta le pettorine il promemoria.
   if (opzioni.avvisa) {
-    const titolo = match.formazioniUfficialiIl ? `⚽ ${lega.nome}: formazioni aggiornate` : `⚽ ${lega.nome}: formazioni pronte!`
-    const quando = `${formatData(match.data, { weekday: 'long', hour: '2-digit', minute: '2-digit' })} · ${match.luogo}`
-    // Chi non ha ancora pagato la quota riceve anche l'invito a pagare con Satispay.
+    // Nella lingua di ogni telefono. Chi non ha ancora pagato la quota riceve anche l'invito a pagare con Satispay.
     const pagato = new Set(match.pagamenti.map((p) => p.giocatoreId))
+    const messaggio = (squadra: 'A' | 'B', conQuota: boolean) => (t: T) => {
+      const quando = `${t.data(match.data, { weekday: 'long', hour: '2-digit', minute: '2-digit' })} · ${match.luogo}`
+      const sei = t('Sei nella {squadra}', { squadra: nomeSquadra(squadra, t) })
+      const base = `${sei}${pettorine === squadra ? `: ${t('porta la pettorina!')} 🦺` : '.'}\n${quando}`
+      const paga = conQuota && match.quota != null ? `\n💶 ${t('Entra nell’app per pagare {quota} € con Satispay', { quota: match.quota })}` : ''
+      return {
+        title: `⚽ ${lega.nome}: ${match.formazioniUfficialiIl ? t('formazioni aggiornate') : t('formazioni pronte!')}`,
+        body: base + paga,
+        url: `/partite/${matchId}`,
+        tag: `formazioni-${matchId}`,
+      }
+    }
     const invii = (['A', 'B'] as const).flatMap((squadra) => {
       const ids = squadra === 'A' ? a : b
-      const base = `Sei nella ${nomeSquadra(squadra)}${pettorine === squadra ? ': porta la pettorina! 🦺' : '.'}\n${quando}`
-      const paga = match.quota != null ? `\n💶 Entra nell'app per pagare ${match.quota} € con Satispay` : ''
       return [
-        [ids.filter((id) => pagato.has(id)), base],
-        [ids.filter((id) => !pagato.has(id)), base + paga],
+        [ids.filter((id) => pagato.has(id)), messaggio(squadra, false)],
+        [ids.filter((id) => !pagato.has(id)), messaggio(squadra, true)],
       ] as const
     })
-    await Promise.all(
-      invii.map(([ids, body]) =>
-        inviaAGiocatori([...ids], { title: titolo, body, url: `/partite/${matchId}`, tag: `formazioni-${matchId}` }, 'formazioni'),
-      ),
-    )
+    await Promise.all(invii.map(([ids, testo]) => inviaAGiocatori([...ids], testo, 'formazioni')))
   }
   redirect(`/partite/${matchId}`)
 }
@@ -437,10 +446,10 @@ export async function togliDallaSquadra(matchId: string, giocatoreId: string) {
 export async function salvaRisultato(matchId: string, _prev: FormState, formData: FormData): Promise<FormState> {
   await requireForDoc(matchId, 'refertatore')
   const match = await getMatch(matchId)
-  if (!match) return { error: 'Partita non trovata.' }
-  if (match.stato === 'annullata') return { error: 'La partita è annullata.' }
-  if (new Date() < risultatoDa(match)) return { error: 'La partita non è ancora finita.' }
-  if (!match.squadraA.length || !match.squadraB.length) return { error: 'Prima vanno fatte le squadre.' }
+  if (!match) return { error: await tr('Partita non trovata.') }
+  if (match.stato === 'annullata') return { error: await tr('La partita è annullata.') }
+  if (new Date() < risultatoDa(match)) return { error: await tr('La partita non è ancora finita.') }
+  if (!match.squadraA.length || !match.squadraB.length) return { error: await tr('Prima vanno fatte le squadre.') }
 
   const golDi = (id: string) => {
     const n = num(formData, `gol_${id}`) ?? 0
@@ -461,12 +470,12 @@ export async function salvaRisultato(matchId: string, _prev: FormState, formData
 
   const mvp = str(formData, 'mvp')
   const inCampo = new Set([...match.squadraA, ...match.squadraB].map((p) => p._id))
-  if (mvp && !inCampo.has(mvp)) return { error: 'L\u2019MVP deve essere uno dei giocatori in campo.' }
+  if (mvp && !inCampo.has(mvp)) return { error: await tr('L\u2019MVP deve essere uno dei giocatori in campo.') }
 
   // Tabellone: in caso di pareggio bisogna dire chi passa il turno (es. ai rigori).
   const eliminazione = match.torneo?.formato === 'eliminazione' || match.fase === 'eliminazione'
   const passa = str(formData, 'passa')
-  if (eliminazione && golA === golB && passa !== 'A' && passa !== 'B') return { error: 'È finita in pareggio: scegli chi passa il turno.' }
+  if (eliminazione && golA === golB && passa !== 'A' && passa !== 'B') return { error: await tr('È finita in pareggio: scegli chi passa il turno.') }
 
   const patch = sanity.patch(matchId).set({
     ...(eliminazione && golA === golB && { passa }),
@@ -496,12 +505,12 @@ async function avvisaProposte(match: Match) {
   const organizzatori = await sanity.fetch<string[]>(`*[_type == "player" && lega._ref == $lega && isAdmin == true && attivo != false]._id`, {
     lega: match.legaId,
   })
-  await inviaAGiocatori(organizzatori, {
-    title: '📈 Nuove proposte di voto',
-    body: `${proposte.length} giocator${proposte.length === 1 ? 'e' : 'i'} da rivedere: approva o scarta i nuovi voti.`,
+  await inviaAGiocatori(organizzatori, (t) => ({
+    title: `📈 ${t('Nuove proposte di voto')}`,
+    body: t.n(proposte.length, '{n} giocatore da rivedere: approva o scarta i nuovi voti.', '{n} giocatori da rivedere: approva o scarta i nuovi voti.'),
     url: '/giocatori/proposte',
     tag: `proposte-${match.legaId}`,
-  })
+  }))
 }
 
 // ---------- Partite ricorrenti (organizzatori) ----------
@@ -511,7 +520,7 @@ const ORA = /^([01]\d|2[0-3]):[0-5]\d$/
 export async function salvaSerie(seriesId: string, _prev: FormState, formData: FormData): Promise<FormState> {
   await requireForDoc(seriesId, 'organizzatore')
   const current = await getSeries(seriesId)
-  if (!current) return { error: 'Serie non trovata.' }
+  if (!current) return { error: await tr('Serie non trovata.') }
 
   const ora = str(formData, 'ora')
   const aperturaOra = str(formData, 'aperturaOra')
@@ -523,9 +532,9 @@ export async function salvaSerie(seriesId: string, _prev: FormState, formData: F
   const note = str(formData, 'note')
   const fineData = str(formData, 'fineData')
 
-  if (!luogo || ![ora, aperturaOra].every((o) => ORA.test(o))) return { error: 'Controlla luogo e orari.' }
+  if (!luogo || ![ora, aperturaOra].every((o) => ORA.test(o))) return { error: await tr('Controlla luogo e orari.') }
   const automatici = formData.get('postiAutomatici') === 'on'
-  if (!automatici && (!Number.isInteger(posti) || posti < 2 || posti > MAX_GIOCATORI)) return { error: `Da 2 a ${MAX_GIOCATORI} giocatori.` }
+  if (!automatici && (!Number.isInteger(posti) || posti < 2 || posti > MAX_GIOCATORI)) return { error: await tr('Da 2 a {n} giocatori.', { n: MAX_GIOCATORI }) }
   // Confronto in minuti rispetto all'inizio della partita.
   const minutiPrima = (giorni: number, hhmm: string) => {
     const [h, m] = hhmm.split(':').map(Number)
@@ -533,7 +542,7 @@ export async function salvaSerie(seriesId: string, _prev: FormState, formData: F
     return giorni * 1440 + (ph * 60 + pm) - (h * 60 + m)
   }
   const aperturaMinutiPrima = minutiPrima(aperturaGiorniPrima, aperturaOra)
-  if (aperturaMinutiPrima <= 0) return { error: 'Le convocazioni devono aprirsi prima della partita.' }
+  if (aperturaMinutiPrima <= 0) return { error: await tr('Le convocazioni devono aprirsi prima della partita.') }
   // Chiusura = apertura + durata, al massimo all'inizio della partita; in "giorni prima" e "ora".
   const chiusuraMinuti = (() => {
     const [ph, pm] = ora.split(':').map(Number)
@@ -544,7 +553,7 @@ export async function salvaSerie(seriesId: string, _prev: FormState, formData: F
   const chiusuraOra = `${String(Math.floor(minutoDelGiorno / 60)).padStart(2, '0')}:${String(minutoDelGiorno % 60).padStart(2, '0')}`
 
   const durata = num(formData, 'durataMinuti') ?? 60
-  if (!Number.isInteger(durata) || durata < 10 || durata > 300) return { error: 'Durata non valida (10-300 minuti).' }
+  if (!Number.isInteger(durata) || durata < 10 || durata > 300) return { error: await tr('Durata non valida (10-300 minuti).') }
 
   const fields = {
     ora,
@@ -589,8 +598,8 @@ const MAX_FOTO = 4 * 1024 * 1024
 
 async function uploadFoto(foto: FormDataEntryValue | null) {
   if (!(foto instanceof File) || foto.size === 0) return undefined
-  if (!foto.type.startsWith('image/')) return { error: 'La foto deve essere un\u2019immagine.' }
-  if (foto.size > MAX_FOTO) return { error: 'La foto è troppo grande (max 4 MB).' }
+  if (!foto.type.startsWith('image/')) return { error: await tr('La foto deve essere un\u2019immagine.') }
+  if (foto.size > MAX_FOTO) return { error: await tr('La foto è troppo grande (max 4 MB).') }
   const asset = await sanity.assets.upload('image', Buffer.from(await foto.arrayBuffer()), {
     filename: foto.name,
     contentType: foto.type,
@@ -611,9 +620,9 @@ const caratteristicheFromForm = (formData: FormData) =>
 // Cambio rapido della foto cliccando sull'avatar: ognuno la sua, gli organizzatori quella di tutti.
 export async function caricaFoto(playerId: string, _prev: FormState, formData: FormData): Promise<FormState> {
   const me = await requireForDoc(playerId)
-  if (me._id !== playerId && !me.isAdmin) return { error: 'Puoi cambiare solo la tua foto.' }
+  if (me._id !== playerId && !me.isAdmin) return { error: await tr('Puoi cambiare solo la tua foto.') }
   const upload = await uploadFoto(formData.get('foto'))
-  if (!upload) return { error: 'Nessuna foto selezionata.' }
+  if (!upload) return { error: await tr('Nessuna foto selezionata.') }
   if ('error' in upload) return upload
   await sanity.patch(playerId).set({ foto: upload.foto }).commit()
   refresh()
@@ -626,15 +635,15 @@ export async function salvaGiocatore(playerId: string | null, _prev: FormState, 
   const nome = str(formData, 'nome')
   const email = str(formData, 'email').toLowerCase()
   const telefono = normalizzaTelefono(str(formData, 'telefono'))
-  if (!nome) return { error: 'Il nome è obbligatorio.' }
-  if (!email && !telefono) return { error: 'Serve l\u2019email o il numero di telefono, per collegarlo quando fa l\u2019accesso.' }
-  if (telefono && !/^\+\d{8,15}$/.test(telefono)) return { error: 'Numero di telefono non valido (es. 333 1234567 o +39 333 1234567).' }
+  if (!nome) return { error: await tr('Il nome è obbligatorio.') }
+  if (!email && !telefono) return { error: await tr('Serve l\u2019email o il numero di telefono, per collegarlo quando fa l\u2019accesso.') }
+  if (telefono && !/^\+\d{8,15}$/.test(telefono)) return { error: await tr('Numero di telefono non valido (es. 333 1234567 o +39 333 1234567).') }
 
   const duplicate = await sanity.fetch<string | null>(
     `*[_type == "player" && lega._ref == $lega && _id != $id && ((defined(email) && lower(email) == $email) || (defined(telefono) && telefono == $telefono))][0].nome`,
     { email: email || '-', telefono: telefono || '-', id: playerId ?? '', lega: admin.lega._id },
   )
-  if (duplicate) return { error: `Email o telefono già usati da ${duplicate}.` }
+  if (duplicate) return { error: await tr('Email o telefono già usati da {nome}.', { nome: duplicate }) }
 
   const upload = await uploadFoto(formData.get('foto'))
   if (upload && 'error' in upload) return upload
@@ -680,7 +689,7 @@ export async function attivaNotifiche(sub: PushSub, dispositivo: string) {
   const utente = await getUtente()
   if (!utente) throw new Error('Accesso richiesto')
   if (!sub?.endpoint?.startsWith('https://') || !sub.keys?.p256dh || !sub.keys?.auth) throw new Error('Iscrizione non valida')
-  await salvaIscrizione(utente.id, sub, dispositivo)
+  await salvaIscrizione(utente.id, sub, dispositivo, await getLingua())
 }
 
 // App iPhone/Android: salva il token Firebase del telefono (anche quando Firebase lo rinnova).
@@ -688,7 +697,7 @@ export async function attivaNotificheNative(token: string, tipo: 'ios' | 'androi
   const utente = await getUtente()
   if (!utente) return
   if (!token || token.length > 4096 || (tipo !== 'ios' && tipo !== 'android')) throw new Error('Token non valido')
-  await salvaTokenNativo(utente.id, token, tipo, dispositivo)
+  await salvaTokenNativo(utente.id, token, tipo, dispositivo, await getLingua())
 }
 
 export async function disattivaNotifiche(endpoint: string) {
@@ -723,9 +732,9 @@ export type AvvisoState = { inviate?: number; totali?: number; error?: string } 
 export async function apriConvocazioni(matchId: string): Promise<AvvisoState> {
   const { lega } = await requireForDoc(matchId, 'organizzatore')
   const match = await getMatch(matchId)
-  if (!match) return { error: 'Partita non trovata.' }
+  if (!match) return { error: await tr('Partita non trovata.') }
   const stato = finestra(match)
-  if (stato === 'chiusa' || stato === 'scaduta') return { error: 'Le convocazioni sono chiuse: modifica l\u2019orario di chiusura.' }
+  if (stato === 'chiusa' || stato === 'scaduta') return { error: await tr('Le convocazioni sono chiuse: modifica l\u2019orario di chiusura.') }
 
   const now = new Date().toISOString()
   // Aprendo prima dell'orario previsto, la finestra parte adesso e dura quanto impostato.
@@ -738,12 +747,12 @@ export async function apriConvocazioni(matchId: string): Promise<AvvisoState> {
   const breve = { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' } as const
   const risultato = await inviaATutti(
     match.legaId,
-    {
-      title: `⚽ ${lega.nome}: convocazioni aperte!`,
-      body: `${formatData(match.data, breve)} · ${match.luogo}\n${match.postiDisponibili} posti, rispondi entro ${formatData(match.chiusuraConvocazioni, breve)}`,
+    (t) => ({
+      title: `⚽ ${lega.nome}: ${t('convocazioni aperte!')}`,
+      body: `${t.data(match.data, breve)} · ${match.luogo}\n${t('{n} posti, rispondi entro {data}', { n: match.postiDisponibili, data: t.data(match.chiusuraConvocazioni, breve) })}`,
       url: `/partite/${matchId}`,
       tag: matchId,
-    },
+    }),
     'convocazioni',
   )
   refresh()
@@ -794,12 +803,12 @@ export type EsitoNuovaLega = { error?: string; creata?: { nome: string; invito: 
 // Restituisce il link d'invito, da condividere subito su WhatsApp.
 export async function creaLega(_prev: EsitoNuovaLega, formData: FormData): Promise<EsitoNuovaLega> {
   const utente = await getUtente()
-  if (!utente) return { error: 'Accesso richiesto.' }
+  if (!utente) return { error: await tr('Accesso richiesto.') }
   const nome = str(formData, 'nome')
-  if (nome.length < 2 || nome.length > 40) return { error: 'Il nome deve avere tra 2 e 40 caratteri.' }
+  if (nome.length < 2 || nome.length > 40) return { error: await tr('Il nome deve avere tra 2 e 40 caratteri.') }
   const cittaScritta = str(formData, 'citta')
   const citta = cittaScritta ? await cercaCitta(cittaScritta) : null
-  if (cittaScritta && !citta) return { error: `Non trovo la città “${cittaScritta}”: prova a scriverla in un altro modo, o lasciala vuota.` }
+  if (cittaScritta && !citta) return { error: await tr('Non trovo la città “{citta}”: prova a scriverla in un altro modo, o lasciala vuota.', { citta: cittaScritta }) }
 
   const codiceInvito = await nuovoCodice()
   const lega = await sanity.create({ _type: 'league', nome, codiceInvito, creataDa: utente.id, ...(citta && { citta }) })
@@ -834,7 +843,7 @@ export async function uniscitiConInvito(codice: string) {
 export async function uniscitiConCodice(_prev: FormState, formData: FormData): Promise<FormState> {
   const codice = str(formData, 'codice').toUpperCase().replace(/[^A-Z0-9]/g, '')
   const esiste = await sanity.fetch<number>(`count(*[_type == "league" && codiceInvito == $codice])`, { codice })
-  if (!esiste) return { error: 'Codice non valido: controlla di averlo scritto bene.' }
+  if (!esiste) return { error: await tr('Codice non valido: controlla di averlo scritto bene.') }
   await uniscitiConInvito(codice)
 }
 
@@ -856,6 +865,23 @@ export async function aggiungimiAllaLega(legaId: string) {
   redirect('/')
 }
 
+// La lingua dell'app su questo dispositivo (e per le notifiche dei miei dispositivi). `vai`: dove tornare dopo.
+export async function scegliLingua(lingua: string, vai?: string) {
+  if (!isLingua(lingua)) throw new Error('Lingua non valida')
+  ;(await cookies()).set(COOKIE_LINGUA, lingua, { path: '/', maxAge: 60 * 60 * 24 * 365 * 2, sameSite: 'lax' })
+  const utente = await getUtente()
+  if (utente) {
+    const ids = await sanity.fetch<string[]>(`*[_type == "pushSubscription" && clerkUserId == $id]._id`, { id: utente.id })
+    if (ids.length) {
+      const tx = sanity.transaction()
+      for (const id of ids) tx.patch(id, (p) => p.set({ lingua }))
+      await tx.commit()
+    }
+  }
+  if (vai) redirect(vai.startsWith('/') && !vai.startsWith('//') ? vai : '/')
+  refresh()
+}
+
 // Cambia la lega attiva su questo dispositivo.
 export async function scegliLega(legaId: string, vai = '/') {
   if (!(await membroDi(legaId))) throw new Error('Non fai parte di questa lega')
@@ -866,14 +892,14 @@ export async function scegliLega(legaId: string, vai = '/') {
 export async function salvaLega(legaId: string, _prev: FormState, formData: FormData): Promise<FormState> {
   await requireIn(legaId, 'organizzatore')
   const nome = str(formData, 'nome')
-  if (nome.length < 2 || nome.length > 40) return { error: 'Il nome deve avere tra 2 e 40 caratteri.' }
+  if (nome.length < 2 || nome.length > 40) return { error: await tr('Il nome deve avere tra 2 e 40 caratteri.') }
   const upload = await uploadFoto(formData.get('logo'))
   if (upload && 'error' in upload) return upload
   // Città per il meteo delle partite: si cerca solo se è cambiata.
   const cittaScritta = str(formData, 'citta')
   const attuale = await sanity.fetch<string | null>(`*[_id == $legaId][0].citta.nome`, { legaId })
   const citta = cittaScritta && cittaScritta !== attuale ? await cercaCitta(cittaScritta) : undefined
-  if (cittaScritta && cittaScritta !== attuale && !citta) return { error: `Non trovo la città “${cittaScritta}”: prova a scriverla in un altro modo.` }
+  if (cittaScritta && cittaScritta !== attuale && !citta) return { error: await tr('Non trovo la città “{citta}”: prova a scriverla in un altro modo.', { citta: cittaScritta }) }
   const patch = sanity.patch(legaId).set({ nome, ...(upload && { logo: upload.foto }), ...(citta && { citta }) })
   if (!upload && formData.get('rimuoviFoto') === 'on') patch.unset(['logo'])
   if (!cittaScritta) patch.unset(['citta'])
@@ -886,7 +912,7 @@ export async function salvaLega(legaId: string, _prev: FormState, formData: Form
 export async function caricaLogoLega(legaId: string, _prev: FormState, formData: FormData): Promise<FormState> {
   await requireIn(legaId, 'organizzatore')
   const upload = await uploadFoto(formData.get('logo'))
-  if (!upload) return { error: 'Nessuna foto selezionata.' }
+  if (!upload) return { error: await tr('Nessuna foto selezionata.') }
   if ('error' in upload) return upload
   await sanity.patch(legaId).set({ logo: upload.foto }).commit()
   refresh()
@@ -899,11 +925,11 @@ const MAX_FOTO_SORPRESA = 30
 
 export async function aggiungiFotoSorpresa(legaId: string, _prev: FormState, formData: FormData): Promise<FormState> {
   await requireIn(legaId, 'giocatore')
-  if (!(await isTitolare())) return { error: 'Solo il titolare dell\u2019app può impostare le foto sorpresa.' }
+  if (!(await isTitolare())) return { error: await tr('Solo il titolare dell\u2019app può impostare le foto sorpresa.') }
   const quante = await sanity.fetch<number>(`count(*[_id == $legaId][0].fotoSorprese)`, { legaId })
-  if (quante >= MAX_FOTO_SORPRESA) return { error: `Al massimo ${MAX_FOTO_SORPRESA} foto: togline qualcuna.` }
+  if (quante >= MAX_FOTO_SORPRESA) return { error: await tr('Al massimo {n} foto: togline qualcuna.', { n: MAX_FOTO_SORPRESA }) }
   const upload = await uploadFoto(formData.get('foto'))
-  if (!upload) return { error: 'Scatta o scegli una foto.' }
+  if (!upload) return { error: await tr('Scatta o scegli una foto.') }
   if ('error' in upload) return upload
   await sanity
     .patch(legaId)
@@ -942,7 +968,7 @@ export async function salvaPagamentiLega(legaId: string, _prev: FormState, formD
     try {
       if (new URL(link).protocol !== 'https:') throw new Error()
     } catch {
-      return { error: 'Il link deve iniziare con https://' }
+      return { error: await tr('Il link deve iniziare con https://') }
     }
   }
   const qr = await uploadFoto(formData.get('satispayQr'))
@@ -1009,12 +1035,15 @@ export async function sollecitaPagamenti(matchId: string): Promise<AvvisoState> 
     .map((c) => c.giocatore._id)
     .filter((id) => !pagato.has(id))
   if (daSollecitare.length === 0) return { inviate: 0, totali: 0 }
-  return inviaAGiocatori(daSollecitare, {
-    title: `💶 ${lega.nome}: quota da pagare`,
-    body: `${match.quota} € per la partita di ${formatData(match.data, { weekday: 'long', day: 'numeric', month: 'long' })}. Paga con Satispay dall'app.`,
+  return inviaAGiocatori(daSollecitare, (t) => ({
+    title: `💶 ${lega.nome}: ${t('quota da pagare')}`,
+    body: t('{quota} € per la partita di {data}. Paga con Satispay dall’app.', {
+      quota: match.quota ?? 0,
+      data: t.data(match.data, { weekday: 'long', day: 'numeric', month: 'long' }),
+    }),
     url: `/partite/${matchId}`,
     tag: `quota-${matchId}`,
-  })
+  }))
 }
 
 // ---------- Km percorsi (da Apple Salute o da Strava) ----------
@@ -1043,8 +1072,8 @@ async function scriviKm(matchId: string, playerId: string, km: number | null, fo
 // Km letti da Apple Salute nell'app per iPhone (non si inseriscono a mano).
 export async function salvaKm(matchId: string, km: number, fonte: 'salute'): Promise<{ error?: string }> {
   const { me } = await partitaPerKm(matchId)
-  if (fonte !== 'salute') return { error: 'I km si prendono dall\u2019app Salute del telefono.' }
-  if (!Number.isFinite(km) || km <= 0 || km > 30) return { error: 'Dall\u2019app Salute arriva una distanza non valida.' }
+  if (fonte !== 'salute') return { error: await tr('I km si prendono dall\u2019app Salute del telefono.') }
+  if (!Number.isFinite(km) || km <= 0 || km > 30) return { error: await tr('Dall\u2019app Salute arriva una distanza non valida.') }
   await scriviKm(matchId, me._id, Math.round(km * 100) / 100, fonte)
   return {}
 }
@@ -1081,15 +1110,15 @@ export type EsitoStrava = { km?: number; attivita?: string; error?: string; daCo
 
 // Cerca su Strava l'attività fatta durante la partita e ne salva i km.
 export async function kmDaStrava(matchId: string): Promise<EsitoStrava> {
-  if (!stravaConfigurato()) return { error: 'Strava non è ancora attivo su The Cap.' }
+  if (!stravaConfigurato()) return { error: await tr('Strava non è ancora attivo su The Cap.') }
   const { me, match } = await partitaPerKm(matchId)
   const utente = await getUtente()
-  if (!utente) return { error: 'Accesso richiesto.' }
+  if (!utente) return { error: await tr('Accesso richiesto.') }
   const { inizio, fine } = orarioPartita(match)
   const r = await kmStrava(utente.id, inizio, fine).catch(() => null)
-  if (!r) return { error: 'Strava non risponde: riprova tra poco.' }
+  if (!r) return { error: await tr('Strava non risponde: riprova tra poco.') }
   if (!r.collegato) return { daCollegare: true }
-  if (!r.attivita) return { error: 'Su Strava non c\u2019è un\u2019attività durante l\u2019orario della partita.' }
+  if (!r.attivita) return { error: await tr('Su Strava non c\u2019è un\u2019attività durante l\u2019orario della partita.') }
   const km = Math.round(r.attivita.km * 100) / 100
   await scriviKm(matchId, me._id, km, 'strava')
   return { km, attivita: r.attivita.nome }
@@ -1122,10 +1151,10 @@ export async function salvaPreferenzaNotifica(chiave: string, attiva: boolean) {
 // Messaggio del capitano (o di un organizzatore) a tutta la squadra, come notifica.
 export async function inviaComunicazione(_prev: AvvisoState, formData: FormData): Promise<AvvisoState> {
   const me = await requirePlayer()
-  if (!me.isAdmin && me.badge !== 'capitano') return { error: 'Solo il capitano e gli organizzatori possono scrivere alla squadra.' }
+  if (!me.isAdmin && me.badge !== 'capitano') return { error: await tr('Solo il capitano e gli organizzatori possono scrivere alla squadra.') }
   const testo = str(formData, 'testo')
-  if (testo.length < 2) return { error: 'Scrivi un messaggio.' }
-  if (testo.length > 300) return { error: 'Massimo 300 caratteri.' }
+  if (testo.length < 2) return { error: await tr('Scrivi un messaggio.') }
+  if (testo.length > 300) return { error: await tr('Massimo 300 caratteri.') }
   return inviaATutti(me.lega._id, { title: `📢 ${displayName(me)} · ${me.lega.nome}`, body: testo, url: '/', tag: `comunicazione-${Date.now()}` }, 'capitano')
 }
 
@@ -1191,7 +1220,7 @@ export async function unisciSchede(tieniId: string, togliId: string) {
 // le mie schede giocatore (e nelle leghe in cui entrerò dopo, vedi nuovaScheda).
 export async function salvaAccount(_prev: FormState, formData: FormData): Promise<FormState> {
   const utente = await getUtente()
-  if (!utente) return { error: 'Accesso richiesto.' }
+  if (!utente) return { error: await tr('Accesso richiesto.') }
   const nome = str(formData, 'nome')
   const cognome = str(formData, 'cognome')
   const telefonoScritto = str(formData, 'telefono')
@@ -1199,13 +1228,13 @@ export async function salvaAccount(_prev: FormState, formData: FormData): Promis
   const ruolo = (RUOLI as readonly string[]).includes(str(formData, 'ruolo')) ? str(formData, 'ruolo') : ''
   const piede = (PIEDI as readonly string[]).includes(str(formData, 'piede')) ? str(formData, 'piede') : ''
   const dataNascita = str(formData, 'dataNascita')
-  if (!nome) return { error: 'Il nome è obbligatorio.' }
+  if (!nome) return { error: await tr('Il nome è obbligatorio.') }
   if (dataNascita) {
     const anni = /^\d{4}-\d{2}-\d{2}$/.test(dataNascita) ? eta(dataNascita) : NaN
-    if (!(anni >= 5 && anni <= 100)) return { error: 'La data di nascita non sembra valida.' }
+    if (!(anni >= 5 && anni <= 100)) return { error: await tr('La data di nascita non sembra valida.') }
   }
-  if (nome.length > 40 || cognome.length > 40) return { error: 'Nome e cognome: massimo 40 caratteri.' }
-  if (telefonoScritto && !/^\+?\d{6,15}$/.test(telefono)) return { error: 'Il numero di telefono non sembra valido.' }
+  if (nome.length > 40 || cognome.length > 40) return { error: await tr('Nome e cognome: massimo 40 caratteri.') }
+  if (telefonoScritto && !/^\+?\d{6,15}$/.test(telefono)) return { error: await tr('Il numero di telefono non sembra valido.') }
 
   const { clerkClient } = await import('@clerk/nextjs/server')
   const clerk = await clerkClient()
@@ -1256,12 +1285,12 @@ export async function esciDallaLega(legaId: string) {
   if (nuovo) tx.patch(nuovo, (p) => p.set({ isAdmin: true }))
   await tx.commit()
   if (nuovo) {
-    await inviaAGiocatori([nuovo], {
-      title: `👑 Sei il nuovo organizzatore di ${me.lega.nome}`,
-      body: 'L\u2019organizzatore ha lasciato la lega: ora gestisci tu partite, squadre e inviti.',
+    await inviaAGiocatori([nuovo], (t) => ({
+      title: `👑 ${t('Sei il nuovo organizzatore di {lega}', { lega: me.lega.nome })}`,
+      body: t('L’organizzatore ha lasciato la lega: ora gestisci tu partite, squadre e inviti.'),
       url: '/',
       tag: `nuovo-organizzatore-${nuovo}`,
-    }).catch(() => undefined)
+    })).catch(() => undefined)
   }
   if ((await cookies()).get(COOKIE_LEGA)?.value === legaId) (await cookies()).delete(COOKIE_LEGA)
   refresh()
@@ -1308,7 +1337,7 @@ export async function eliminaLega(legaId: string) {
 
 export async function eliminaAccount(): Promise<FormState> {
   const utente = await getUtente()
-  if (!utente) return { error: 'Accesso richiesto.' }
+  if (!utente) return { error: await tr('Accesso richiesto.') }
 
   const schede = await sanity.fetch<{ _id: string; isAdmin?: boolean; legaId: string; lega: string; altriAdmin: number; altriMembri: number }[]>(
     `*[_type == "player" && clerkUserId == $id]{
@@ -1342,12 +1371,12 @@ export async function eliminaAccount(): Promise<FormState> {
   await tx.commit()
 
   for (const n of nuoviOrganizzatori) {
-    await inviaAGiocatori([n.id], {
-      title: `👑 Sei il nuovo organizzatore di ${n.lega}`,
-      body: 'L\u2019organizzatore ha lasciato l\u2019app: ora gestisci tu partite, squadre e inviti.',
+    await inviaAGiocatori([n.id], (t) => ({
+      title: `👑 ${t('Sei il nuovo organizzatore di {lega}', { lega: n.lega })}`,
+      body: t('L’organizzatore ha lasciato l’app: ora gestisci tu partite, squadre e inviti.'),
       url: '/',
       tag: `nuovo-organizzatore-${n.id}`,
-    }).catch(() => undefined)
+    })).catch(() => undefined)
   }
 
   const { clerkClient } = await import('@clerk/nextjs/server')
@@ -1401,8 +1430,8 @@ async function squadreDalModulo(formData: FormData, legaId: string, quante: numb
     if (rosa.has(id) && sq) sq.giocatori.push({ _key: id, _type: 'reference', _ref: id })
   }
   const vuota = squadre.find((sq) => !sq.giocatori.length)
-  if (vuota) return `La squadra “${vuota.nome}” non ha giocatori.`
-  if (new Set(squadre.map((sq) => sq.nome.toLowerCase())).size < squadre.length) return 'Due squadre hanno lo stesso nome.'
+  if (vuota) return tr('La squadra “{squadra}” non ha giocatori.', { squadra: vuota.nome })
+  if (new Set(squadre.map((sq) => sq.nome.toLowerCase())).size < squadre.length) return tr('Due squadre hanno lo stesso nome.')
   const usati = new Set<string>()
   for (const [i, sq] of squadre.entries()) {
     const upload = await uploadFoto(formData.get(`foto_${i}`))
@@ -1565,23 +1594,23 @@ async function aggiornaTabellone(torneoId: string) {
 // Le partite sono normali partite della lega (con squadre già fatte e senza convocazioni).
 export async function creaTorneo(_prev: FormState, formData: FormData): Promise<FormState> {
   const admin = await requireIn(str(formData, 'legaId'), 'organizzatore')
-  if (!(await puoCreareTornei())) return { error: 'I tornei sono una funzione Pro.' }
+  if (!(await puoCreareTornei())) return { error: await tr('I tornei sono una funzione Pro.') }
   const utente = await getUtente()
 
   const nome = str(formData, 'nome')
-  if (nome.length < 2 || nome.length > 60) return { error: 'Il nome del torneo deve avere tra 2 e 60 caratteri.' }
+  if (nome.length < 2 || nome.length > 60) return { error: await tr('Il nome del torneo deve avere tra 2 e 60 caratteri.') }
   const formati = ['girone', 'eliminazione', 'gironi'] as const
   const formato = formati.find((f) => f === str(formData, 'formato')) ?? 'girone'
   const quante = num(formData, 'numSquadre') ?? 0
   if (!Number.isInteger(quante) || quante < 2 || quante > SQUADRE_PREDEFINITE.length) {
-    return { error: `Servono da 2 a ${SQUADRE_PREDEFINITE.length} squadre.` }
+    return { error: await tr('Servono da 2 a {n} squadre.', { n: SQUADRE_PREDEFINITE.length }) }
   }
   const squadre = await squadreDalModulo(formData, admin.lega._id, quante)
   if (typeof squadre === 'string') return { error: squadre }
   const maxGiocatori = maxDalModulo(formData)
-  if (typeof maxGiocatori === 'string') return { error: maxGiocatori }
+  if (typeof maxGiocatori === 'string') return { error: await tr(maxGiocatori) }
   const troppi = maxGiocatori && squadre.find((sq) => sq.giocatori.length > maxGiocatori)
-  if (troppi) return { error: `${troppi.nome} ha più di ${maxGiocatori} giocatori.` }
+  if (troppi) return { error: await tr('{squadra} ha più di {n} giocatori.', { squadra: troppi.nome, n: maxGiocatori }) }
   // Tabellone: il primo turno come l'ha messo l'organizzatore (indici delle squadre, a due a due).
   let primoTurno: string[] | undefined
   if (formato === 'eliminazione') {
@@ -1594,32 +1623,32 @@ export async function creaTorneo(_prev: FormState, formData: FormData): Promise<
     primoTurno = Array.isArray(posti)
       ? posti.filter((i) => typeof i === 'number' && squadre[i]).map((i) => squadre[i]._key)
       : primoTurnoTeste(squadre.map((sq) => sq._key))
-    if (!primoTurnoValido(primoTurno, squadre.map((sq) => sq._key))) return { error: 'Nel tabellone devono esserci tutte le squadre, una volta sola.' }
+    if (!primoTurnoValido(primoTurno, squadre.map((sq) => sq._key))) return { error: await tr('Nel tabellone devono esserci tutte le squadre, una volta sola.') }
   }
   // Gironi + tabellone: girone di ogni squadra (girone_<i> = indice del girone) e quante passano da ognuno.
   const numGironi = num(formData, 'numGironi') ?? 2
   const qualificate = num(formData, 'qualificate') ?? 2
   if (formato === 'gironi') {
-    if (!Number.isInteger(numGironi) || numGironi < 2 || numGironi > LETTERE_GIRONI.length) return { error: 'Servono da 2 a 8 gironi.' }
+    if (!Number.isInteger(numGironi) || numGironi < 2 || numGironi > LETTERE_GIRONI.length) return { error: await tr('Servono da 2 a 8 gironi.') }
     squadre.forEach((sq, i) => {
       const g = num(formData, `girone_${i}`)
       sq.girone = LETTERE_GIRONI[g != null && Number.isInteger(g) && g >= 0 && g < numGironi ? g : i % numGironi]
     })
     const grandezze = LETTERE_GIRONI.slice(0, numGironi).map((l) => squadre.filter((sq) => sq.girone === l).length)
-    if (grandezze.some((n) => n < 2)) return { error: 'Ogni girone deve avere almeno 2 squadre.' }
+    if (grandezze.some((n) => n < 2)) return { error: await tr('Ogni girone deve avere almeno 2 squadre.') }
     if (![1, 2].includes(qualificate) || qualificate >= Math.min(...grandezze)) {
-      return { error: 'Dai gironi devono passare 1 o 2 squadre, e non tutte quelle del girone.' }
+      return { error: await tr('Dai gironi devono passare 1 o 2 squadre, e non tutte quelle del girone.') }
     }
   }
 
   const inizio = str(formData, 'inizio')
-  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(inizio)) return { error: 'Scegli giorno e ora della prima giornata.' }
+  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(inizio)) return { error: await tr('Scegli giorno e ora della prima giornata.') }
   const ogniGiorni = num(formData, 'ogniGiorni') ?? 7
-  if (![0, 1, 7, 14].includes(ogniGiorni)) return { error: 'Frequenza delle giornate non valida.' }
+  if (![0, 1, 7, 14].includes(ogniGiorni)) return { error: await tr('Frequenza delle giornate non valida.') }
   const durataMinuti = num(formData, 'durataMinuti') ?? 40
-  if (!Number.isInteger(durataMinuti) || durataMinuti < 10 || durataMinuti > 300) return { error: 'Durata non valida (10-300 minuti).' }
+  if (!Number.isInteger(durataMinuti) || durataMinuti < 10 || durataMinuti > 300) return { error: await tr('Durata non valida (10-300 minuti).') }
   const luogo = str(formData, 'luogo')
-  if (!luogo) return { error: 'Scrivi dove si gioca.' }
+  if (!luogo) return { error: await tr('Scrivi dove si gioca.') }
   const andataRitorno = formato === 'girone' && formData.get('andataRitorno') === 'on'
   const calendario: CalendarioTorneo = { inizio, ogniGiorni, durataMinuti, luogo }
 
@@ -1680,12 +1709,12 @@ export async function creaTorneo(_prev: FormState, formData: FormData): Promise<
   // Ai capitani: tocca a loro invitare i compagni.
   await Promise.all(
     squadre.map((sq) =>
-      inviaAGiocatori([sq.capitano!._ref], {
-        title: `🏆 Sei il capitano dei ${sq.nome}`,
-        body: `Torneo ${nome}: invita i tuoi compagni con il link della squadra.`,
+      inviaAGiocatori([sq.capitano!._ref], (t) => ({
+        title: `🏆 ${t('Sei il capitano dei {squadra}', { squadra: sq.nome })}`,
+        body: t('Torneo {torneo}: invita i tuoi compagni con il link della squadra.', { torneo: nome }),
         url: `/tornei/${torneo._id}/squadra/${sq._key}`,
         tag: `capitano-${torneo._id}-${sq._key}`,
-      }).catch(() => undefined),
+      })).catch(() => undefined),
     ),
   )
   redirect(`/tornei/${torneo._id}`)
@@ -1720,25 +1749,26 @@ const partiteDaGiocare = (torneoId: string) =>
   )
 
 // Limite facoltativo di giocatori per squadra (vuoto = nessun limite).
+const ERRORE_MAX = 'Il limite di giocatori per squadra deve essere tra 1 e 50.'
 function maxDalModulo(formData: FormData): number | null | string {
   const v = str(formData, 'maxGiocatori')
   if (!v) return null
   const n = Number(v)
-  return Number.isInteger(n) && n >= 1 && n <= 50 ? n : 'Il limite di giocatori per squadra deve essere tra 1 e 50.'
+  return Number.isInteger(n) && n >= 1 && n <= 50 ? n : ERRORE_MAX
 }
 
 // L'organizzatore cambia nomi, capitani e giocatori delle squadre: valgono anche per le partite non ancora giocate.
 export async function salvaSquadreTorneo(torneoId: string, _prev: FormState, formData: FormData): Promise<FormState> {
   const admin = await requireForDoc(torneoId, 'organizzatore')
-  if (!(await puoCreareTornei())) return { error: 'I tornei sono una funzione Pro.' }
+  if (!(await puoCreareTornei())) return { error: await tr('I tornei sono una funzione Pro.') }
   const torneo = await sanity.fetch<{ _rev: string; squadre: SquadraDoc[] } | null>(`*[_type == "tournament" && _id == $id][0]{_rev, squadre}`, { id: torneoId })
-  if (!torneo) return { error: 'Torneo non trovato.' }
+  if (!torneo) return { error: await tr('Torneo non trovato.') }
   const max = maxDalModulo(formData)
-  if (typeof max === 'string') return { error: max }
+  if (typeof max === 'string') return { error: await tr(max) }
   const squadre = await squadreDalModulo(formData, admin.lega._id, torneo.squadre.length, torneo.squadre)
   if (typeof squadre === 'string') return { error: squadre }
   const troppi = max && squadre.find((sq) => sq.giocatori.length > max)
-  if (troppi) return { error: `${troppi.nome} ha più di ${max} giocatori.` }
+  if (troppi) return { error: await tr('{squadra} ha più di {n} giocatori.', { squadra: troppi.nome, n: max }) }
 
   const tx = sanity.transaction().patch(torneoId, (p) => {
     p.ifRevisionId(torneo._rev).set({ squadre })
@@ -1803,12 +1833,12 @@ export async function entraInSquadra(codice: string) {
     aggiornaPartiteDaGiocare(tx, await partiteDaGiocare(torneo._id), squadre)
     await tx.commit()
     if (squadra.capitano) {
-      await inviaAGiocatori([squadra.capitano._ref], {
-        title: `🏆 ${utente.nome || 'Un giocatore'} è nei ${squadra.nome}`,
-        body: `È entrato nella tua squadra del torneo ${torneo.nome}.`,
+      await inviaAGiocatori([squadra.capitano._ref], (t) => ({
+        title: `🏆 ${t('{nome} è nei {squadra}', { nome: utente.nome || t('Un giocatore'), squadra: squadra.nome })}`,
+        body: t('È entrato nella tua squadra del torneo {torneo}.', { torneo: torneo.nome }),
         url: `/tornei/${torneo._id}`,
         tag: `squadra-${torneo._id}-${squadra._key}`,
-      }).catch(() => undefined)
+      })).catch(() => undefined)
     }
   }
   redirect(`/tornei/${torneo._id}`)
@@ -1821,14 +1851,14 @@ export async function salvaMiaSquadra(torneoId: string, chiave: string, _prev: F
   const torneo = await sanity.fetch<TorneoSquadre | null>(`*[_type == "tournament" && _id == $id][0]{${torneoSquadreFields}}`, { id: torneoId })
   const me = await membroDi(torneo?.legaId)
   const squadra = torneo?.squadre.find((sq) => sq._key === chiave)
-  if (!torneo || !me || !squadra) return { error: 'Squadra non trovata.' }
+  if (!torneo || !me || !squadra) return { error: await tr('Squadra non trovata.') }
   const organizzatore = !!me.isAdmin
-  if (!organizzatore && squadra.capitano?._ref !== me._id) return { error: 'Solo il capitano può gestire la squadra.' }
-  if (!organizzatore && !iscrizioniAperte(torneo)) return { error: 'Le iscrizioni sono chiuse: la squadra non si può più cambiare.' }
+  if (!organizzatore && squadra.capitano?._ref !== me._id) return { error: await tr('Solo il capitano può gestire la squadra.') }
+  if (!organizzatore && !iscrizioniAperte(torneo)) return { error: await tr('Le iscrizioni sono chiuse: la squadra non si può più cambiare.') }
 
   const nome = str(formData, 'nome').slice(0, 30)
-  if (nome.length < 2) return { error: 'Il nome della squadra deve avere almeno 2 caratteri.' }
-  if (torneo.squadre.some((sq) => sq._key !== chiave && sq.nome.toLowerCase() === nome.toLowerCase())) return { error: 'C’è già una squadra con questo nome.' }
+  if (nome.length < 2) return { error: await tr('Il nome della squadra deve avere almeno 2 caratteri.') }
+  if (torneo.squadre.some((sq) => sq._key !== chiave && sq.nome.toLowerCase() === nome.toLowerCase())) return { error: await tr('C’è già una squadra con questo nome.') }
 
   const rosa = new Set(await sanity.fetch<string[]>(`*[_type == "player" && lega._ref == $lega && attivo != false]._id`, { lega: torneo.legaId }))
   const squadraDi = new Map(torneo.squadre.flatMap((sq) => sq.giocatori.map((g) => [g._ref, sq] as const)))
@@ -1839,16 +1869,16 @@ export async function salvaMiaSquadra(torneoId: string, chiave: string, _prev: F
     if (!rosa.has(id)) continue
     const altra = squadraDi.get(id)
     if (altra?._key === chiave) continue
-    if (altra && !organizzatore) return { error: 'Un giocatore che hai scelto è già in un’altra squadra.' }
-    if (altra?.capitano?._ref === id) return { error: `Non puoi spostare il capitano dei ${altra.nome}.` }
+    if (altra && !organizzatore) return { error: await tr('Un giocatore che hai scelto è già in un’altra squadra.') }
+    if (altra?.capitano?._ref === id) return { error: await tr('Non puoi spostare il capitano dei {squadra}.', { squadra: altra.nome }) }
     nuovi.push(id)
   }
   const giocatori = [
     ...squadra.giocatori.filter((g) => g._ref === squadra.capitano?._ref || formData.get(`rimuovi_${g._ref}`) !== 'on'),
     ...nuovi.map((id) => ({ _key: id, _type: 'reference' as const, _ref: id })),
   ]
-  if (!giocatori.length) return { error: 'La squadra deve avere almeno un giocatore.' }
-  if (torneo.maxGiocatori && giocatori.length > torneo.maxGiocatori) return { error: `Al massimo ${torneo.maxGiocatori} giocatori per squadra.` }
+  if (!giocatori.length) return { error: await tr('La squadra deve avere almeno un giocatore.') }
+  if (torneo.maxGiocatori && giocatori.length > torneo.maxGiocatori) return { error: await tr('Al massimo {n} giocatori per squadra.', { n: torneo.maxGiocatori }) }
   const upload = await uploadFoto(formData.get('foto'))
   if (upload && 'error' in upload) return upload
 
@@ -1859,7 +1889,7 @@ export async function salvaMiaSquadra(torneoId: string, chiave: string, _prev: F
       : { ...sq, giocatori: sq.giocatori.filter((g) => !spostati.has(g._ref)) },
   )
   const vuota = squadre.find((sq) => !sq.giocatori.length)
-  if (vuota) return { error: `I ${vuota.nome} resterebbero senza giocatori.` }
+  if (vuota) return { error: await tr('I {squadra} resterebbero senza giocatori.', { squadra: vuota.nome }) }
   const tx = sanity.transaction().patch(torneo._id, (p) => p.ifRevisionId(torneo._rev).set({ squadre }))
   aggiornaPartiteDaGiocare(tx, await partiteDaGiocare(torneo._id), squadre)
   await tx.commit()

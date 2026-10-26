@@ -5,16 +5,17 @@ import { salvaFormazioni } from '@/app/actions'
 import { displayName, iniziali, requireIn } from '@/lib/player'
 import { getMatch, presenti } from '@/lib/matches'
 import { avatarUrl } from '@/lib/image'
-import { formatData } from '@/lib/dates'
+import { getT } from '@/lib/lingua'
 import { sanity } from '@/lib/sanity'
 import { formaDellaLega, legaPro } from '@/lib/pro'
 import { Card, Loading, PageTitle } from '@/components/ui'
 import { FormazioniEditor, type GiocatoreFormazione } from './formazioni-editor'
 
-export default function FormazioniPage({ params }: PageProps<'/partite/[id]/formazioni'>) {
+export default async function FormazioniPage({ params }: PageProps<'/partite/[id]/formazioni'>) {
+  const t = await getT()
   return (
     <>
-      <PageTitle>Formazioni</PageTitle>
+      <PageTitle>{t('Formazioni')}</PageTitle>
       <Suspense fallback={<Loading />}>
         <Editor params={params} />
       </Suspense>
@@ -26,17 +27,17 @@ async function Editor({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const match = await getMatch(id)
   if (!match) notFound()
-  await requireIn(match.legaId, 'organizzatore')
+  const [, t] = await Promise.all([requireIn(match.legaId, 'organizzatore'), getT()])
 
   const indietro = (
     <Link href={`/partite/${match._id}`} className="text-sm text-green-700 hover:underline dark:text-green-400">
-      ← Torna alla partita
+      ← {t('Torna alla partita')}
     </Link>
   )
   if (match.stato !== 'chiusa') {
     return (
       <Card className="space-y-2">
-        <p>Le formazioni si fanno dopo aver chiuso le convocazioni.</p>
+        <p>{t('Le formazioni si fanno dopo aver chiuso le convocazioni.')}</p>
         {indietro}
       </Card>
     )
@@ -56,7 +57,7 @@ async function Editor({ params }: { params: Promise<{ id: string }> }) {
   if (giocatori.length < 2) {
     return (
       <Card className="space-y-2">
-        <p>Servono almeno 2 giocatori in lista.</p>
+        <p>{t('Servono almeno 2 giocatori in lista.')}</p>
         {indietro}
       </Card>
     )
@@ -69,7 +70,7 @@ async function Editor({ params }: { params: Promise<{ id: string }> }) {
     { lega: match.legaId, id: match._id, data: match.data },
   )
   const precedente = prima && {
-    quando: formatData(prima.data, { day: 'numeric', month: 'long' }),
+    quando: t.data(prima.data, { day: 'numeric', month: 'long' }),
     lati: Object.fromEntries([...prima.a.map((id) => [id, 'A' as const]), ...prima.b.map((id) => [id, 'B' as const])]),
   }
 
@@ -82,7 +83,7 @@ async function Editor({ params }: { params: Promise<{ id: string }> }) {
   return (
     <div className="space-y-3">
       <p className="text-sm capitalize text-zinc-500">
-        {formatData(match.data)} · {match.luogo} · {giocatori.length} in lista
+        {t.data(match.data)} · {match.luogo} · {t('{n} in lista', { n: giocatori.length })}
       </p>
       <FormazioniEditor
         giocatori={giocatori}

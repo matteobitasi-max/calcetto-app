@@ -5,23 +5,24 @@ import { SubmitButton } from '@/components/submit-button'
 import { Card, PlayerRow } from '@/components/ui'
 import { presenti, type Match } from '@/lib/matches'
 import { mioInCima, type Membro } from '@/lib/player'
+import { getT } from '@/lib/lingua'
 
-const euro = (n: number) => new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(n)
 const piccolo = 'rounded px-2 py-1 text-xs font-medium hover:bg-zinc-100 dark:hover:bg-zinc-800'
 
 export const haPagato = (match: Match, playerId: string) => match.pagamenti.some((p) => p.giocatoreId === playerId)
 
 // Accanto al mio nome nella lista: icona Satispay se devo ancora pagare, ✅ se ho pagato
 // (con ↩ per annullare se l'ho segnato per errore).
-export function PagamentoInLista({ match, me, playerId }: { match: Match; me: Membro; playerId: string }) {
+export async function PagamentoInLista({ match, me, playerId }: { match: Match; me: Membro; playerId: string }) {
   if (match.quota == null || match.stato === 'annullata') return null
+  const t = await getT()
   if (haPagato(match, playerId)) {
-    if (playerId !== me._id) return <span title="Quota pagata">✅</span>
+    if (playerId !== me._id) return <span title={t('Quota pagata')}>✅</span>
     return (
       <span className="flex shrink-0 items-center">
-        <span title="Quota pagata">✅</span>
+        <span title={t('Quota pagata')}>✅</span>
         <form action={annullaPagamento.bind(null, match._id, undefined)}>
-          <SubmitButton className={`${piccolo} text-zinc-400`} title="L'ho segnata per errore" confirm="Segnare di nuovo come da pagare?">
+          <SubmitButton className={`${piccolo} text-zinc-400`} title={t('L’ho segnata per errore')} confirm={t('Segnare di nuovo come da pagare?')}>
             ↩
           </SubmitButton>
         </form>
@@ -33,8 +34,10 @@ export function PagamentoInLista({ match, me, playerId }: { match: Match; me: Me
 }
 
 // La cassa dell'organizzatore: chi ha pagato e chi manca.
-export function Cassa({ match, mioId }: { match: Match; mioId?: string }) {
+export async function Cassa({ match, mioId }: { match: Match; mioId?: string }) {
   if (match.quota == null || match.stato === 'annullata') return null
+  const t = await getT()
+  const euro = (n: number) => t.numero(n, { style: 'currency', currency: 'EUR' })
   const lista = presenti(match)
   if (lista.length === 0) return null
   const pagati = lista.filter((c) => haPagato(match, c.giocatore._id)).length
@@ -46,7 +49,7 @@ export function Cassa({ match, mioId }: { match: Match; mioId?: string }) {
         {/* Chiusa: solo i totali. Toccando si apre l'elenco dei giocatori. */}
         <summary className="cursor-pointer list-none space-y-3 p-4 [&::-webkit-details-marker]:hidden">
           <h2 className="flex items-center justify-between font-semibold">
-            💰 Cassa
+            💰 {t('Cassa')}
             <span className="text-zinc-400 transition group-open:rotate-180" aria-hidden>
               ▾
             </span>
@@ -54,8 +57,8 @@ export function Cassa({ match, mioId }: { match: Match; mioId?: string }) {
           <dl className="grid grid-cols-2 gap-2 text-center">
             {(
               [
-                ['Incassato', `${euro(pagati * match.quota)} · ${pagati}`, 'text-green-600'],
-                ['Mancano', `${euro(mancanti * match.quota)} · ${mancanti}`, 'text-red-600'],
+                [t('Incassato'), `${euro(pagati * match.quota)} · ${pagati}`, 'text-green-600'],
+                [t('Mancano'), `${euro(mancanti * match.quota)} · ${mancanti}`, 'text-red-600'],
               ] as const
             ).map(([label, valore, cls]) => (
               <div key={label} className="flex flex-col-reverse rounded-lg bg-zinc-50 py-2 dark:bg-zinc-950">
@@ -79,15 +82,15 @@ export function Cassa({ match, mioId }: { match: Match; mioId?: string }) {
                       <span className="flex shrink-0 items-center gap-1 text-xs">
                         {pagato ? (
                           <>
-                            <span className="rounded-full bg-green-100 px-2 py-0.5 text-green-800 dark:bg-green-950 dark:text-green-300">✅ pagato</span>
+                            <span className="rounded-full bg-green-100 px-2 py-0.5 text-green-800 dark:bg-green-950 dark:text-green-300">✅ {t('pagato')}</span>
                             <form action={annullaPagamento.bind(null, match._id, giocatore._id)}>
-                              <SubmitButton className={`${piccolo} text-zinc-400`} title="Annulla: torna da pagare" confirm="Segnare di nuovo come da pagare?">
+                              <SubmitButton className={`${piccolo} text-zinc-400`} title={t('Annulla: torna da pagare')} confirm={t('Segnare di nuovo come da pagare?')}>
                                 ↩
                               </SubmitButton>
                             </form>
                           </>
                         ) : (
-                          <span className="rounded-full bg-red-100 px-2 py-0.5 text-red-800 dark:bg-red-950 dark:text-red-300">da pagare</span>
+                          <span className="rounded-full bg-red-100 px-2 py-0.5 text-red-800 dark:bg-red-950 dark:text-red-300">{t('da pagare')}</span>
                         )}
                       </span>
                     }

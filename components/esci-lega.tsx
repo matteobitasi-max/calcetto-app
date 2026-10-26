@@ -3,10 +3,12 @@
 import { useState, useTransition } from 'react'
 import { createPortal } from 'react-dom'
 import { eliminaLega, esciDallaLega } from '@/app/actions'
+import { useT } from '@/components/lingua'
 
 // 🗑️ accanto a una delle mie leghe: esci (la scheda resta, se eri l'unico organizzatore ne diventa
 // un altro a caso) oppure, se sei organizzatore, esci ed elimina la lega con tutto quello che contiene.
 export function EsciLega({ legaId, nome, organizzatore }: { legaId: string; nome: string; organizzatore: boolean }) {
+  const t = useT()
   const [aperta, setAperta] = useState(false)
   const [pending, startTransition] = useTransition()
   const [errore, setErrore] = useState<string | null>(null)
@@ -17,7 +19,7 @@ export function EsciLega({ legaId, nome, organizzatore }: { legaId: string; nome
         await azione()
         setAperta(false)
       } catch (e) {
-        setErrore((e as Error).message || 'Qualcosa è andato storto')
+        setErrore((e as Error).message || t('Qualcosa è andato storto'))
       }
     })
 
@@ -28,7 +30,7 @@ export function EsciLega({ legaId, nome, organizzatore }: { legaId: string; nome
       <button
         type="button"
         onClick={() => setAperta(true)}
-        aria-label={`Esci da ${nome}`}
+        aria-label={t('Esci da {lega}', { lega: nome })}
         className="shrink-0 rounded-lg px-2 py-2 text-lg hover:bg-zinc-100 dark:hover:bg-zinc-800"
       >
         🗑️
@@ -37,7 +39,7 @@ export function EsciLega({ legaId, nome, organizzatore }: { legaId: string; nome
         createPortal(
           <div
             role="dialog"
-            aria-label={`Esci da ${nome}`}
+            aria-label={t('Esci da {lega}', { lega: nome })}
             onClick={(e) => e.target === e.currentTarget && !pending && setAperta(false)}
             className="fixed inset-0 z-[60] flex items-end justify-center bg-black/50 p-4 sm:items-center"
           >
@@ -46,12 +48,13 @@ export function EsciLega({ legaId, nome, organizzatore }: { legaId: string; nome
               <button
                 type="button"
                 disabled={pending}
-                onClick={() => confirm(`Uscire da "${nome}"?`) && esegui(() => esciDallaLega(legaId))}
+                onClick={() => confirm(t('Uscire da “{lega}”?', { lega: nome })) && esegui(() => esciDallaLega(legaId))}
                 className={`${voce} bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700`}
               >
-                🚪 Esci dalla lega
+                🚪 {t('Esci dalla lega')}
                 <span className="block text-xs font-normal text-zinc-500">
-                  Le tue partite restano nello storico.{organizzatore && ' Se sei l’unico organizzatore, un giocatore a caso prende il tuo posto.'}
+                  {t('Le tue partite restano nello storico.')}
+                  {organizzatore && ` ${t('Se sei l’unico organizzatore, un giocatore a caso prende il tuo posto.')}`}
                 </span>
               </button>
               {organizzatore && (
@@ -59,19 +62,19 @@ export function EsciLega({ legaId, nome, organizzatore }: { legaId: string; nome
                   type="button"
                   disabled={pending}
                   onClick={() =>
-                    confirm(`Eliminare "${nome}"? Spariscono per tutti partite, giocatori e classifiche.`) &&
-                    confirm('Sicuro? Non si torna indietro.') &&
+                    confirm(t('Eliminare “{lega}”? Spariscono per tutti partite, giocatori e classifiche.', { lega: nome })) &&
+                    confirm(t('Sicuro? Non si torna indietro.')) &&
                     esegui(() => eliminaLega(legaId))
                   }
                   className={`${voce} bg-red-50 text-red-700 hover:bg-red-100 dark:bg-red-950 dark:text-red-300`}
                 >
-                  ❌ Esci ed elimina la lega
-                  <span className="block text-xs font-normal">Cancella per tutti partite, giocatori e classifiche.</span>
+                  ❌ {t('Esci ed elimina la lega')}
+                  <span className="block text-xs font-normal">{t('Cancella per tutti partite, giocatori e classifiche.')}</span>
                 </button>
               )}
               {errore && <p className="text-center text-sm text-red-600">{errore}</p>}
               <button type="button" disabled={pending} onClick={() => setAperta(false)} className="w-full py-2 text-sm text-zinc-500">
-                {pending ? '…' : 'Annulla'}
+                {pending ? '…' : t('Annulla')}
               </button>
             </div>
           </div>,

@@ -3,6 +3,7 @@
 import { startTransition, useActionState, useState, useTransition } from 'react'
 import type { FormState } from '@/app/actions'
 import { useSceltaFoto } from './scelta-foto'
+import { useT } from '@/components/lingua'
 
 // Le foto sorpresa della lega: griglia con ✕ per toglierle e "+" per aggiungerne
 // (fotocamera o libreria), caricate subito.
@@ -15,11 +16,12 @@ export function FotoSorpreseEditor({
   aggiungi: (prev: FormState, fd: FormData) => Promise<FormState>
   rimuovi: (key: string) => Promise<void>
 }) {
+  const t = useT()
   const [state, formAction, caricando] = useActionState(aggiungi, undefined)
   const [anteprima, setAnteprima] = useState<string | null>(null)
   const [togliendo, startTogli] = useTransition()
   const scelta = useSceltaFoto({
-    titolo: 'Nuova foto sorpresa',
+    titolo: t('Nuova foto sorpresa'),
     onFoto: (f) => {
       setAnteprima(URL.createObjectURL(f))
       const fd = new FormData()
@@ -38,9 +40,9 @@ export function FotoSorpreseEditor({
             <button
               type="button"
               disabled={togliendo}
-              onClick={() => confirm('Togliere questa foto?') && startTogli(() => rimuovi(f.key))}
+              onClick={() => confirm(t('Togliere questa foto?')) && startTogli(() => rimuovi(f.key))}
               className="absolute right-1 top-1 flex h-7 w-7 items-center justify-center rounded-full bg-black/60 text-sm text-white"
-              aria-label="Togli foto"
+              aria-label={t('Togli foto')}
             >
               ✕
             </button>
@@ -60,7 +62,7 @@ export function FotoSorpreseEditor({
           className="flex aspect-square flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed border-zinc-300 text-sm text-zinc-500 hover:border-green-600 hover:text-green-700 dark:border-zinc-700"
         >
           <span className="text-2xl">＋</span>
-          Aggiungi
+          {t('Aggiungi')}
         </button>
       </div>
       {state?.error && <p className="mt-2 text-sm text-red-600">{state.error}</p>}
@@ -71,7 +73,7 @@ export function FotoSorpreseEditor({
           onClick={() => window.dispatchEvent(new Event('scossa'))}
           className="mt-3 text-sm font-medium text-green-700 hover:underline dark:text-green-500"
         >
-          📳 Prova: mostra una foto a caso
+          📳 {t('Prova: mostra una foto a caso')}
         </button>
       )}
       {scelta.menu}

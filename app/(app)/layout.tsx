@@ -13,9 +13,11 @@ import { caricaLogoLega } from '@/app/actions'
 import { ScuotiFoto } from '@/components/scuoti-foto'
 import { UsaApp } from '@/components/usa-app'
 import { KmAutomatici } from '@/components/km-automatici'
+import { getT } from '@/lib/lingua'
 
 
-export default function AppLayout({ children }: LayoutProps<'/'>) {
+export default async function AppLayout({ children }: LayoutProps<'/'>) {
+  const t = await getT()
   return (
     <div className="campo flex min-h-full flex-1 flex-col">
       <header className="sticky top-0 z-10 border-b border-zinc-200 bg-white/90 pt-[var(--safe-area-inset-top,env(safe-area-inset-top))] backdrop-blur dark:border-zinc-800 dark:bg-zinc-900/90">
@@ -30,7 +32,7 @@ export default function AppLayout({ children }: LayoutProps<'/'>) {
             <Suspense
               fallback={SEZIONI.map((s) => (
                 <Link key={s.href} href={s.href} className={pillClass(false)}>
-                  {s.label}
+                  {t(s.label)}
                 </Link>
               ))}
             >
@@ -51,12 +53,12 @@ export default function AppLayout({ children }: LayoutProps<'/'>) {
 
 // La lega attiva (con il menu per cambiarla) e la mia foto, che apre il mio profilo.
 async function LegaEUtente() {
-  const [me, leghe, titolare] = await Promise.all([getCurrentPlayer(), getMemberships(), isTitolare()])
+  const [me, leghe, titolare, t] = await Promise.all([getCurrentPlayer(), getMemberships(), isTitolare(), getT()])
   // Chi non è (ancora) in nessuna lega ha comunque bisogno del menu Clerk per uscire.
   if (!me) {
     return (
       <>
-        <span className="flex-1 font-semibold">Calcetto</span>
+        <span className="flex-1 font-semibold">{t('Calcetto')}</span>
         <UserButton />
       </>
     )
@@ -87,7 +89,7 @@ async function LegaEUtente() {
       </div>
       <Link
         href="/profilo"
-        title="Il mio profilo"
+        title={t('Il mio profilo')}
         className="shrink-0 rounded-full ring-2 ring-green-600 ring-offset-2 ring-offset-white dark:ring-offset-zinc-900"
       >
         <Avatar player={me} size={34} zoom={false} />

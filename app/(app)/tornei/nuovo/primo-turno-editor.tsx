@@ -1,8 +1,9 @@
 'use client'
 
 import { useRef, useState } from 'react'
-import { SQUADRE_PREDEFINITE } from '@/lib/girone'
+import { SQUADRE_PREDEFINITE, nomePredefinito } from '@/lib/girone'
 import { nomeTurno, primoTurnoTeste, turniTabellone } from '@/lib/tabellone'
+import { useT } from '@/components/lingua'
 
 // Il primo turno dall'alto in basso (indici delle squadre): due posti consecutivi (1°-2°, 3°-4°, …) sono un incrocio.
 // Con squadre dispari l'ultima passa direttamente.
@@ -17,6 +18,7 @@ const SOGLIA = 10
 // Le squadre sono quelle scelte sopra (nomi e foto). Invia `primoTurno` (JSON).
 // Va montato con key={numSquadre}: cambiando il numero di squadre si riparte dalle teste di serie.
 export function PrimoTurnoEditor({ numSquadre, nomi, foto }: { numSquadre: number; nomi: string[]; foto: (string | null)[] }) {
+  const t = useT()
   const [posti, setPosti] = useState(() => teste(numSquadre))
   // trascinamento: posto attuale dell'elemento, da dove è partito il dito, se ha superato la soglia
   const [trascino, setTrascino] = useState<{ indice: number; y0: number; attivo: boolean } | null>(null)
@@ -48,27 +50,27 @@ export function PrimoTurnoEditor({ numSquadre, nomi, foto }: { numSquadre: numbe
       return nuovo
     })
 
-  const nome = (sq: number) => nomi[sq] || SQUADRE_PREDEFINITE[sq]?.nome
+  const nome = (sq: number) => nomi[sq] || nomePredefinito(sq, t.lingua)
 
   return (
     <div className="space-y-3">
       <input type="hidden" name="primoTurno" value={JSON.stringify(posti)} />
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-xs text-zinc-500">{nomeTurno(1, turni)}: trascina dalla maniglia ⠿ per cambiare gli incroci.</p>
+        <p className="text-xs text-zinc-500">{nomeTurno(1, turni, t)}: {t('trascina dalla maniglia ⠿ per cambiare gli incroci.')}</p>
         <div className="flex gap-2">
           <button
             type="button"
             onClick={() => setPosti(mescola(numSquadre))}
             className="rounded-full bg-zinc-100 px-3 py-1.5 text-xs font-semibold hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700"
           >
-            🎲 Sorteggia
+            🎲 {t('Sorteggia')}
           </button>
           <button
             type="button"
             onClick={() => setPosti(teste(numSquadre))}
             className="rounded-full bg-zinc-100 px-3 py-1.5 text-xs font-semibold hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700"
           >
-            Teste di serie
+            {t('Teste di serie')}
           </button>
         </div>
       </div>
@@ -82,7 +84,7 @@ export function PrimoTurnoEditor({ numSquadre, nomi, foto }: { numSquadre: numbe
             <li key={sq} className={inizioIncrocio && i > 0 ? 'pt-3' : ''}>
               {inizioIncrocio && (
                 <p className="px-1 pb-1 text-[11px] font-semibold uppercase tracking-wide text-zinc-400">
-                  {daSola ? 'Passa direttamente il primo turno' : `Incrocio ${i / 2 + 1}`}
+                  {daSola ? t('Passa direttamente il primo turno') : t('Incrocio {n}', { n: i / 2 + 1 })}
                 </p>
               )}
               <div
@@ -94,7 +96,7 @@ export function PrimoTurnoEditor({ numSquadre, nomi, foto }: { numSquadre: numbe
                 <span
                   role="button"
                   tabIndex={0}
-                  aria-label={`Sposta ${nome(sq)}`}
+                  aria-label={t('Sposta {squadra}', { squadra: nome(sq) })}
                   onPointerDown={(e) => {
                     e.currentTarget.setPointerCapture(e.pointerId)
                     setTrascino({ indice: i, y0: e.clientY, attivo: false })

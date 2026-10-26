@@ -3,9 +3,11 @@
 import { useState, useTransition } from 'react'
 import { salvaPreferenzaNotifica } from '@/app/actions'
 import { CATEGORIE_NOTIFICHE, type CategoriaNotifica } from '@/lib/roster'
+import { useT } from '@/components/lingua'
 
 // Interruttori per scegliere quali notifiche ricevere: si salvano subito.
 export function PreferenzeNotifiche({ iniziali }: { iniziali?: Partial<Record<CategoriaNotifica, boolean>> }) {
+  const t = useT()
   const [valori, setValori] = useState(iniziali ?? {})
   const [, startTransition] = useTransition()
 
@@ -17,7 +19,7 @@ export function PreferenzeNotifiche({ iniziali }: { iniziali?: Partial<Record<Ca
           <li key={chiave}>
             <label className="flex cursor-pointer items-center justify-between gap-3 py-3 text-sm">
               <span>
-                {c.emoji} {c.label}
+                {c.emoji} {t(c.label)}
               </span>
               <input
                 type="checkbox"

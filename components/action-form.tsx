@@ -2,6 +2,7 @@
 
 import { createContext, useActionState, useRef, useState, type ComponentProps } from 'react'
 import type { FormState } from '@/app/actions'
+import { useT } from '@/components/lingua'
 
 // Nomi leggibili dei campi, per dire cosa manca.
 const ETICHETTE: Record<string, string> = {
@@ -30,6 +31,7 @@ export function ActionForm({
   children,
   ...props
 }: Omit<ComponentProps<'form'>, 'action'> & { action: (prev: FormState, fd: FormData) => Promise<FormState> }) {
+  const t = useT()
   const [state, formAction] = useActionState(action, undefined)
   const [mancanti, setMancanti] = useState<string[]>([])
   const raccolti = useRef<Set<string> | null>(null)
@@ -51,14 +53,14 @@ export function ActionForm({
             avviso.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
           })
         }
-        raccolti.current.add(ETICHETTE[campo.name] ?? campo.name)
+        raccolti.current.add(ETICHETTE[campo.name] ? t(ETICHETTE[campo.name]) : campo.name)
       }}
       {...props}
     >
       <EsitoModulo value={state}>{children}</EsitoModulo>
       {mancanti.length > 0 && (
         <p ref={avviso} role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">
-          Manca: {mancanti.join(', ')}.
+          {t('Manca: {campi}.', { campi: mancanti.join(', ') })}
         </p>
       )}
       {state?.error && (

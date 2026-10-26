@@ -3,6 +3,7 @@
 import { Capacitor } from '@capacitor/core'
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { useT } from '@/components/lingua'
 
 const STRATTONE = 22 // variazione di accelerazione (m/s²) tra due letture per contare uno strattone
 const STRATTONI = 3 // strattoni ravvicinati che fanno una "scossa"
@@ -17,6 +18,7 @@ type ConPermesso = typeof DeviceMotionEvent & { requestPermission?: () => Promis
 // MainActivity, con l'accelerometro) e la segnala con l'evento "scossa"; nel browser si usano i sensori,
 // che su iPhone vanno chiesti dopo un tocco: lo fa al primo tocco sulla pagina.
 export function ScuotiFoto({ urls }: { urls: string[] }) {
+  const t = useT()
   const [aperta, setAperta] = useState<string | null>(null)
   const chiave = urls.join(' ')
 
@@ -81,13 +83,13 @@ export function ScuotiFoto({ urls }: { urls: string[] }) {
   return createPortal(
     <div
       role="dialog"
-      aria-label="Foto sorpresa"
+      aria-label={t('Foto sorpresa')}
       onClick={() => setAperta(null)}
       className="fixed inset-0 z-[60] animate-[zoom_150ms_ease-out] bg-black"
     >
       {/* eslint-disable-next-line @next/next/no-img-element -- immagine dal CDN di Sanity */}
-      <img src={aperta} alt="Foto sorpresa" className="h-full w-full object-cover" />
-      <span className="absolute inset-x-0 bottom-[max(1.5rem,env(safe-area-inset-bottom))] text-center text-sm text-white drop-shadow">Tocca per chiudere</span>
+      <img src={aperta} alt={t('Foto sorpresa')} className="h-full w-full object-cover" />
+      <span className="absolute inset-x-0 bottom-[max(1.5rem,env(safe-area-inset-bottom))] text-center text-sm text-white drop-shadow">{t('Tocca per chiudere')}</span>
     </div>,
     document.body,
   )

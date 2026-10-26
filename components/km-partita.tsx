@@ -6,11 +6,11 @@ import { useEffect, useState, useTransition } from 'react'
 import { collegaStrava, kmDaStrava, salvaKm, togliKm } from '@/app/actions'
 import type { Distanza } from '@/lib/matches'
 import { Salute, escludiPartita, impostaKmAutomatici, nomeSalute, saluteDisponibile } from '@/lib/salute'
+import { useT } from './lingua'
 
 const DOPO_STRAVA = 'km-dopo-strava'
 
 const FONTI: Record<string, string> = { strava: 'da Strava', salute: 'da Apple Health / Health Connect', manuale: 'inseriti a mano' }
-const formatoKm = (km: number) => km.toLocaleString('it-IT', { maximumFractionDigits: 2 })
 
 // "I tuoi km" nella partita finita: da Apple Salute (iPhone) o Health Connect (Android), o da Strava (se attivo).
 // Dove nessuno dei due è disponibile e non ci sono km, non mostra niente.
@@ -29,6 +29,8 @@ export function KmPartita({
   stravaAttivo: boolean
   stravaCollegato: boolean
 }) {
+  const t = useT()
+  const formatoKm = (km: number) => t.numero(km, { maximumFractionDigits: 2 })
   const [pending, startTransition] = useTransition()
   const [messaggio, setMessaggio] = useState<{ testo: string; errore?: boolean } | null>(null)
   const [salute, setSalute] = useState(false)
@@ -38,7 +40,7 @@ export function KmPartita({
     startTransition(async () => {
       const r = await kmDaStrava(matchId)
       if (r.daCollegare) return collega()
-      setMessaggio(r.error ? { testo: r.error, errore: true } : { testo: `✅ ${formatoKm(r.km!)} km da “${r.attivita}”` })
+      setMessaggio(r.error ? { testo: r.error, errore: true } : { testo: `✅ ${t('{km} km da “{attivita}”', { km: formatoKm(r.km!), attivita: r.attivita ?? '' })}` })
     })
 
   const collega = () =>
@@ -74,15 +76,15 @@ export function KmPartita({
         impostaKmAutomatici(true)
         if (metri < 50) {
           setMessaggio({
-            testo: `In ${nome} non ci sono km registrati durante la partita (controlla anche di aver dato il permesso di leggere la distanza).`,
+            testo: t('In {app} non ci sono km registrati durante la partita (controlla anche di aver dato il permesso di leggere la distanza).', { app: nome }),
             errore: true,
           })
           return
         }
         const r = await salvaKm(matchId, metri / 1000, 'salute')
-        setMessaggio(r.error ? { testo: r.error, errore: true } : { testo: `✅ ${formatoKm(metri / 1000)} km da ${nome}` })
+        setMessaggio(r.error ? { testo: r.error, errore: true } : { testo: `✅ ${t('{km} km da {app}', { km: formatoKm(metri / 1000), app: nome })}` })
       } catch (e) {
-        setMessaggio({ testo: (e as { message?: string })?.message || `Non riesco a leggere ${nome}.`, errore: true })
+        setMessaggio({ testo: (e as { message?: string })?.message || t('Non riesco a leggere {app}.', { app: nome }), errore: true })
       }
     })
 
@@ -92,11 +94,11 @@ export function KmPartita({
 
   return (
     <div className="space-y-3">
-      <h2 className="font-semibold">🏃 I tuoi km</h2>
+      <h2 className="font-semibold">🏃 {t('I tuoi km')}</h2>
       {miei ? (
         <p className="text-sm">
           <b className="text-2xl tabular-nums">{formatoKm(miei.km)}</b> km
-          {miei.fonte && <span className="text-zinc-500"> · {FONTI[miei.fonte]}</span>}
+          {miei.fonte && <span className="text-zinc-500"> · {t(FONTI[miei.fonte])}</span>}
           <button type="button" disabled={pending} onClick={() =>
               startTransition(async () => {
                 // tolti a mano: i km automatici non li rimettono
@@ -104,17 +106,17 @@ export function KmPartita({
                 await togliKm(matchId)
               })
             } className="ml-3 text-xs text-zinc-500 underline">
-            togli
+            {t('togli')}
           </button>
         </p>
       ) : (
-        <p className="text-sm text-zinc-500">Prendi i km che hai corso: compaiono nella partita e nella classifica.</p>
+        <p className="text-sm text-zinc-500">{t('Prendi i km che hai corso: compaiono nella partita e nella classifica.')}</p>
       )}
 
       <div className="flex flex-wrap gap-2">
         {salute && (
           <button type="button" disabled={pending} onClick={daSalute} className={`${pulsante} bg-rose-500 text-white hover:bg-rose-600`}>
-            ❤️ {miei ? 'Aggiorna' : 'Prendi'} da {nome}
+            ❤️ {t(miei ? 'Aggiorna da {app}' : 'Prendi da {app}', { app: nome })}
           </button>
         )}
         {stravaAttivo && (
@@ -124,7 +126,7 @@ export function KmPartita({
             onClick={stravaCollegato ? daStrava : collega}
             className={`${pulsante} bg-[#fc4c02] text-white hover:bg-[#e34402]`}
           >
-            {stravaCollegato ? `${miei ? 'Aggiorna' : 'Prendi'} da Strava` : 'Collega Strava'}
+            {stravaCollegato ? t(miei ? 'Aggiorna da {app}' : 'Prendi da {app}', { app: 'Strava' }) : t('Collega Strava')}
           </button>
         )}
       </div>

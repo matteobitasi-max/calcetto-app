@@ -2,9 +2,11 @@
 
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { useT } from '@/components/lingua'
 
 // Foto profilo toccabile: si apre ingrandita sopra la pagina (un tocco o Esc la chiude).
 export function FotoZoom({ piccola, grande, nome, size }: { piccola: string; grande: string; nome: string; size: number }) {
+  const t = useT()
   const [aperta, setAperta] = useState(false)
   return (
     <>
@@ -16,7 +18,7 @@ export function FotoZoom({ piccola, grande, nome, size }: { piccola: string; gra
           e.stopPropagation()
           setAperta(true)
         }}
-        aria-label={`Ingrandisci la foto di ${nome}`}
+        aria-label={t('Ingrandisci la foto di {nome}', { nome })}
         className="shrink-0 rounded-full"
         style={{ width: size, height: size }}
       >
@@ -30,6 +32,7 @@ export function FotoZoom({ piccola, grande, nome, size }: { piccola: string; gra
 
 // La foto grande a tutto schermo, direttamente nel body (sopra intestazione e menu).
 export function FotoIngrandita({ url, nome, chiudi }: { url: string; nome: string; chiudi: () => void }) {
+  const t = useT()
   useEffect(() => {
     const esc = (e: KeyboardEvent) => e.key === 'Escape' && chiudi()
     document.addEventListener('keydown', esc)
@@ -39,7 +42,7 @@ export function FotoIngrandita({ url, nome, chiudi }: { url: string; nome: strin
   return createPortal(
     <div
       role="dialog"
-      aria-label={`Foto di ${nome}`}
+      aria-label={t('Foto di {nome}', { nome })}
       onClick={chiudi}
       className="fixed inset-0 z-[60] flex animate-[zoom_150ms_ease-out] flex-col items-center justify-center gap-4 bg-black/85 p-6 backdrop-blur-sm"
     >
@@ -49,7 +52,7 @@ export function FotoIngrandita({ url, nome, chiudi }: { url: string; nome: strin
       <button
         type="button"
         onClick={chiudi}
-        aria-label="Chiudi"
+        aria-label={t('Chiudi')}
         className="absolute right-4 top-[max(1rem,env(safe-area-inset-top))] flex h-10 w-10 items-center justify-center rounded-full bg-white text-lg text-zinc-900 shadow-lg"
       >
         ✕

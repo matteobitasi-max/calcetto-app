@@ -5,6 +5,9 @@ import { IndietroAndroid } from "@/components/indietro-android";
 import { SwipeIndietro } from "@/components/swipe-indietro";
 import { RitornoAccesso } from "@/components/accesso-nativo";
 import { SenzaConnessione } from "@/components/senza-connessione";
+import { LinguaProvider } from "@/components/lingua";
+import { getLingua } from "@/lib/lingua";
+import { Suspense } from "react";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -50,13 +53,22 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
       >
         <body className="min-h-full flex flex-col">
-          <IndietroAndroid />
-          <SwipeIndietro />
-          <RitornoAccesso />
-          <SenzaConnessione />
-          {children}
+          {/* la lingua viene dal cookie: tutta l'app è dentro, così ogni testo sa in che lingua mostrarsi */}
+          <Suspense>
+            <ConLingua>
+              <IndietroAndroid />
+              <SwipeIndietro />
+              <RitornoAccesso />
+              <SenzaConnessione />
+              {children}
+            </ConLingua>
+          </Suspense>
         </body>
       </html>
     </ClerkProvider>
   );
+}
+
+async function ConLingua({ children }: { children: React.ReactNode }) {
+  return <LinguaProvider lingua={await getLingua()}>{children}</LinguaProvider>;
 }

@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 import { LOGO_OFFLINE } from '@/lib/logo-offline'
+import { useT } from '@/components/lingua'
 
 // Il server risponde? (un file piccolo, senza cache, con un limite di 5 secondi)
 async function raggiungibile() {
@@ -24,6 +25,7 @@ async function raggiungibile() {
 // Si ricontrolla anche quando l'app torna in primo piano. (Senza internet già all'apertura
 // dell'app, la pagina è capacitor/www/offline.html.)
 export function SenzaConnessione() {
+  const t = useT()
   const router = useRouter()
   const [offline, setOffline] = useState(false)
   const offlineRef = useRef(false)
@@ -88,9 +90,9 @@ export function SenzaConnessione() {
       {/* eslint-disable-next-line @next/next/no-img-element -- logo incorporato: si vede anche senza internet */}
       <img src={LOGO_OFFLINE} alt="" width={96} height={96} className="rounded-[22%] shadow-lg" />
       <p className="text-5xl">📡</p>
-      <h1 className="text-2xl font-bold">Nessuna connessione</h1>
+      <h1 className="text-2xl font-bold">{t('Nessuna connessione')}</h1>
       <p className="max-w-xs text-zinc-600 dark:text-zinc-400">
-        The Cap ha bisogno di internet. Controlla Wi‑Fi o dati mobili: appena torna la connessione si riparte da qui.
+        {t('The Cap ha bisogno di internet. Controlla Wi‑Fi o dati mobili: appena torna la connessione si riparte da qui.')}
       </p>
       <button
         type="button"
@@ -103,7 +105,7 @@ export function SenzaConnessione() {
         }}
         className="rounded-xl bg-green-600 px-8 py-3 font-semibold text-white shadow hover:bg-green-700"
       >
-        Riprova
+        {t('Riprova')}
       </button>
     </div>
   )

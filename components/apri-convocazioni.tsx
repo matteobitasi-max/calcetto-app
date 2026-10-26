@@ -3,6 +3,7 @@
 import { useActionState } from 'react'
 import type { AvvisoState } from '@/app/actions'
 import { buttonClass } from './ui-classes'
+import { useT } from './lingua'
 
 // Pulsante dell'organizzatore: apre le convocazioni e manda la notifica push,
 // poi propone il messaggio già scritto per il gruppo WhatsApp.
@@ -17,6 +18,7 @@ export function ApriConvocazioni({
   whatsappUrl: string
   conferma: string
 }) {
+  const t = useT()
   const [state, run, pending] = useActionState(() => action(), undefined)
 
   return (
@@ -31,20 +33,20 @@ export function ApriConvocazioni({
               if (!window.confirm(conferma)) e.preventDefault()
             }}
           >
-            {pending ? 'Invio…' : label}
+            {pending ? t('Invio…') : label}
           </button>
         </form>
         <a href={whatsappUrl} target="_blank" rel="noopener noreferrer" className={`${buttonClass('secondary')} text-green-700 dark:text-green-400`}>
-          💬 Manda su WhatsApp
+          💬 {t('Manda su WhatsApp')}
         </a>
       </div>
       {state?.error && <p className="text-sm text-red-600">{state.error}</p>}
       {state && !state.error && (
         <p className="rounded-lg bg-green-50 p-3 text-sm text-green-800 dark:bg-green-950 dark:text-green-300">
           {state.totali
-            ? `Notifica inviata su ${state.inviate} dispositiv${state.inviate === 1 ? 'o' : 'i'} su ${state.totali}.`
-            : 'Nessuno ha ancora attivato le notifiche.'}{' '}
-          Per avvisare anche gli altri, manda il messaggio nel gruppo WhatsApp.
+            ? t.n(state.inviate ?? 0, 'Notifica inviata su {n} dispositivo su {tot}.', 'Notifica inviata su {n} dispositivi su {tot}.', { tot: state.totali })
+            : t('Nessuno ha ancora attivato le notifiche.')}{' '}
+          {t('Per avvisare anche gli altri, manda il messaggio nel gruppo WhatsApp.')}
         </p>
       )}
     </div>

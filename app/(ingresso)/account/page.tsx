@@ -10,6 +10,8 @@ import { PillSalva } from '@/components/pill-salva'
 import { StravaAccount } from '@/components/strava-account'
 import { getCollegamento, stravaConfigurato } from '@/lib/strava'
 import { Card, Field, Loading, buttonClass, inputClass } from '@/components/ui'
+import { ScegliLingua } from '@/components/scegli-lingua'
+import { getT } from '@/lib/lingua'
 
 // "Il mio account": dati personali (che finiscono in tutte le mie schede giocatore),
 // privacy e contatti, uscita ed eliminazione dell'account.
@@ -22,7 +24,7 @@ export default function AccountPage() {
 }
 
 async function Account() {
-  const [utente, leghe] = await Promise.all([getUtente(), getMemberships()])
+  const [utente, leghe, t] = await Promise.all([getUtente(), getMemberships(), getT()])
   if (!utente) redirect('/sign-in')
   const strava = stravaConfigurato() ? await getCollegamento(utente.id) : null
   // Se non li ho ancora scelti qui, si parte da quelli della mia scheda (es. messi dall'organizzatore).
@@ -35,24 +37,24 @@ async function Account() {
   return (
     <div className="space-y-4">
       <div className="text-center">
-        <h1 className="text-2xl font-bold">Il mio account</h1>
-        <p className="mt-1 text-sm text-zinc-500">Questi dati compaiono nella tua scheda giocatore, in tutte le tue leghe.</p>
+        <h1 className="text-2xl font-bold">{t('Il mio account')}</h1>
+        <p className="mt-1 text-sm text-zinc-500">{t('Questi dati compaiono nella tua scheda giocatore, in tutte le tue leghe.')}</p>
       </div>
 
       <ActionForm action={salvaAccount} className="space-y-4">
         <Card className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
-            <Field label="Nome">
+            <Field label={t('Nome')}>
               <input name="nome" required maxLength={40} defaultValue={utente.nome ?? ''} autoComplete="given-name" className={inputClass} />
             </Field>
-            <Field label="Cognome">
+            <Field label={t('Cognome')}>
               <input name="cognome" maxLength={40} defaultValue={utente.cognome ?? ''} autoComplete="family-name" className={inputClass} />
             </Field>
           </div>
           <Field label="Email">
             <input value={utente.emails[0] ?? '—'} readOnly disabled className={`${inputClass} text-zinc-500`} />
           </Field>
-          <Field label="Telefono (facoltativo)">
+          <Field label={t('Telefono (facoltativo)')}>
             <input
               name="telefono"
               type="tel"
@@ -63,26 +65,26 @@ async function Account() {
               className={inputClass}
             />
           </Field>
-          <Field label="Data di nascita (facoltativa)">
+          <Field label={t('Data di nascita (facoltativa)')}>
             <input name="dataNascita" type="date" defaultValue={dataNascita} max={new Date().toISOString().slice(0, 10)} className={inputClass} />
           </Field>
           <div className="grid grid-cols-2 gap-4">
-            <Field label="Ruolo">
+            <Field label={t('Ruolo')}>
               <select name="ruolo" defaultValue={ruolo} className={`${inputClass} capitalize`}>
                 <option value="">—</option>
                 {RUOLI.map((r) => (
                   <option key={r} value={r}>
-                    {r}
+                    {t(r)}
                   </option>
                 ))}
               </select>
             </Field>
-            <Field label="Piede">
+            <Field label={t('Piede')}>
               <select name="piede" defaultValue={piede} className={`${inputClass} capitalize`}>
                 <option value="">—</option>
                 {PIEDI.map((p) => (
                   <option key={p} value={p}>
-                    {p}
+                    {t(p)}
                   </option>
                 ))}
               </select>
@@ -92,26 +94,31 @@ async function Account() {
         <PillSalva />
       </ActionForm>
 
+      <Card className="space-y-3">
+        <h2 className="font-semibold">🌍 {t('Lingua')}</h2>
+        <ScegliLingua />
+      </Card>
+
       <Card className="divide-y divide-zinc-100 p-0! empty:hidden dark:divide-zinc-800">
         {stravaConfigurato() && <StravaAccount collegato={!!strava} atleta={strava?.atleta} />}
       </Card>
 
       <Card className="divide-y divide-zinc-100 p-0! text-sm dark:divide-zinc-800">
         <Link href="/privacy" className="flex items-center justify-between px-4 py-3 hover:bg-zinc-50 dark:hover:bg-zinc-800">
-          🔒 Privacy policy <span className="text-zinc-400">›</span>
+          🔒 {t('Privacy policy')} <span className="text-zinc-400">›</span>
         </Link>
         <Link href="/supporto" className="flex items-center justify-between px-4 py-3 hover:bg-zinc-50 dark:hover:bg-zinc-800">
-          💬 Supporto e contatti <span className="text-zinc-400">›</span>
+          💬 {t('Supporto e contatti')} <span className="text-zinc-400">›</span>
         </Link>
       </Card>
 
       <SignOutButton redirectUrl="/sign-in">
-        <button className={`${buttonClass('secondary')} w-full`}>Esci</button>
+        <button className={`${buttonClass('secondary')} w-full`}>{t('Esci')}</button>
       </SignOutButton>
       <EliminaAccount />
 
       <Link href={leghe.length ? '/' : '/benvenuto'} className="block text-center text-sm text-green-700 hover:underline dark:text-green-400">
-        ← {leghe.length ? 'Torna all’app' : 'Torna alle leghe'}
+        ← {leghe.length ? t('Torna all’app') : t('Torna alle leghe')}
       </Link>
     </div>
   )

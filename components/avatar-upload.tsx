@@ -4,6 +4,7 @@ import { startTransition, useActionState, useState, type ReactNode } from 'react
 import type { FormState } from '@/app/actions'
 import { FotoIngrandita } from './foto-zoom'
 import { useSceltaFoto, voceMenuFoto } from './scelta-foto'
+import { useT } from '@/components/lingua'
 
 // Avatar cliccabile: scatta o scegli una foto e viene caricata subito.
 export function AvatarUpload({
@@ -20,11 +21,12 @@ export function AvatarUpload({
   nome?: string
   children: ReactNode
 }) {
+  const t = useT()
   const [zoom, setZoom] = useState(false)
   const [state, formAction, pending] = useActionState(action, undefined)
   const [preview, setPreview] = useState<string | null>(null)
   const scelta = useSceltaFoto({
-    titolo: 'Foto del profilo',
+    titolo: t('Foto del profilo'),
     onFoto: (foto) => {
       setPreview(URL.createObjectURL(foto))
       const fd = new FormData()
@@ -40,7 +42,7 @@ export function AvatarUpload({
           setZoom(true)
         }}
       >
-        🔍 Vedi ingrandita
+        🔍 {t('Vedi ingrandita')}
       </button>
     ),
   })
@@ -51,7 +53,7 @@ export function AvatarUpload({
         type="button"
         onClick={scelta.apri}
         disabled={pending}
-        title="Cambia foto"
+        title={t('Cambia foto')}
         className="group relative block overflow-hidden rounded-full"
         style={{ width: size, height: size }}
       >

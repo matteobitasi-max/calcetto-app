@@ -1,5 +1,6 @@
 'use client'
 
+import { useT } from '@/components/lingua'
 import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState, useTransition } from 'react'
 import { Admin, Stemma } from '@/components/lega-menu'
@@ -9,6 +10,7 @@ export type VoceFiltro = { id: string; nome: string; logo: string | null; organi
 // Menu in cima al calendario: tutte le mie leghe (predefinito) o una sola, con logo e pallino "A" se organizzo.
 export function FiltroLega({ leghe, scelta, mese }: { leghe: VoceFiltro[]; scelta: string; mese: string }) {
   const router = useRouter()
+  const t = useT()
   const [pending, startTransition] = useTransition()
   const [open, setOpen] = useState(false)
   const box = useRef<HTMLDivElement>(null)
@@ -56,7 +58,7 @@ export function FiltroLega({ leghe, scelta, mese }: { leghe: VoceFiltro[]; scelt
         ) : (
           <>
             <span className="flex h-7 w-7 shrink-0 items-center justify-center text-lg">🌐</span>
-            <span className="min-w-0 flex-1 truncate">Tutte le mie leghe ({leghe.length})</span>
+            <span className="min-w-0 flex-1 truncate">{t('Tutte le mie leghe ({n})', { n: leghe.length })}</span>
           </>
         )}
         <span className="text-xs text-zinc-500" aria-hidden>
@@ -68,7 +70,7 @@ export function FiltroLega({ leghe, scelta, mese }: { leghe: VoceFiltro[]; scelt
         <div role="listbox" className="absolute inset-x-0 z-30 mt-1 max-h-80 overflow-y-auto rounded-xl border border-zinc-200 bg-white p-2 shadow-lg dark:border-zinc-700 dark:bg-zinc-900">
           <button type="button" role="option" aria-selected={!attuale} className={voce(!attuale)} onClick={() => scegli('tutte')}>
             <span className="flex h-6 w-6 shrink-0 items-center justify-center">🌐</span>
-            <span className="flex-1 truncate">Tutte le mie leghe ({leghe.length})</span>
+            <span className="flex-1 truncate">{t('Tutte le mie leghe ({n})', { n: leghe.length })}</span>
           </button>
           <hr className="my-1 border-zinc-200 dark:border-zinc-800" />
           {leghe.map((l) => (
