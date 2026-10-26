@@ -349,7 +349,7 @@ export async function salvaFormazioni(
   redirect(`/partite/${matchId}`)
 }
 
-// Ritocchi alle squadre già fatte (organizzatori, a convocazioni chiuse, non nei tornei).
+// Ritocchi alle squadre già fatte (organizzatori, a convocazioni chiuse; nei tornei valgono solo per quella partita).
 type SquadreRaw = {
   _rev: string
   stato: Stato
@@ -368,7 +368,7 @@ async function ritoccaSquadre(matchId: string, cambia: (doc: SquadreRaw) => Reco
       { id: matchId },
     )
     if (!doc) throw new Error('Partita non trovata')
-    if (doc.stato !== 'chiusa' || doc.torneo) throw new Error('Le squadre di questa partita non si possono modificare')
+    if (doc.stato !== 'chiusa') throw new Error('Le squadre di questa partita non si possono modificare')
     const set = cambia(doc)
     if (!set) return
     try {

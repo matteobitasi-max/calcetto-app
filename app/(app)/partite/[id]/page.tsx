@@ -113,7 +113,7 @@ async function MatchDetail({ params }: { params: Promise<{ id: string }> }) {
       {player.isAdmin && match.stato !== 'giocata' && <AdminPanel match={match} whatsappUrl={await whatsappUrl(match, player.lega.nome)} />}
 
       {match.squadraA.length + match.squadraB.length > 0 && (
-        <Squadre match={match} mioId={player._id} gestisci={!!player.isAdmin && match.stato === 'chiusa' && !match.torneo} />
+        <Squadre match={match} mioId={player._id} gestisci={!!player.isAdmin && match.stato === 'chiusa'} />
       )}
 
       {player.isAdmin && <Cassa match={match} mioId={player._id} />}
@@ -249,12 +249,13 @@ function Gruppo({
 
 // Organizzatore, squadre già fatte: ⇄ sposta il giocatore nell'altra squadra (lo swipe lo rimette tra quelli da allocare).
 function RitoccoSquadra({ match, player, verso }: { match: Match; player: Player; verso: 'A' | 'B' }) {
+  const nome = (verso === 'A' ? match.nomeA : match.nomeB) ?? `Squadra ${verso}`
   return (
     <span className="flex shrink-0 items-center gap-1">
       <form action={cambiaSquadra.bind(null, match._id, player._id, verso)}>
         <SubmitButton
-          title={`Sposta nella Squadra ${verso}`}
-          aria-label={`Sposta ${displayName(player)} nella Squadra ${verso}`}
+          title={`Sposta in ${nome}`}
+          aria-label={`Sposta ${displayName(player)} in ${nome}`}
           className="flex h-8 w-8 items-center justify-center rounded-lg bg-zinc-100 text-base hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700"
         >
           ⇄

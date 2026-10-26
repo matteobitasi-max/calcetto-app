@@ -46,11 +46,12 @@ export function SwipeRiga({ children, sinistra, destra }: { children: ReactNode;
   }
 
   const pulsante = (a: AzioneSwipe, lato: 'left' | 'right', colore: string, visibile: boolean) => (
-    <form action={a.azione} className="absolute inset-y-0 flex" style={{ [lato]: 0, width: LARGHEZZA }} aria-hidden={!visibile}>
+    // pulsante di misura fissa, centrato: uguale su tutte le righe, anche quelle su due righe di testo
+    <form action={a.azione} className="absolute inset-y-0 flex items-center px-1" style={{ [lato]: 0, width: LARGHEZZA }} aria-hidden={!visibile}>
       <SubmitButton
         confirm={a.confirm}
         tabIndex={visibile ? 0 : -1}
-        className={`flex w-full items-center justify-center px-2 text-sm font-semibold text-white ${colore}`}
+        className={`flex h-10 w-full items-center justify-center rounded-lg px-2 text-sm font-semibold text-white ${colore}`}
       >
         {a.label}
       </SubmitButton>
