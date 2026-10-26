@@ -3,7 +3,8 @@ import { Suspense } from 'react'
 import { getMemberships, requirePlayer } from '@/lib/player'
 import { getTorneiDelleLeghe } from '@/lib/tornei'
 import { avatarUrl } from '@/lib/image'
-import { Capitano, Stemma } from '@/components/lega-menu'
+import { Stemma } from '@/components/lega-menu'
+import { PallinoAdmin } from '@/components/pallino-admin'
 import { Card, Loading, PageTitle } from '@/components/ui'
 
 // I miei tornei: quelli di tutte le mie leghe, non solo della lega attiva. Prima quelli in corso.
@@ -54,7 +55,7 @@ async function Elenco() {
                   {mia && (
                     <span className="mt-0.5 flex items-center gap-1 text-xs font-medium text-green-700 dark:text-green-400">
                       Giochi nei {mia.nome}
-                      {mia.capitanoId === io && <Capitano />}
+                      {mia.capitanoId === io && <PallinoAdmin title="Capitano della squadra" />}
                     </span>
                   )}
                 </span>

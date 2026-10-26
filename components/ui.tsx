@@ -2,6 +2,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import type { ComponentProps, ReactNode } from 'react'
 import { PallinoAdmin } from './pallino-admin'
+import { LogoC } from './logo-c'
 import { BADGE, SKILLS, displayName, iniziali, overall, type Badge, type Player, type Skill } from '@/lib/roster'
 import type { Risposta, Stato } from '@/lib/matches'
 import { finestra } from '@/lib/finestra'
@@ -198,6 +199,11 @@ export function PlayerRow({
       <Avatar player={player} />
       <Link href={`/giocatori/${player._id}`} className="min-w-0 flex-1 hover:underline">
         <div className="flex min-w-0 items-center gap-1.5">
+          {player.pro && (
+            <span title="The Cap Pro" className="flex shrink-0">
+              <LogoC size={16} />
+            </span>
+          )}
           <span className={`truncate ${mio ? 'font-extrabold' : 'font-medium'}`}>{displayName(player)}</span>
           <PlayerBadge badge={player.badge} />
         </div>

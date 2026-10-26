@@ -124,10 +124,10 @@ export function SquadreEditor({
             aria-pressed={capitano}
             title={capitano ? 'Capitano della squadra' : 'Fai capitano'}
             className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[11px] font-bold ${
-              capitano ? 'bg-amber-400 text-zinc-900' : 'border border-zinc-300 text-zinc-400 hover:border-amber-400 hover:text-amber-600 dark:border-zinc-600'
+              capitano ? 'bg-orange-500 text-white' : 'border border-zinc-300 text-zinc-400 hover:border-orange-500 hover:text-orange-600 dark:border-zinc-600'
             }`}
           >
-            C
+            A
           </button>
         )}
         <span className="truncate">{p.nome}</span>
@@ -158,7 +158,7 @@ export function SquadreEditor({
       ))}
       <div className="flex items-center justify-between gap-2">
         <p className="text-xs text-zinc-500">
-          Sposta i giocatori dal loro menu, oppure tocca “Bilancia”. La <b>C</b> sceglie il capitano: invita i compagni con il link della squadra.
+          Sposta i giocatori dal loro menu, oppure tocca “Bilancia”. La <b>A</b> sceglie il capitano: invita i compagni con il link della squadra.
         </p>
         <button
           type="button"

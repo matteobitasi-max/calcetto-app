@@ -64,6 +64,8 @@ export type Player = {
   isAdmin?: boolean
   puoInserireRisultati?: boolean
   attivo?: boolean
+  /** Ha l'abbonamento Pro (C del logo accanto al nome). */
+  pro?: boolean
   /** Pro: data dell'ultima partita già valutata per aggiornare le caratteristiche. */
   revisioneIl?: string
   /** Tolto dalla lega da un organizzatore (non compare più nella rosa). */
@@ -73,7 +75,8 @@ export type Player = {
   caratteristiche?: Partial<Record<Skill, number>>
 }
 
-export const playerFields = `_id, "legaId": lega._ref, nome, cognome, soprannome, email, telefono, dataNascita, foto, ruolo, piede, badge, notifiche, isAdmin, puoInserireRisultati, attivo, revisioneIl, "rimosso": defined(rimossoIl), "collegato": defined(clerkUserId), caratteristiche`
+export const playerFields = `_id, "legaId": lega._ref, nome, cognome, soprannome, email, telefono, dataNascita, foto, ruolo, piede, badge, notifiche, isAdmin, puoInserireRisultati, attivo, revisioneIl, "rimosso": defined(rimossoIl), "collegato": defined(clerkUserId), caratteristiche,
+  "pro": defined(clerkUserId) && count(*[_type == "abbonamento" && clerkUserId == ^.clerkUserId && attivo != false && (!defined(scadenza) || scadenza > now())]) > 0`
 
 
 // Chi può segnare risultato, marcatori e MVP.

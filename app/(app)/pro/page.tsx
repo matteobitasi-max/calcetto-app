@@ -1,5 +1,6 @@
 import Link from 'next/link'
-import { Suspense } from 'react'
+import { Suspense, type ReactNode } from 'react'
+import { LogoC } from '@/components/logo-c'
 import { requirePlayer } from '@/lib/player'
 import { legaPro } from '@/lib/pro'
 import { ButtonLink, Card, Loading, PageTitle } from '@/components/ui'
@@ -17,7 +18,7 @@ export default function ProPage() {
   )
 }
 
-const FUNZIONI: { titolo: string; voci: [string, string][]; link?: [string, string] }[] = [
+const FUNZIONI: { titolo: string; voci: [ReactNode, string][]; link?: [string, string] }[] = [
   {
     titolo: '🏆 Tornei',
     voci: [
@@ -36,6 +37,13 @@ const FUNZIONI: { titolo: string; voci: [string, string][]; link?: [string, stri
       ['🗳️', 'Ogni 5 partite, proposte per aggiornare i voti da gol, MVP, km e risultati: l’organizzatore approva o scarta'],
     ],
     link: ['/giocatori', 'Vai alla rosa'],
+  },
+  {
+    titolo: '👤 Il tuo abbonamento',
+    voci: [
+      [<LogoC key="c" size={18} />, 'La C di The Cap accanto al tuo nome, in tutte le leghe'],
+      ['👑', 'Tutte le funzioni Pro nelle leghe che organizzi'],
+    ],
   },
   {
     titolo: '🔜 In arrivo',
@@ -73,7 +81,7 @@ async function Vetrina() {
           <ul className="space-y-2 text-sm text-zinc-600 dark:text-zinc-300">
             {f.voci.map(([icona, testo]) => (
               <li key={testo} className="flex gap-2">
-                <span className="w-6 shrink-0 text-center">{icona}</span>
+                <span className="flex w-6 shrink-0 justify-center">{icona}</span>
                 <span>{testo}</span>
               </li>
             ))}

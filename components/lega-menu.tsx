@@ -12,18 +12,6 @@ export const Admin = () => <PallinoAdmin title="Sei organizzatore" />
 /** `organizzatore`: sono organizzatore di questa lega (mostra il pallino "A"). */
 export type LegaVoce = { id: string; nome: string; logo: string | null; organizzatore?: boolean }
 
-// "C" del capitano di una squadra (tornei).
-export function Capitano() {
-  return (
-    <span
-      title="Capitano della squadra"
-      className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-amber-400 text-[11px] font-bold text-zinc-900"
-    >
-      C
-    </span>
-  )
-}
-
 export function Stemma({ lega, size = 28 }: { lega: Pick<LegaVoce, 'nome' | 'logo'>; size?: number }) {
   return lega.logo ? (
     // eslint-disable-next-line @next/next/no-img-element -- miniatura già ridimensionata dal CDN di Sanity
