@@ -7,7 +7,7 @@ import { SQUADRE_PREDEFINITE } from '@/lib/girone'
 export type GiocatoreRosa = { id: string; nome: string; forza: number; ruolo?: string }
 
 // Foto della squadra: si scatta o si sceglie, e parte con il modulo nel campo `name` (già rimpicciolita).
-function FotoSquadra({
+export function FotoSquadra({
   name,
   attuale,
   colore,
@@ -61,6 +61,7 @@ export function SquadreEditor({
   coloriIniziali = SQUADRE_PREDEFINITE.map((s) => s.colore),
   fotoIniziali = [],
   squadraIniziale = {},
+  capitaniIniziali = [],
   onNomi,
   onFoto,
 }: {
@@ -71,6 +72,8 @@ export function SquadreEditor({
   fotoIniziali?: (string | null)[]
   /** giocatore → indice della squadra */
   squadraIniziale?: Record<string, string>
+  /** Capitano di ogni squadra (id del giocatore). */
+  capitaniIniziali?: (string | undefined)[]
   /** Avvisa quando cambiano i nomi delle squadre (per l'anteprima del tabellone). */
   onNomi?: (nomi: string[]) => void
   /** Avvisa quando si sceglie la foto di una squadra (anteprima). */
@@ -78,6 +81,7 @@ export function SquadreEditor({
 }) {
   const [nomi, setNomi] = useState(() => SQUADRE_PREDEFINITE.map((s, i) => nomiIniziali[i] ?? s.nome))
   const [squadraDi, setSquadraDi] = useState<Record<string, string>>(squadraIniziale)
+  const [capitani, setCapitani] = useState<(string | undefined)[]>(capitaniIniziali)
   const colore = (i: number) => coloriIniziali[i] || SQUADRE_PREDEFINITE[i].colore
 
   // Indice valido della squadra di un giocatore ('' = fuori dal torneo).
@@ -86,6 +90,11 @@ export function SquadreEditor({
     return v !== undefined && v !== '' && Number(v) < numSquadre ? v : ''
   }
   const membri = (i: string) => rosa.filter((p) => di(p.id) === i)
+  // Capitano: quello scelto se è ancora in squadra, altrimenti il primo giocatore.
+  const capitanoDi = (i: number) => {
+    const m = membri(String(i))
+    return m.find((p) => p.id === capitani[i])?.id ?? m[0]?.id
+  }
   const fuori = membri('')
 
   // I giocatori scelti (o tutta la rosa, se non ne hai scelto nessuno) distribuiti "a serpentina" per forza.
@@ -102,11 +111,27 @@ export function SquadreEditor({
 
   const sposta = (id: string, verso: string) => setSquadraDi((v) => ({ ...v, [id]: verso }))
 
-  const riga = (p: GiocatoreRosa) => (
+  const riga = (p: GiocatoreRosa) => {
+    const sq = di(p.id)
+    const capitano = sq !== '' && capitanoDi(Number(sq)) === p.id
+    return (
     <li key={p.id} className="flex items-center justify-between gap-2 py-1.5">
-      <span className="min-w-0 truncate text-sm">
-        {p.nome}
-        <span className="text-xs text-zinc-500"> · {p.forza.toFixed(1)}</span>
+      <span className="flex min-w-0 items-center gap-1.5 text-sm">
+        {sq !== '' && (
+          <button
+            type="button"
+            onClick={() => setCapitani((v) => Object.assign([...v], { [Number(sq)]: p.id }))}
+            aria-pressed={capitano}
+            title={capitano ? 'Capitano della squadra' : 'Fai capitano'}
+            className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[11px] font-bold ${
+              capitano ? 'bg-amber-400 text-zinc-900' : 'border border-zinc-300 text-zinc-400 hover:border-amber-400 hover:text-amber-600 dark:border-zinc-600'
+            }`}
+          >
+            C
+          </button>
+        )}
+        <span className="truncate">{p.nome}</span>
+        <span className="shrink-0 text-xs text-zinc-500">· {p.forza.toFixed(1)}</span>
       </span>
       <select
         name={`squadra_${p.id}`}
@@ -123,12 +148,18 @@ export function SquadreEditor({
         ))}
       </select>
     </li>
-  )
+    )
+  }
 
   return (
     <div className="space-y-3">
+      {Array.from({ length: numSquadre }, (_, i) => (
+        <input key={i} type="hidden" name={`capitano_${i}`} value={capitanoDi(i) ?? ''} />
+      ))}
       <div className="flex items-center justify-between gap-2">
-        <p className="text-xs text-zinc-500">Sposta i giocatori dal loro menu, oppure tocca “Bilancia” per squadre equilibrate.</p>
+        <p className="text-xs text-zinc-500">
+          Sposta i giocatori dal loro menu, oppure tocca “Bilancia”. La <b>C</b> sceglie il capitano: invita i compagni con il link della squadra.
+        </p>
         <button
           type="button"
           onClick={bilancia}

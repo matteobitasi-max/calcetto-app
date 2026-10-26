@@ -9,7 +9,7 @@ import { avatarUrl } from '@/lib/image'
 import { getTorneo, puoCreareTornei } from '@/lib/tornei'
 import { ActionForm } from '@/components/action-form'
 import { PillSalva } from '@/components/pill-salva'
-import { Card, Loading, PageTitle } from '@/components/ui'
+import { Card, Field, Loading, PageTitle, inputClass } from '@/components/ui'
 import { SquadreEditor } from '../../squadre-editor'
 
 // L'organizzatore rinomina le squadre e sposta i giocatori: vale per le partite non ancora giocate.
@@ -47,13 +47,17 @@ async function Editor({ params }: { params: Promise<{ id: string }> }) {
         {torneo.giocate > 0 && ` (${torneo.giocate} già giocat${torneo.giocate === 1 ? 'a' : 'e'})`}
       </p>
       <ActionForm action={salvaSquadreTorneo.bind(null, torneo._id)} className="pb-20">
-        <Card>
+        <Card className="space-y-4">
+          <Field label="Giocatori massimi per squadra (facoltativo)">
+            <input name="maxGiocatori" type="number" min={1} max={50} defaultValue={torneo.maxGiocatori} placeholder="Nessun limite" className={inputClass} />
+          </Field>
           <SquadreEditor
             rosa={rosa}
             numSquadre={torneo.squadre.length}
             nomiIniziali={torneo.squadre.map((s) => s.nome)}
             coloriIniziali={torneo.squadre.map((s) => s.colore ?? '')}
             fotoIniziali={torneo.squadre.map((s) => avatarUrl(s.logo, 96))}
+            capitaniIniziali={torneo.squadre.map((s) => s.capitanoId)}
             squadraIniziale={squadraIniziale}
           />
         </Card>

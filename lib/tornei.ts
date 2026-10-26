@@ -3,7 +3,7 @@ import { sanity } from './sanity'
 import { isTitolare } from './player'
 import type { SanityImage } from './roster'
 
-export type SquadraTorneo = { _key: string; nome: string; colore?: string; logo?: SanityImage; girone?: string; giocatori: { _id: string; nome: string; cognome?: string; soprannome?: string; foto?: SanityImage }[] }
+export type SquadraTorneo = { _key: string; nome: string; colore?: string; logo?: SanityImage; girone?: string; capitanoId?: string; codiceInvito?: string; giocatori: { _id: string; nome: string; cognome?: string; soprannome?: string; foto?: SanityImage }[] }
 
 export type Torneo = {
   _id: string
@@ -11,6 +11,10 @@ export type Torneo = {
   nome: string
   formato: 'girone' | 'eliminazione' | 'gironi'
   numGironi?: number
+  maxGiocatori?: number
+  iscrizioniChiuse?: boolean
+  /** Inizio della prima partita: da lì i capitani non cambiano più le squadre. */
+  primaPartita?: string
   qualificate?: number
   primoTurno?: string[]
   calendario?: { inizio: string; ogniGiorni: number; durataMinuti: number; luogo: string }
@@ -23,9 +27,10 @@ export type Torneo = {
   giocate: number
 }
 
-const torneoFields = `_id, "legaId": lega._ref, nome, "formato": coalesce(formato, "girone"), "andataRitorno": coalesce(andataRitorno, false), calendario, primoTurno, numGironi, qualificate,
+const torneoFields = `_id, "legaId": lega._ref, nome, "formato": coalesce(formato, "girone"), "andataRitorno": coalesce(andataRitorno, false), calendario, primoTurno, numGironi, qualificate, maxGiocatori, iscrizioniChiuse,
+  "primaPartita": *[_type == "match" && torneo._ref == ^._id] | order(data asc)[0].data,
   "puntiVittoria": coalesce(puntiVittoria, 3), "puntiPareggio": coalesce(puntiPareggio, 1), _createdAt,
-  "squadre": coalesce(squadre[]{_key, nome, colore, logo, girone, "giocatori": coalesce(giocatori[]->{_id, nome, cognome, soprannome, foto}, [])}, []),
+  "squadre": coalesce(squadre[]{_key, nome, colore, logo, girone, "capitanoId": capitano._ref, codiceInvito, "giocatori": coalesce(giocatori[]->{_id, nome, cognome, soprannome, foto}, [])}, []),
   "partite": count(*[_type == "match" && torneo._ref == ^._id]),
   "giocate": count(*[_type == "match" && torneo._ref == ^._id && stato == "giocata"])`
 
@@ -36,6 +41,10 @@ export function getTornei(legaId: string) {
 export function getTorneo(id: string) {
   return sanity.fetch<Torneo | null>(`*[_type == "tournament" && _id == $id][0]{${torneoFields}}`, { id })
 }
+
+// I capitani possono invitare e cambiare la squadra finché l'organizzatore non chiude e non è iniziata la prima partita.
+export const iscrizioniAperte = (t: Pick<Torneo, 'iscrizioniChiuse' | 'primaPartita'>, adesso = new Date()) =>
+  !t.iscrizioniChiuse && (!t.primaPartita || adesso < new Date(t.primaPartita))
 
 // I tornei sono una funzione Pro. Finché il Pro non c'è, li può creare solo il titolare dell'app (per provarli).
 export const puoCreareTornei = () => isTitolare()

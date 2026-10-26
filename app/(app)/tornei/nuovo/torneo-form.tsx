@@ -113,6 +113,9 @@ export function TorneoForm({ legaId, rosa, inizio }: { legaId: string; rosa: Gio
 
       <Card className="space-y-3">
         <h2 className="font-semibold">Squadre e giocatori</h2>
+        <Field label="Giocatori massimi per squadra (facoltativo)">
+          <input name="maxGiocatori" type="number" min={1} max={50} placeholder="Nessun limite" className={inputClass} />
+        </Field>
         <SquadreEditor
           rosa={rosa}
           numSquadre={numSquadre}

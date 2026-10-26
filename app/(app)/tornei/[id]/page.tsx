@@ -1,10 +1,10 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { Suspense, type ReactNode } from 'react'
-import { eliminaTorneo } from '@/app/actions'
+import { chiudiIscrizioni, eliminaTorneo } from '@/app/actions'
 import { displayName, membroDi } from '@/lib/player'
 import { getPartiteTorneo, type Match } from '@/lib/matches'
-import { getTorneo } from '@/lib/tornei'
+import { getTorneo, iscrizioniAperte } from '@/lib/tornei'
 import { classifica } from '@/lib/girone'
 import { nomeTurno, tabellone, type Incrocio } from '@/lib/tabellone'
 import { formatData } from '@/lib/dates'
@@ -142,6 +142,11 @@ async function Torneo({ params }: { params: Promise<{ id: string }> }) {
   }
 
   const titolo = (testo: string) => <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">{testo}</h2>
+  const aperte = iscrizioniAperte(torneo)
+  const nomeCapitano = (s: (typeof torneo.squadre)[number]) => {
+    const c = s.giocatori.find((g) => g._id === s.capitanoId)
+    return c ? displayName(c) : null
+  }
 
   return (
     <div className="space-y-4 pb-8">
@@ -170,6 +175,52 @@ async function Torneo({ params }: { params: Promise<{ id: string }> }) {
           </p>
         </Card>
       )}
+
+      <section className="space-y-2">
+        <div className="flex items-center justify-between gap-2">
+          {titolo('Squadre')}
+          <span className={`text-xs font-semibold ${aperte ? 'text-green-700 dark:text-green-500' : 'text-zinc-500'}`}>
+            {aperte ? 'Iscrizioni aperte' : 'Iscrizioni chiuse'}
+          </span>
+        </div>
+        <Card className="divide-y divide-zinc-100 p-0 dark:divide-zinc-800">
+          {torneo.squadre.map((s) => {
+            const mia = s.giocatori.some((g) => g._id === me._id)
+            return (
+              <Link
+                key={s._key}
+                href={`/tornei/${torneo._id}/squadra/${s._key}`}
+                className={`flex items-center justify-between gap-2 px-4 py-3 text-sm hover:bg-zinc-50 dark:hover:bg-zinc-800 ${mia ? 'bg-green-50 dark:bg-green-950/40' : ''}`}
+              >
+                <span className="flex min-w-0 items-center gap-2">
+                  {stemma(s._key, 28)}
+                  <span className="min-w-0">
+                    <span className="block truncate font-medium">
+                      {s.nome}
+                      {mia && <span className="ml-1 text-xs font-normal text-green-700 dark:text-green-400">· la tua squadra</span>}
+                    </span>
+                    <span className="block truncate text-xs text-zinc-500">
+                      {nomeCapitano(s) && `🅒 ${nomeCapitano(s)} · `}
+                      {s.giocatori.length}
+                      {torneo.maxGiocatori ? `/${torneo.maxGiocatori}` : ''} giocator{s.giocatori.length === 1 ? 'e' : 'i'}
+                    </span>
+                  </span>
+                </span>
+                <span className="shrink-0 text-xs font-medium text-green-700 dark:text-green-400">
+                  {s.capitanoId === me._id && aperte ? 'Invita ›' : '›'}
+                </span>
+              </Link>
+            )
+          })}
+        </Card>
+        {me.isAdmin && (
+          <form action={chiudiIscrizioni.bind(null, torneo._id, !torneo.iscrizioniChiuse)} className="text-right">
+            <SubmitButton className="text-xs font-medium text-zinc-500 hover:underline" pendingText="…">
+              {torneo.iscrizioniChiuse ? '🔓 Riapri le iscrizioni' : '🔒 Chiudi le iscrizioni'}
+            </SubmitButton>
+          </form>
+        )}
+      </section>
 
       {conTabellone && (
         <section className="space-y-2">
