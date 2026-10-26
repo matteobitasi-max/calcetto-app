@@ -6,7 +6,7 @@ import { avatarUrl, immagineUrl } from '@/lib/image'
 import { baseUrl } from '@/lib/url'
 import { ActionForm } from '@/components/action-form'
 import { CodiceInvito, InvitoLink } from '@/components/invito-link'
-import { PhotoInput } from '@/components/photo-input'
+import { LegaNomeLogo } from '@/components/lega-nome-logo'
 import { PillSalva } from '@/components/pill-salva'
 import { SatispaySetup } from '@/components/satispay-setup'
 import { SubmitButton } from '@/components/submit-button'
@@ -33,15 +33,7 @@ async function Impostazioni() {
     <div className="space-y-4">
       <Card>
         <ActionForm action={salvaLega.bind(null, lega._id)} className="space-y-4">
-          <h2 className="font-semibold">Nome e logo</h2>
-          <div className="space-y-1 text-sm">
-            <span className="font-medium">Logo</span>
-            {/* stesso caricamento delle foto profilo, campo "logo" */}
-            <PhotoInput currentUrl={avatarUrl(lega.logo, 160)} name="logo" />
-          </div>
-          <Field label="Nome della lega">
-            <input name="nome" required minLength={2} maxLength={40} defaultValue={lega.nome} className={inputClass} />
-          </Field>
+          <LegaNomeLogo nomeIniziale={lega.nome} logoUrl={avatarUrl(lega.logo, 160)} />
           <Field label="Città (per il meteo delle partite)">
             <input name="citta" maxLength={60} defaultValue={lega.citta?.nome ?? ''} placeholder="Es. Milano" className={inputClass} />
           </Field>

@@ -114,7 +114,7 @@ export function LegaMenu({
           )}
           {organizzatore && (
             <Link href="/lega" role="menuitem" className={voce} onClick={() => setOpen(false)}>
-              ⚙️ Impostazioni e inviti
+              ⚙️ Impostazioni lega
             </Link>
           )}
           {titolare && (
