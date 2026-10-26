@@ -132,6 +132,11 @@ export function LegaMenu({
             <span className="flex-1">I miei tornei</span>
             <span className="text-xs font-normal text-zinc-400">tutte le leghe</span>
           </Link>
+          <Link href="/pro" role="menuitem" className={`${voce} font-semibold`} onClick={() => setOpen(false)}>
+            <span className="flex h-6 w-6 shrink-0 items-center justify-center">⭐</span>
+            <span className="flex-1">The Cap Pro</span>
+            <span className="rounded-full bg-amber-400 px-2 py-0.5 text-[10px] font-bold text-zinc-900">PRO</span>
+          </Link>
         </div>
       )}
     </div>

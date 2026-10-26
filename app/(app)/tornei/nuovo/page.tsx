@@ -32,6 +32,9 @@ function VetrinaPro() {
         <li>📊 Classifica, marcatori e risultati sempre aggiornati</li>
       </ul>
       <p className="text-sm text-zinc-500">I tornei arrivano presto con la versione Pro.</p>
+      <Link href="/pro" className="inline-block text-sm font-semibold text-green-700 hover:underline dark:text-green-400">
+        Scopri tutto il Pro ›
+      </Link>
     </Card>
   )
 }

@@ -80,7 +80,10 @@ async function Rosa() {
         <p className="mb-4 rounded-xl bg-zinc-50 p-3 text-xs text-zinc-600 dark:bg-zinc-800/50 dark:text-zinc-300">
           <span className="mr-1 rounded bg-amber-400 px-1.5 py-0.5 text-[10px] font-bold text-zinc-900">PRO</span>
           Forma dei giocatori (↑↓ accanto al voto), formazioni che ne tengono conto e proposte automatiche per aggiornare i voti ogni 5
-          partite.
+          partite.{' '}
+          <Link href="/pro" className="font-semibold text-green-700 hover:underline dark:text-green-400">
+            Scopri il Pro ›
+          </Link>
         </p>
       )}
       <Card>
