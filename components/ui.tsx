@@ -92,6 +92,18 @@ export function Overall({ player, grande = false }: { player: Player; grande?: b
   )
 }
 
+// Forma del giocatore (Pro, da −1 a +1): freccia accanto al voto, solo se si vede davvero.
+export function FrecciaForma({ forma }: { forma: number }) {
+  if (Math.abs(forma) < 0.15) return null
+  const su = forma > 0
+  const testo = `Forma ${su ? '+' : '−'}${Math.abs(forma).toLocaleString('it-IT', { maximumFractionDigits: 1 })}`
+  return (
+    <span title={testo} aria-label={testo} className={`shrink-0 text-sm font-bold ${su ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+      {su ? '↑' : '↓'}
+    </span>
+  )
+}
+
 // Foto profilo (o iniziali). Con `zoom` (di base sì) toccandola si apre ingrandita.
 export function Avatar({ player, size = 40, zoom = true }: { player: Player; size?: number; zoom?: boolean }) {
   const url = avatarUrl(player.foto, size * 2)
@@ -194,6 +206,7 @@ export function PlayerRow({
   right,
   mostraAccesso = false,
   mio = false,
+  forma,
 }: {
   player: Player
   prima?: ReactNode
@@ -201,6 +214,8 @@ export function PlayerRow({
   mostraAccesso?: boolean
   /** La mia riga: nome in grassetto e sfondo evidenziato. */
   mio?: boolean
+  /** Pro: forma del giocatore, freccia accanto al voto. */
+  forma?: number
 }) {
   return (
     <div className={`flex items-center gap-3 ${mio ? '-mx-1.5 rounded-lg bg-green-50 px-1.5 py-1 dark:bg-green-950/50' : ''}`}>
@@ -219,6 +234,7 @@ export function PlayerRow({
         )}
       </Link>
       {prima}
+      {forma != null && <FrecciaForma forma={forma} />}
       <Overall player={player} />
       {right}
     </div>
@@ -236,7 +252,7 @@ export function SkillBars({ player }: { player: Player }) {
             <span className="h-2 rounded bg-zinc-200 dark:bg-zinc-800">
               <span className="block h-2 rounded bg-green-600" style={{ width: `${value * 10}%` }} />
             </span>
-            <span className="text-right tabular-nums">{value}</span>
+            <span className="text-right tabular-nums">{value.toLocaleString('it-IT')}</span>
           </li>
         )
       })}

@@ -77,6 +77,13 @@ export const player = defineType({
       initialValue: true,
     }),
     defineField({
+      name: 'revisioneIl',
+      title: 'Voti rivisti fino al',
+      description: 'Pro: le proposte di aggiornamento dei voti guardano solo le partite dopo questa data',
+      type: 'datetime',
+      readOnly: true,
+    }),
+    defineField({
       name: 'rimossoIl',
       title: 'Tolto dalla lega il',
       description: 'Tolto dalla rosa da un organizzatore: non compare più nemmeno tra i non attivi (rientra se riceve un nuovo invito)',

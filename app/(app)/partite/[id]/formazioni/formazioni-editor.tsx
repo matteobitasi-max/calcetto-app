@@ -7,6 +7,7 @@ import { SKILLS, type Player, type Skill } from '@/lib/roster'
 import { CHIAVE, balanceTeams, forza, medie, nomeSquadra, numeroSquadra, similiAPrima, squilibrio } from '@/lib/teams'
 
 export type GiocatoreFormazione = Pick<Player, '_id' | 'ruolo' | 'caratteristiche'> & {
+  forma?: number
   nome: string
   foto: string | null
   iniziali: string
@@ -100,6 +101,7 @@ export function FormazioniEditor({
         <span className="block truncate text-sm">{g.nome}</span>
         <span className="block text-xs capitalize text-zinc-500">
           {g.ruolo && `${g.ruolo} · `}forza {forza(g).toFixed(1)}
+          {g.forma != null && Math.abs(g.forma) >= 0.15 && (g.forma > 0 ? ' ↑' : ' ↓')}
         </span>
       </span>
       {(['A', 'B'] as const).map((x) => (

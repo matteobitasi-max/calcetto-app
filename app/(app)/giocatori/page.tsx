@@ -6,6 +6,8 @@ import { ButtonLink, Card, IconaOrganizzatore, Loading, PageTitle, PlayerRow } f
 import { SwipeRiga } from '@/components/swipe-riga'
 import { convocaGiocatore, rimuoviDallaLega } from '@/app/actions'
 import type { ReactNode } from 'react'
+import Link from 'next/link'
+import { formaDellaLega, legaPro } from '@/lib/pro'
 
 export default function GiocatoriPage() {
   return (
@@ -17,7 +19,13 @@ export default function GiocatoriPage() {
 
 async function Rosa() {
   const me = await requirePlayer()
-  const [players, prossime] = await Promise.all([getPlayers(me.lega._id), me.isAdmin ? getUpcomingMatches(me.lega._id) : []])
+  const [players, prossime, pro] = await Promise.all([
+    getPlayers(me.lega._id),
+    me.isAdmin ? getUpcomingMatches(me.lega._id) : [],
+    legaPro(me.lega._id),
+  ])
+  // Pro: forma di ognuno (freccia accanto al voto) e, per gli organizzatori, le proposte di nuovi voti
+  const analisi = pro ? await formaDellaLega(me.lega._id) : null
   // la prossima partita (non di un torneo) in cui l'organizzatore può convocare chi non si è ancora convocato
   const prossima = prossime.find((m) => !m.torneo)
   const giaInLista = new Set(prossima?.convocazioni.filter((c) => c.risposta !== 'assente').map((c) => c.giocatore?._id))
@@ -57,6 +65,24 @@ async function Rosa() {
       <PageTitle action={me.isAdmin && <ButtonLink href="/giocatori/nuovo">+ Giocatore</ButtonLink>}>
         Rosa <span className="text-base font-normal text-zinc-500">({attivi.length})</span>
       </PageTitle>
+      {me.isAdmin && analisi && analisi.proposte.length > 0 && (
+        <Link
+          href="/giocatori/proposte"
+          className="mb-4 flex items-center justify-between gap-2 rounded-xl bg-green-50 p-3 text-sm font-medium text-green-900 hover:bg-green-100 dark:bg-green-950 dark:text-green-200 dark:hover:bg-green-900"
+        >
+          <span>
+            📈 {analisi.proposte.length} {analisi.proposte.length === 1 ? 'proposta' : 'proposte'} di aggiornamento dei voti
+          </span>
+          <span aria-hidden>›</span>
+        </Link>
+      )}
+      {me.isAdmin && !pro && (
+        <p className="mb-4 rounded-xl bg-zinc-50 p-3 text-xs text-zinc-600 dark:bg-zinc-800/50 dark:text-zinc-300">
+          <span className="mr-1 rounded bg-amber-400 px-1.5 py-0.5 text-[10px] font-bold text-zinc-900">PRO</span>
+          Forma dei giocatori (↑↓ accanto al voto), formazioni che ne tengono conto e proposte automatiche per aggiornare i voti ogni 5
+          partite.
+        </p>
+      )}
       <Card>
         <ul className="space-y-3">
           {mioInCima(attivi, me._id, (p) => p._id).map((p) => (
@@ -66,6 +92,7 @@ async function Rosa() {
                 <PlayerRow
                   player={p}
                   mio={p._id === me._id}
+                  forma={analisi?.forma.get(p._id)}
                   mostraAccesso
                   // ruolo a sinistra del voto, così i voti restano allineati a destra
                   prima={

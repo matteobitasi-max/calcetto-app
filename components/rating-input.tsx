@@ -15,11 +15,12 @@ export function RatingInput({ name, label, hint, defaultValue }: { name: string;
         name={name}
         min={1}
         max={10}
+        step={0.5}
         value={value}
         onChange={(e) => setValue(Number(e.target.value))}
         className="accent-green-600"
       />
-      <span className="text-right font-medium tabular-nums">{value}</span>
+      <span className="text-right font-medium tabular-nums">{value.toLocaleString('it-IT')}</span>
     </label>
   )
 }

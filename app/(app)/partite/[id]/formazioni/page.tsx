@@ -7,6 +7,7 @@ import { getMatch, presenti } from '@/lib/matches'
 import { avatarUrl } from '@/lib/image'
 import { formatData } from '@/lib/dates'
 import { sanity } from '@/lib/sanity'
+import { formaDellaLega, legaPro } from '@/lib/pro'
 import { Card, Loading, PageTitle } from '@/components/ui'
 import { FormazioniEditor, type GiocatoreFormazione } from './formazioni-editor'
 
@@ -41,10 +42,13 @@ async function Editor({ params }: { params: Promise<{ id: string }> }) {
     )
   }
 
+  // Pro: chi è in forma conta un po' di più (anche nel bilanciamento automatico)
+  const forma = (await legaPro(match.legaId)) ? (await formaDellaLega(match.legaId)).forma : null
   const giocatori: GiocatoreFormazione[] = presenti(match).map(({ giocatore: p }) => ({
     _id: p._id,
     ruolo: p.ruolo,
     caratteristiche: p.caratteristiche,
+    forma: forma?.get(p._id),
     nome: displayName(p),
     foto: avatarUrl(p.foto, 64),
     iniziali: iniziali(displayName(p)),

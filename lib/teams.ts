@@ -16,7 +16,8 @@ export const PESI: Record<Skill, number> = {
 }
 export const CHIAVE: Skill[] = ['cervello', 'scatto', 'fiato', 'tecnica']
 
-type Giocatore = Pick<Player, '_id' | 'ruolo' | 'caratteristiche'>
+// `forma` (Pro, da −1 a +1): chi è in forma conta un po' di più nelle formazioni.
+type Giocatore = Pick<Player, '_id' | 'ruolo' | 'caratteristiche'> & { forma?: number }
 
 const voto = (p: Giocatore, k: Skill) => p.caratteristiche?.[k] ?? 5
 
@@ -24,7 +25,7 @@ const voto = (p: Giocatore, k: Skill) => p.caratteristiche?.[k] ?? 5
 export function forza(p: Giocatore) {
   const tot = (Object.keys(SKILLS) as Skill[]).reduce((s, k) => s + voto(p, k) * PESI[k], 0)
   const pesi = Object.values(PESI).reduce((a, b) => a + b, 0)
-  return Math.round((tot / pesi) * 10) / 10
+  return Math.round((tot / pesi + 0.5 * (p.forma ?? 0)) * 10) / 10
 }
 
 const somma = (ps: Giocatore[], f: (p: Giocatore) => number) => ps.reduce((s, p) => s + f(p), 0)

@@ -19,6 +19,8 @@ import { iscrizioniAperte, puoCreareTornei } from '@/lib/tornei'
 import { LETTERE_GIRONI, SQUADRE_PREDEFINITE, classifica, giornate, incrociGironi } from '@/lib/girone'
 import { daCreare, primoTurnoTeste, primoTurnoValido, tabellone } from '@/lib/tabellone'
 import { nomeSquadra } from '@/lib/teams'
+import { formaDellaLega, legaPro } from '@/lib/pro'
+import { PARTITE_PER_REVISIONE } from '@/lib/forma'
 
 export type FormState = { error?: string } | undefined
 
@@ -406,6 +408,22 @@ export async function togliDallaPartita(matchId: string, giocatoreId: string) {
   })
 }
 
+// Pro: l'organizzatore approva (o scarta) la proposta di nuovi voti per un giocatore. La proposta si ricalcola qui,
+// così vale quella aggiornata; in tutti e due i casi la prossima guarda solo le partite giocate dopo.
+export async function decidiProposta(giocatoreId: string, approva: boolean) {
+  const admin = await requireForDoc(giocatoreId, 'organizzatore')
+  if (!(await legaPro(admin.lega._id))) throw new Error('Funzione della versione Pro')
+  const proposta = (await formaDellaLega(admin.lega._id)).proposte.find((p) => p.giocatoreId === giocatoreId)
+  if (!proposta) return refresh()
+  const patch = sanity.patch(giocatoreId).set({ revisioneIl: proposta.fino })
+  if (approva) {
+    patch.setIfMissing({ caratteristiche: {} })
+    for (const [k, m] of Object.entries(proposta.modifiche)) patch.set({ [`caratteristiche.${k}`]: m.a })
+  }
+  await patch.commit()
+  refresh()
+}
+
 // Rimette un giocatore tra quelli da allocare: esce dalla sua squadra ma resta in lista.
 export async function togliDallaSquadra(matchId: string, giocatoreId: string) {
   await ritoccaSquadre(matchId, (doc) => {
@@ -464,7 +482,26 @@ export async function salvaRisultato(matchId: string, _prev: FormState, formData
   await patch.commit()
   // Tabellone: con il vincitore si crea (se si può) la partita del turno dopo.
   if (match.torneo && match.torneo.formato !== 'girone') await aggiornaTabellone(match.torneo._id)
+  await avvisaProposte(match).catch(() => undefined)
   redirect(`/partite/${matchId}`)
+}
+
+// Pro: quando un giocatore di questa partita arriva a PARTITE_PER_REVISIONE partite dall'ultima revisione
+// dei suoi voti, gli organizzatori ricevono un avviso con le proposte da rivedere.
+async function avvisaProposte(match: Match) {
+  if (!(await legaPro(match.legaId))) return
+  const inCampo = new Set([...match.squadraA, ...match.squadraB].map((p) => p._id))
+  const { proposte } = await formaDellaLega(match.legaId)
+  if (!proposte.some((p) => inCampo.has(p.giocatoreId) && p.partite % PARTITE_PER_REVISIONE === 0)) return
+  const organizzatori = await sanity.fetch<string[]>(`*[_type == "player" && lega._ref == $lega && isAdmin == true && attivo != false]._id`, {
+    lega: match.legaId,
+  })
+  await inviaAGiocatori(organizzatori, {
+    title: '📈 Nuove proposte di voto',
+    body: `${proposte.length} giocator${proposte.length === 1 ? 'e' : 'i'} da rivedere: approva o scarta i nuovi voti.`,
+    url: '/giocatori/proposte',
+    tag: `proposte-${match.legaId}`,
+  })
 }
 
 // ---------- Partite ricorrenti (organizzatori) ----------
@@ -568,7 +605,7 @@ const badgeFromForm = (formData: FormData) => {
 
 const caratteristicheFromForm = (formData: FormData) =>
   Object.fromEntries(
-    (Object.keys(SKILLS) as Skill[]).map((k) => [k, Math.min(10, Math.max(1, Math.round(num(formData, k) ?? 5)))]),
+    (Object.keys(SKILLS) as Skill[]).map((k) => [k, Math.min(10, Math.max(1, Math.round((num(formData, k) ?? 5) * 2) / 2))]),
   )
 
 // Cambio rapido della foto cliccando sull'avatar: ognuno la sua, gli organizzatori quella di tutti.

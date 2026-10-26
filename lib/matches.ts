@@ -2,6 +2,7 @@ import 'server-only'
 import { sanity } from './sanity'
 import { playerFields, type Player } from './roster'
 import type { PartitaPunteggio } from './punteggio'
+import type { PartitaForma } from './forma'
 import { formatoDaIscritti } from './limiti'
 
 export type Risposta = 'presente' | 'assente' | 'riserva'
@@ -265,4 +266,17 @@ export async function getKmTotali(legaId: string) {
     }
   }
   return totali
+}
+
+// Le partite giocate di una lega, con solo quello che serve per la forma (Pro).
+export function getPartitePerForma(legaId: string) {
+  return sanity.fetch<PartitaForma[]>(
+    `*[_type == "match" && lega._ref == $legaId && stato == "giocata"] | order(data asc){
+      _id, data, risultato, "mvpId": mvp._ref,
+      "squadraA": coalesce(squadraA[]._ref, []), "squadraB": coalesce(squadraB[]._ref, []),
+      "marcatori": coalesce(marcatori[]{"giocatoreId": giocatore._ref, gol}, []),
+      "distanze": coalesce(distanze[]{"giocatoreId": giocatore._ref, km}, [])
+    }`,
+    { legaId },
+  )
 }

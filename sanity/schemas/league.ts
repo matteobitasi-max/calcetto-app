@@ -33,6 +33,13 @@ export const league = defineType({
     // prima versione, con una sola foto: letta ancora insieme a fotoSorprese
     defineField({ name: 'fotoSorpresa', title: 'Foto sorpresa (vecchia)', type: 'image', hidden: true }),
     defineField({
+      name: 'pro',
+      title: 'Versione Pro',
+      description: 'Forma dei giocatori e proposte automatiche di aggiornamento dei voti',
+      type: 'boolean',
+      initialValue: false,
+    }),
+    defineField({
       name: 'citta',
       title: 'Città (per il meteo)',
       type: 'object',
