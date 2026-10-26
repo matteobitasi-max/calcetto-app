@@ -20,7 +20,7 @@ import { LETTERE_GIRONI, SQUADRE_PREDEFINITE, classifica, giornate, incrociGiron
 import { daCreare, primoTurnoTeste, primoTurnoValido, tabellone } from '@/lib/tabellone'
 import { nomeSquadra } from '@/lib/teams'
 import { formaDellaLega, legaPro } from '@/lib/pro'
-import { PARTITE_PER_REVISIONE } from '@/lib/forma'
+import { PARTITE_PER_REVISIONE, passoVoto } from '@/lib/forma'
 
 export type FormState = { error?: string } | undefined
 
@@ -605,7 +605,7 @@ const badgeFromForm = (formData: FormData) => {
 
 const caratteristicheFromForm = (formData: FormData) =>
   Object.fromEntries(
-    (Object.keys(SKILLS) as Skill[]).map((k) => [k, Math.min(10, Math.max(1, Math.round((num(formData, k) ?? 5) * 2) / 2))]),
+    (Object.keys(SKILLS) as Skill[]).map((k) => [k, Math.min(10, Math.max(1, passoVoto(num(formData, k) ?? 5)))]),
   )
 
 // Cambio rapido della foto cliccando sull'avatar: ognuno la sua, gli organizzatori quella di tutti.

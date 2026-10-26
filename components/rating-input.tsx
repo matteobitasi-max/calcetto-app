@@ -15,7 +15,7 @@ export function RatingInput({ name, label, hint, defaultValue }: { name: string;
         name={name}
         min={1}
         max={10}
-        step={0.5}
+        step={0.05}
         value={value}
         onChange={(e) => setValue(Number(e.target.value))}
         className="accent-green-600"

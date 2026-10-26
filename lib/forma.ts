@@ -6,8 +6,8 @@
 // dalla sua tecnica) e MVP. Le partite vecchie pesano sempre meno.
 //
 // Proposte (ogni PARTITE_PER_REVISIONE partite giocate dal giocatore): gol → tecnica, MVP → cervello,
-// km → fiato e scatto, risultati rispetto alle attese → un po' tutte. Al massimo ±0,5 per caratteristica,
-// a passi di 0,5; l'organizzatore approva o scarta.
+// km → fiato e scatto, risultati rispetto alle attese → un po' tutte. Da 0,10 a 0,25 per caratteristica
+// (sotto 0,10 non si propone niente), a passi di 0,05; l'organizzatore approva o scarta.
 
 import { SKILLS, type Player, type Skill } from './roster'
 import { forza } from './teams'
@@ -24,6 +24,11 @@ const PASSO = 0.15
 const MEMORIA = 0.85
 // Nelle formazioni la forma vale metà di un punto di forza.
 export const PESO_FORMA = 0.5
+// Modifica di un voto in una proposta: sotto il minimo non si propone, sopra il massimo si taglia.
+export const MODIFICA_MIN = 0.1
+export const MODIFICA_MAX = 0.25
+// I voti si muovono a passi di 0,05.
+export const passoVoto = (x: number) => Math.round(x * 20) / 20
 
 export type PartitaForma = {
   _id: string
@@ -125,7 +130,9 @@ export function analisiForma(giocatori: GiocatoreForma[], tutte: PartitaForma[])
     const modifiche: Proposta['modifiche'] = {}
     for (const k of Object.keys(SKILLS) as Skill[]) {
       const da = voto(g, k)
-      const a = Math.min(10, Math.max(1, da + limita(Math.round(spinta[k] * 2) / 2, 0.5)))
+      const d = limita(passoVoto(spinta[k]), MODIFICA_MAX)
+      if (Math.abs(d) < MODIFICA_MIN) continue
+      const a = passoVoto(Math.min(10, Math.max(1, da + d)))
       if (a !== da) modifiche[k] = { da, a }
     }
     if (Object.keys(modifiche).length) {

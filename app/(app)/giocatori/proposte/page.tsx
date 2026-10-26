@@ -19,10 +19,10 @@ export default function PropostePage() {
   )
 }
 
-const numero = (n: number, cifre = 1) => n.toLocaleString('it-IT', { maximumFractionDigits: cifre })
+const numero = (n: number, cifre = 2) => n.toLocaleString('it-IT', { maximumFractionDigits: cifre })
 
 // Pro: ogni PARTITE_PER_REVISIONE partite giocate, per ogni giocatore l'app propone nuovi voti
-// (al massimo ±0,5 per caratteristica). L'organizzatore approva o scarta.
+// (da 0,10 a 0,25 per caratteristica). L'organizzatore approva o scarta.
 async function Proposte() {
   const me = await requireAdmin()
   if (!(await legaPro(me.lega._id))) {
@@ -45,7 +45,7 @@ async function Proposte() {
     <div className="space-y-4">
       <p className="text-sm text-zinc-500">
         Ogni {PARTITE_PER_REVISIONE} partite giocate, l&apos;app guarda gol, MVP, km e risultati rispetto a quanto ci si aspettava dai voti, e propone
-        di alzarli o abbassarli di mezzo punto. Approvando i voti cambiano; in tutti e due i casi la prossima proposta guarda solo le partite
+        di alzarli o abbassarli un po&apos; (da 0,10 a 0,25 punti). Approvando i voti cambiano; in tutti e due i casi la prossima proposta guarda solo le partite
         nuove.
       </p>
       {proposte.length === 0 && <Card className="text-sm text-zinc-500">Nessuna proposta per ora: servono almeno {PARTITE_PER_REVISIONE} partite giocate dall&apos;ultima revisione.</Card>}
