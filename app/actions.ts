@@ -18,6 +18,7 @@ import { assicuraRicorrenze, getSeries, occurrenceId, rimuoviFutureVuote, type S
 import { iscrizioniAperte, puoCreareTornei } from '@/lib/tornei'
 import { LETTERE_GIRONI, SQUADRE_PREDEFINITE, classifica, giornate, incrociGironi } from '@/lib/girone'
 import { daCreare, primoTurnoTeste, primoTurnoValido, tabellone } from '@/lib/tabellone'
+import { nomeSquadra } from '@/lib/teams'
 
 export type FormState = { error?: string } | undefined
 
@@ -333,7 +334,7 @@ export async function salvaFormazioni(
     const pagato = new Set(match.pagamenti.map((p) => p.giocatoreId))
     const invii = (['A', 'B'] as const).flatMap((squadra) => {
       const ids = squadra === 'A' ? a : b
-      const base = `Sei nella Squadra ${squadra}${pettorine === squadra ? ': porta la pettorina! 🦺' : '.'}\n${quando}`
+      const base = `Sei nella ${nomeSquadra(squadra)}${pettorine === squadra ? ': porta la pettorina! 🦺' : '.'}\n${quando}`
       const paga = match.quota != null ? `\n💶 Entra nell'app per pagare ${match.quota} € con Satispay` : ''
       return [
         [ids.filter((id) => pagato.has(id)), base],

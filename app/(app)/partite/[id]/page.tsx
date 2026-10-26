@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { Suspense } from 'react'
 import { canEnterResults, displayName, getCurrentPlayer, getUtente, membroDi, mioInCima, type Membro, type Player } from '@/lib/player'
-import { forza } from '@/lib/teams'
+import { forza, nomeSquadra, numeroSquadra } from '@/lib/teams'
 import { finestra, formatoInCorso, getMatch, getPlayers, orarioPartita, ordinati, presenti, risultatoDa, type Match, type Risposta } from '@/lib/matches'
 import { getCollegamento, stravaConfigurato } from '@/lib/strava'
 import { KmPartita } from '@/components/km-partita'
@@ -249,7 +249,7 @@ function Gruppo({
 
 // Organizzatore, squadre già fatte: ⇄ sposta il giocatore nell'altra squadra (lo swipe lo rimette tra quelli da allocare).
 function RitoccoSquadra({ match, player, verso }: { match: Match; player: Player; verso: 'A' | 'B' }) {
-  const nome = (verso === 'A' ? match.nomeA : match.nomeB) ?? `Squadra ${verso}`
+  const nome = (verso === 'A' ? match.nomeA : match.nomeB) ?? nomeSquadra(verso)
   return (
     <span className="flex shrink-0 items-center gap-1">
       <form action={cambiaSquadra.bind(null, match._id, player._id, verso)}>
@@ -272,7 +272,7 @@ function Squadre({ match, mioId, gestisci }: { match: Match; mioId: string; gest
   ]
   const mia = match.squadraA.some((p) => p._id === mioId) ? 'A' : match.squadraB.some((p) => p._id === mioId) ? 'B' : null
   // Nelle partite dei tornei le squadre hanno un nome.
-  const nome = (l: 'A' | 'B') => (l === 'A' ? match.nomeA : match.nomeB) ?? `Squadra ${l}`
+  const nome = (l: 'A' | 'B') => (l === 'A' ? match.nomeA : match.nomeB) ?? nomeSquadra(l)
   const inSquadra = new Set([...match.squadraA, ...match.squadraB].map((p) => p._id))
   const senzaSquadra = presenti(match)
     .map((c) => c.giocatore)
@@ -281,7 +281,7 @@ function Squadre({ match, mioId, gestisci }: { match: Match; mioId: string; gest
     <div className="space-y-3">
       {mia && match.stato !== 'giocata' && (
         <p className={`rounded-xl p-3 text-center text-sm font-medium text-white ${mia === 'A' ? 'bg-blue-600' : 'bg-orange-500'}`}>
-          {match.torneo ? `La tua squadra: ${nome(mia)}` : `Sei nella Squadra ${mia}`}
+          {match.torneo ? `La tua squadra: ${nome(mia)}` : `Sei nella ${nomeSquadra(mia)}`}
           {match.pettorine === mia && ' · 🦺 porta la pettorina!'}
         </p>
       )}
@@ -343,7 +343,7 @@ function Squadre({ match, mioId, gestisci }: { match: Match; mioId: string; gest
                             <SubmitButton
                               className={`rounded-lg px-2 py-1 text-xs font-semibold text-white ${l === 'A' ? 'bg-blue-600' : 'bg-orange-500'}`}
                             >
-                              → {l}
+                              → {match.torneo ? (l === 'A' ? match.nomeA : match.nomeB) : numeroSquadra(l)}
                             </SubmitButton>
                           </form>
                         ))}

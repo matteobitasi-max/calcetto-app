@@ -4,7 +4,7 @@ import { useState, useTransition } from 'react'
 import type { FormState } from '@/app/actions'
 import { buttonClass } from '@/components/ui-classes'
 import { SKILLS, type Player, type Skill } from '@/lib/roster'
-import { CHIAVE, balanceTeams, forza, medie, similiAPrima, squilibrio } from '@/lib/teams'
+import { CHIAVE, balanceTeams, forza, medie, nomeSquadra, numeroSquadra, similiAPrima, squilibrio } from '@/lib/teams'
 
 export type GiocatoreFormazione = Pick<Player, '_id' | 'ruolo' | 'caratteristiche'> & {
   nome: string
@@ -14,8 +14,8 @@ export type GiocatoreFormazione = Pick<Player, '_id' | 'ruolo' | 'caratteristich
 type Lato = 'A' | 'B' | null
 
 const SQUADRE = {
-  A: { nome: 'Squadra A', bordo: 'border-t-blue-500', barra: 'bg-blue-500', testo: 'text-blue-600 dark:text-blue-400' },
-  B: { nome: 'Squadra B', bordo: 'border-t-orange-500', barra: 'bg-orange-500', testo: 'text-orange-600 dark:text-orange-400' },
+  A: { nome: nomeSquadra('A'), bordo: 'border-t-blue-500', barra: 'bg-blue-500', testo: 'text-blue-600 dark:text-blue-400' },
+  B: { nome: nomeSquadra('B'), bordo: 'border-t-orange-500', barra: 'bg-orange-500', testo: 'text-orange-600 dark:text-orange-400' },
 } as const
 
 function Faccia({ g }: { g: GiocatoreFormazione }) {
@@ -112,7 +112,7 @@ export function FormazioniEditor({
           }`}
           aria-label={`Metti ${g.nome} nella ${SQUADRE[x].nome}`}
         >
-          {x}
+          {numeroSquadra(x)}
         </button>
       ))}
     </li>
