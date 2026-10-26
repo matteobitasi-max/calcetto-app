@@ -96,13 +96,6 @@ export async function ProfiloGiocatore({ id }: { id: string }) {
 
       <Statistiche stats={stats} km={kmTotali.get(id)} />
 
-      {/* Solo nel mio profilo e nell'app: Apple Health (iPhone) / Health Connect (Android) per i km */}
-      {mio && (
-        <Card className="p-0! empty:hidden">
-          <SaluteAccount />
-        </Card>
-      )}
-
       <Card>
         <h2 className="mb-1 font-semibold">🏅 Trofei</h2>
         <p className="mb-3 text-xs text-zinc-500">
@@ -131,6 +124,10 @@ export async function ProfiloGiocatore({ id }: { id: string }) {
               <p className="text-xs text-zinc-500">Cosa vuoi ricevere da {me.lega.nome}:</p>
               <PreferenzeNotifiche iniziali={player.notifiche} />
             </div>
+          </Card>
+          {/* Solo nell'app: Apple Health (iPhone) / Health Connect (Android) per i km */}
+          <Card className="p-0! empty:hidden">
+            <SaluteAccount />
           </Card>
           <Card className="divide-y divide-zinc-100 p-0! text-sm dark:divide-zinc-800">
             <Link href="/account" className="flex items-center justify-between px-4 py-3 hover:bg-zinc-50 dark:hover:bg-zinc-800">
