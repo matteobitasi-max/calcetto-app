@@ -112,9 +112,6 @@ export function LegaMenu({
               <hr className="my-2 border-zinc-200 dark:border-zinc-800" />
             </>
           )}
-          <Link href="/tornei" role="menuitem" className={voce} onClick={() => setOpen(false)}>
-            🏆 Tornei
-          </Link>
           {organizzatore && (
             <Link href="/lega" role="menuitem" className={voce} onClick={() => setOpen(false)}>
               ⚙️ Impostazioni e inviti
@@ -127,6 +124,13 @@ export function LegaMenu({
           )}
           <Link href="/benvenuto" role="menuitem" className={voce} onClick={() => setOpen(false)}>
             ➕ Crea o entra in una lega
+          </Link>
+          {/* I tornei sono una sezione a sé: quelli di tutte le mie leghe, non solo della lega attiva */}
+          <hr className="my-2 border-zinc-200 dark:border-zinc-800" />
+          <Link href="/tornei" role="menuitem" className={`${voce} font-semibold`} onClick={() => setOpen(false)}>
+            <span className="flex h-6 w-6 shrink-0 items-center justify-center">🏆</span>
+            <span className="flex-1">I miei tornei</span>
+            <span className="text-xs font-normal text-zinc-400">tutte le leghe</span>
           </Link>
         </div>
       )}

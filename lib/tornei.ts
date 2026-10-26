@@ -38,6 +38,14 @@ export function getTornei(legaId: string) {
   return sanity.fetch<Torneo[]>(`*[_type == "tournament" && lega._ref == $legaId] | order(_createdAt desc){${torneoFields}}`, { legaId })
 }
 
+/** I tornei di più leghe insieme (la sezione "I miei tornei"), con nome e logo della lega. */
+export function getTorneiDelleLeghe(legaIds: string[]) {
+  return sanity.fetch<(Torneo & { lega: { nome: string; logo?: SanityImage } })[]>(
+    `*[_type == "tournament" && lega._ref in $legaIds] | order(_createdAt desc){${torneoFields}, "lega": lega->{nome, logo}}`,
+    { legaIds },
+  )
+}
+
 export function getTorneo(id: string) {
   return sanity.fetch<Torneo | null>(`*[_type == "tournament" && _id == $id][0]{${torneoFields}}`, { id })
 }
