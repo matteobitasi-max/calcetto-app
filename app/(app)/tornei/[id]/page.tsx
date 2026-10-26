@@ -206,9 +206,17 @@ async function Torneo({ params }: { params: Promise<{ id: string }> }) {
                     </span>
                   </span>
                 </span>
-                <span className="shrink-0 text-xs font-medium text-green-700 dark:text-green-400">
-                  {s.capitanoId === me._id && aperte ? 'Invita ›' : '›'}
-                </span>
+                {/* Matita: l'organizzatore su tutte le squadre, il capitano sulla sua */}
+                {me.isAdmin || s.capitanoId === me._id ? (
+                  <span
+                    aria-label={`Gestisci ${s.nome}`}
+                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-zinc-100 text-base dark:bg-zinc-800"
+                  >
+                    ✏️
+                  </span>
+                ) : (
+                  <span className="shrink-0 text-zinc-400">›</span>
+                )}
               </Link>
             )
           })}

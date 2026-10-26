@@ -1652,7 +1652,9 @@ export async function entraInSquadra(codice: string) {
   redirect(`/tornei/${torneo._id}`)
 }
 
-// Il capitano (o un organizzatore) gestisce la sua squadra: nome, foto e chi togliere (rimuovi_<giocatore>).
+// Il capitano (o un organizzatore) gestisce la sua squadra: nome, foto, chi togliere (rimuovi_<giocatore>)
+// e chi inserire dalla rosa (aggiungi_<giocatore>). Il capitano inserisce solo chi non è in un'altra squadra;
+// l'organizzatore può anche spostare giocatori da un'altra squadra (non il suo capitano, e senza lasciarla vuota).
 export async function salvaMiaSquadra(torneoId: string, chiave: string, _prev: FormState, formData: FormData): Promise<FormState> {
   const torneo = await sanity.fetch<TorneoSquadre | null>(`*[_type == "tournament" && _id == $id][0]{${torneoSquadreFields}}`, { id: torneoId })
   const me = await membroDi(torneo?.legaId)
@@ -1665,16 +1667,56 @@ export async function salvaMiaSquadra(torneoId: string, chiave: string, _prev: F
   const nome = str(formData, 'nome').slice(0, 30)
   if (nome.length < 2) return { error: 'Il nome della squadra deve avere almeno 2 caratteri.' }
   if (torneo.squadre.some((sq) => sq._key !== chiave && sq.nome.toLowerCase() === nome.toLowerCase())) return { error: 'C’è già una squadra con questo nome.' }
-  const giocatori = squadra.giocatori.filter((g) => g._ref === squadra.capitano?._ref || formData.get(`rimuovi_${g._ref}`) !== 'on')
+
+  const rosa = new Set(await sanity.fetch<string[]>(`*[_type == "player" && lega._ref == $lega && attivo != false]._id`, { lega: torneo.legaId }))
+  const squadraDi = new Map(torneo.squadre.flatMap((sq) => sq.giocatori.map((g) => [g._ref, sq] as const)))
+  const nuovi: string[] = []
+  for (const [k, v] of formData) {
+    if (!k.startsWith('aggiungi_') || v !== 'on') continue
+    const id = k.slice('aggiungi_'.length)
+    if (!rosa.has(id)) continue
+    const altra = squadraDi.get(id)
+    if (altra?._key === chiave) continue
+    if (altra && !organizzatore) return { error: 'Un giocatore che hai scelto è già in un’altra squadra.' }
+    if (altra?.capitano?._ref === id) return { error: `Non puoi spostare il capitano dei ${altra.nome}.` }
+    nuovi.push(id)
+  }
+  const giocatori = [
+    ...squadra.giocatori.filter((g) => g._ref === squadra.capitano?._ref || formData.get(`rimuovi_${g._ref}`) !== 'on'),
+    ...nuovi.map((id) => ({ _key: id, _type: 'reference' as const, _ref: id })),
+  ]
   if (!giocatori.length) return { error: 'La squadra deve avere almeno un giocatore.' }
+  if (torneo.maxGiocatori && giocatori.length > torneo.maxGiocatori) return { error: `Al massimo ${torneo.maxGiocatori} giocatori per squadra.` }
   const upload = await uploadFoto(formData.get('foto'))
   if (upload && 'error' in upload) return upload
 
-  const squadre = torneo.squadre.map((sq) => (sq._key === chiave ? { ...sq, nome, giocatori, ...(upload && { logo: upload.foto }) } : sq))
+  const spostati = new Set(nuovi)
+  const squadre = torneo.squadre.map((sq) =>
+    sq._key === chiave
+      ? { ...sq, nome, giocatori, ...(upload && { logo: upload.foto }) }
+      : { ...sq, giocatori: sq.giocatori.filter((g) => !spostati.has(g._ref)) },
+  )
+  const vuota = squadre.find((sq) => !sq.giocatori.length)
+  if (vuota) return { error: `I ${vuota.nome} resterebbero senza giocatori.` }
   const tx = sanity.transaction().patch(torneo._id, (p) => p.ifRevisionId(torneo._rev).set({ squadre }))
   aggiornaPartiteDaGiocare(tx, await partiteDaGiocare(torneo._id), squadre)
   await tx.commit()
   redirect(`/tornei/${torneoId}`)
+}
+
+// Link d'invito per una squadra che non l'ha ancora (tornei creati prima dei capitani): serve anche un capitano.
+export async function creaLinkSquadra(torneoId: string, chiave: string) {
+  const torneo = await sanity.fetch<TorneoSquadre | null>(`*[_type == "tournament" && _id == $id][0]{${torneoSquadreFields}}`, { id: torneoId })
+  const me = await membroDi(torneo?.legaId)
+  const squadra = torneo?.squadre.find((sq) => sq._key === chiave)
+  if (!torneo || !me || !squadra) throw new Error('Squadra non trovata')
+  if (!me.isAdmin && squadra.capitano?._ref !== me._id) throw new Error('Solo il capitano o un organizzatore')
+  if (squadra.codiceInvito) return refresh()
+  const codiceInvito = await nuovoCodiceSquadra(new Set(torneo.squadre.map((sq) => sq.codiceInvito).filter(Boolean) as string[]))
+  const capitano = squadra.capitano ?? (squadra.giocatori[0] && { _type: 'reference' as const, _ref: squadra.giocatori[0]._ref })
+  const squadre = torneo.squadre.map((sq) => (sq._key === chiave ? { ...sq, codiceInvito, ...(capitano && { capitano }) } : sq))
+  await sanity.patch(torneo._id).ifRevisionId(torneo._rev).set({ squadre }).commit()
+  refresh()
 }
 
 // Elimina il torneo con tutte le sue partite (anche quelle già giocate).

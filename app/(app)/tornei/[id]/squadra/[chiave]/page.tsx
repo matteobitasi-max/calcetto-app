@@ -1,15 +1,17 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { Suspense } from 'react'
-import { salvaMiaSquadra } from '@/app/actions'
+import { creaLinkSquadra, salvaMiaSquadra } from '@/app/actions'
 import { displayName, membroDi } from '@/lib/player'
+import { getPlayers } from '@/lib/matches'
 import { getTorneo, iscrizioniAperte } from '@/lib/tornei'
 import { avatarUrl } from '@/lib/image'
 import { baseUrl } from '@/lib/url'
 import { ActionForm } from '@/components/action-form'
 import { InvitoLink } from '@/components/invito-link'
 import { PillSalva } from '@/components/pill-salva'
-import { Card, Field, Loading, inputClass } from '@/components/ui'
+import { SubmitButton } from '@/components/submit-button'
+import { Card, Field, Loading, buttonClass, inputClass } from '@/components/ui'
 import { FotoSquadra } from '../../../squadre-editor'
 
 // La squadra di un torneo: il capitano (e gli organizzatori) invita i compagni, cambia nome e foto, toglie giocatori.
@@ -34,6 +36,19 @@ async function Squadra({ params }: { params: Promise<{ id: string; chiave: strin
   const nomeCapitano = squadra.giocatori.find((g) => g._id === squadra.capitanoId)
   const piena = !!torneo.maxGiocatori && squadra.giocatori.length >= torneo.maxGiocatori
   const link = squadra.codiceInvito ? `${await baseUrl()}/invito-squadra/${squadra.codiceInvito}` : null
+
+  // Chi si può inserire dalla rosa: il capitano solo chi non è in nessuna squadra; l'organizzatore anche chi è
+  // in un'altra squadra (tranne i capitani), che verrà spostato qui.
+  const squadraDi = new Map(torneo.squadre.flatMap((s) => s.giocatori.map((g) => [g._id, s] as const)))
+  const inseribili = puoGestire
+    ? (await getPlayers(torneo.legaId)).filter((p) => {
+        if (p.attivo === false) return false
+        const altra = squadraDi.get(p._id)
+        if (altra?._key === squadra._key) return false
+        if (!altra) return true
+        return !!me.isAdmin && altra.capitanoId !== p._id
+      })
+    : []
 
   return (
     <div className="space-y-4 pb-20">
@@ -79,6 +94,31 @@ async function Squadra({ params }: { params: Promise<{ id: string; chiave: strin
               ))}
             </ul>
           </Card>
+
+          {inseribili.length > 0 && (
+            <Card className="space-y-2">
+              <h2 className="font-semibold">➕ Inserisci giocatori</h2>
+              <p className="text-xs text-zinc-500">
+                Dalla rosa della lega{me.isAdmin ? ': chi è in un’altra squadra viene spostato qui.' : ' (solo chi non è già in una squadra).'}
+              </p>
+              <ul className="divide-y divide-zinc-100 dark:divide-zinc-800">
+                {inseribili.map((p) => {
+                  const altra = squadraDi.get(p._id)
+                  return (
+                    <li key={p._id}>
+                      <label className="flex items-center justify-between gap-2 py-2 text-sm">
+                        <span className="min-w-0 truncate">
+                          {displayName(p)}
+                          {altra && <span className="text-xs text-zinc-500"> · nei {altra.nome}</span>}
+                        </span>
+                        <input type="checkbox" name={`aggiungi_${p._id}`} className="h-5 w-5 shrink-0 accent-green-600" />
+                      </label>
+                    </li>
+                  )
+                })}
+              </ul>
+            </Card>
+          )}
           <PillSalva label="Salva squadra" />
         </ActionForm>
       ) : (
@@ -116,7 +156,11 @@ async function Squadra({ params }: { params: Promise<{ id: string; chiave: strin
               <InvitoLink url={link} nomeLega={me.lega.nome} messaggio={`🏆 Gioca con i ${squadra.nome} nel torneo "${torneo.nome}" su The Cap:`} />
             </>
           ) : (
-            <p className="text-sm text-zinc-500">Il link della squadra arriva al prossimo salvataggio delle squadre da parte dell&apos;organizzatore.</p>
+            <form action={creaLinkSquadra.bind(null, torneo._id, squadra._key)}>
+              <SubmitButton className={buttonClass('primary')} pendingText="Creo…">
+                🔗 Crea link d&apos;invito
+              </SubmitButton>
+            </form>
           )}
         </Card>
       )}
