@@ -1,6 +1,7 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import type { ComponentProps, ReactNode } from 'react'
+import { PallinoAdmin } from './pallino-admin'
 import { BADGE, SKILLS, displayName, iniziali, overall, type Badge, type Player, type Skill } from '@/lib/roster'
 import type { Risposta, Stato } from '@/lib/matches'
 import { finestra } from '@/lib/finestra'
@@ -143,41 +144,16 @@ function FasciaCapitano() {
   )
 }
 
-// La "C" dell'organizzatore, come nel logo dell'app: C bianca bordata di verde su campo a strisce.
-function LogoC({ size = 22 }: { size?: number }) {
-  const c = 'M8.2 5.5h7.6l2.7 2.7v2.4h-4.2V9.3h-3.6v5.4h3.6v-1.3h4.2v2.4l-2.7 2.7H8.2l-2.7-2.7V8.2z'
-  return (
-    <svg viewBox="0 0 24 24" width={size} height={size} aria-hidden className="shrink-0 drop-shadow-sm">
-      <defs>
-        <clipPath id="logo-c-angoli">
-          <rect x="0.5" y="0.5" width="23" height="23" rx="5.5" />
-        </clipPath>
-      </defs>
-      {/* campo a strisce con gli angoli arrotondati */}
-      <g clipPath="url(#logo-c-angoli)">
-        <rect width="24" height="24" fill="#2a9d46" />
-        <path d="M4 0h4v24H4zM12 0h4v24h-4zM20 0h4v24h-4z" fill="#1f8a3c" />
-      </g>
-      {/* bordo: verde scuro fuori, filo chiaro dentro */}
-      <rect x="0.5" y="0.5" width="23" height="23" rx="5.5" fill="none" stroke="#14532d" strokeWidth="1" />
-      <rect x="1.5" y="1.5" width="21" height="21" rx="4.5" fill="none" stroke="#ffffff" strokeOpacity="0.35" strokeWidth="0.75" />
-      {/* la C come una lettera da maglia: contorno bianco, poi verde, poi il pieno bianco */}
-      <path d={c} fill="none" stroke="#ffffff" strokeWidth="2.6" strokeLinejoin="round" />
-      <path d={c} fill="#ffffff" stroke="#166534" strokeWidth="1.1" strokeLinejoin="round" />
-    </svg>
-  )
-}
-
-// L'organizzatore della lega: la "C" del logo, toccandola si apre la spiegazione.
+// L'organizzatore della lega: il pallino arancione con la "A", toccandolo si apre la spiegazione.
 export function IconaOrganizzatore() {
   return (
     <Medaglia
-      emoji={<span className="inline-block scale-[2.5] py-4"><LogoC /></span>}
+      emoji={<PallinoAdmin size={56} />}
       titolo="Organizzatore"
       testo="Gestisce la lega: crea le partite, apre e chiude le convocazioni, fa le squadre, inserisce i risultati e invita i giocatori."
       className="shrink-0 rounded-md"
     >
-      <LogoC />
+      <PallinoAdmin size={22} />
     </Medaglia>
   )
 }

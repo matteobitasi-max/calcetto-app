@@ -3,15 +3,20 @@
 import Link from 'next/link'
 import { useEffect, useRef, useState, useTransition } from 'react'
 import { scegliLega } from '@/app/actions'
+import { LogoC } from './logo-c'
+import { PallinoAdmin } from './pallino-admin'
 
-/** `organizzatore`: sono organizzatore di questa lega (mostra la "C"). */
+// Pallino "A" accanto alle leghe in cui sono organizzatore.
+export const Admin = () => <PallinoAdmin title="Sei organizzatore" />
+
+/** `organizzatore`: sono organizzatore di questa lega (mostra il pallino "A"). */
 export type LegaVoce = { id: string; nome: string; logo: string | null; organizzatore?: boolean }
 
-// "C" accanto alle leghe in cui sono organizzatore.
+// "C" del capitano di una squadra (tornei).
 export function Capitano() {
   return (
     <span
-      title="Sei organizzatore"
+      title="Capitano della squadra"
       className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-amber-400 text-[11px] font-bold text-zinc-900"
     >
       C
@@ -77,7 +82,7 @@ export function LegaMenu({
         aria-expanded={open}
       >
         <span className="truncate font-semibold">{pending ? 'Cambio lega…' : corrente.nome}</span>
-        {!pending && corrente.organizzatore && <Capitano />}
+        {!pending && corrente.organizzatore && <Admin />}
         <span className="text-xs text-zinc-500" aria-hidden>
           ▾
         </span>
@@ -106,7 +111,7 @@ export function LegaMenu({
                 >
                   <Stemma lega={l} size={24} />
                   <span className="min-w-0 flex-1 truncate">{l.nome}</span>
-                  {l.organizzatore && <Capitano />}
+                  {l.organizzatore && <Admin />}
                 </button>
               ))}
               <hr className="my-2 border-zinc-200 dark:border-zinc-800" />
@@ -133,7 +138,9 @@ export function LegaMenu({
             <span className="text-xs font-normal text-zinc-400">tutte le leghe</span>
           </Link>
           <Link href="/pro" role="menuitem" className={`${voce} font-semibold`} onClick={() => setOpen(false)}>
-            <span className="flex h-6 w-6 shrink-0 items-center justify-center">⭐</span>
+            <span className="flex h-6 w-6 shrink-0 items-center justify-center">
+              <LogoC />
+            </span>
             <span className="flex-1">The Cap Pro</span>
             <span className="rounded-full bg-amber-400 px-2 py-0.5 text-[10px] font-bold text-zinc-900">PRO</span>
           </Link>

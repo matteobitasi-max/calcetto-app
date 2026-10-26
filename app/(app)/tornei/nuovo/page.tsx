@@ -5,7 +5,7 @@ import { getPlayers } from '@/lib/matches'
 import { forza } from '@/lib/teams'
 import { puoCreareTornei } from '@/lib/tornei'
 import { avatarUrl } from '@/lib/image'
-import { Capitano, Stemma } from '@/components/lega-menu'
+import { Admin, Stemma } from '@/components/lega-menu'
 import { Card, Loading, PageTitle } from '@/components/ui'
 import { TorneoForm } from './torneo-form'
 
@@ -58,7 +58,7 @@ async function Form({ searchParams }: { searchParams: Promise<Record<string, str
           >
             <Stemma lega={{ nome: m.lega.nome, logo: avatarUrl(m.lega.logo, 64) }} size={28} />
             <span className="min-w-0 flex-1 truncate font-medium">{m.lega.nome}</span>
-            <Capitano />
+            <Admin />
             <span className="text-zinc-400">›</span>
           </Link>
         ))}

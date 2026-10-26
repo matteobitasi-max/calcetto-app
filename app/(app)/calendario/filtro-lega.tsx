@@ -2,11 +2,11 @@
 
 import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState, useTransition } from 'react'
-import { Capitano, Stemma } from '@/components/lega-menu'
+import { Admin, Stemma } from '@/components/lega-menu'
 
 export type VoceFiltro = { id: string; nome: string; logo: string | null; organizzatore: boolean }
 
-// Menu in cima al calendario: tutte le mie leghe (predefinito) o una sola, con logo e "C" se organizzo.
+// Menu in cima al calendario: tutte le mie leghe (predefinito) o una sola, con logo e pallino "A" se organizzo.
 export function FiltroLega({ leghe, scelta, mese }: { leghe: VoceFiltro[]; scelta: string; mese: string }) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
@@ -51,7 +51,7 @@ export function FiltroLega({ leghe, scelta, mese }: { leghe: VoceFiltro[]; scelt
           <>
             <Stemma lega={attuale} size={28} />
             <span className="min-w-0 flex-1 truncate">{attuale.nome}</span>
-            {attuale.organizzatore && <Capitano />}
+            {attuale.organizzatore && <Admin />}
           </>
         ) : (
           <>
@@ -75,7 +75,7 @@ export function FiltroLega({ leghe, scelta, mese }: { leghe: VoceFiltro[]; scelt
             <button key={l.id} type="button" role="option" aria-selected={l.id === scelta} className={voce(l.id === scelta)} onClick={() => scegli(l.id)}>
               <Stemma lega={l} size={24} />
               <span className="min-w-0 flex-1 truncate">{l.nome}</span>
-              {l.organizzatore && <Capitano />}
+              {l.organizzatore && <Admin />}
             </button>
           ))}
         </div>
