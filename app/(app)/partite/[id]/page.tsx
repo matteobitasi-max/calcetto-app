@@ -8,11 +8,12 @@ import { getCollegamento, stravaConfigurato } from '@/lib/strava'
 import { KmPartita } from '@/components/km-partita'
 import { MeteoPartita } from '@/components/meteo-partita'
 import { formatData, giornoPartita, oraPartita } from '@/lib/dates'
-import { aggiungiDaAttesa, allungaFinestra, apriConvocazioni, cambiaSquadra, cambiaStato, scegliLega, rimettiInAttesa, togliDallaPartita } from '@/app/actions'
+import { aggiungiDaAttesa, allungaFinestra, apriConvocazioni, cambiaSquadra, cambiaStato, convocaGiocatore, scegliLega, rimettiInAttesa, togliDallaPartita, togliDallaSquadra } from '@/app/actions'
 import { Countdown } from '@/components/countdown'
 import { ApriConvocazioni } from '@/components/apri-convocazioni'
 import { baseUrl } from '@/lib/url'
 import { SubmitButton } from '@/components/submit-button'
+import { SwipeRiga } from '@/components/swipe-riga'
 import { ButtonLink, Card, Loading, PlayerRow, StatoBadge, buttonClass } from '@/components/ui'
 import { FinestraInfo } from '../finestra-info'
 import { RispostaButtons } from '../risposta-buttons'
@@ -40,7 +41,9 @@ async function MatchDetail({ params }: { params: Promise<{ id: string }> }) {
   const aggiunti = presenti(match).filter((c) => c.aggiunto).length
   const gestisci = !!player.isAdmin && match.stato !== 'giocata' && match.stato !== 'annullata'
   const risposto = new Set(match.convocazioni.map((c) => c.giocatore?._id))
-  const mancanti = finestra(match) === 'aperta' ? rosa.filter((p) => p.attivo !== false && !risposto.has(p._id)) : []
+  // L'organizzatore può convocare chi manca con uno swipe a destra (anche a convocazioni chiuse).
+  const convoca = gestisci && !match.torneo
+  const mancanti = finestra(match) === 'aperta' || convoca ? rosa.filter((p) => p.attivo !== false && !risposto.has(p._id)) : []
 
   return (
     <div className="space-y-4">
@@ -134,7 +137,7 @@ async function MatchDetail({ params }: { params: Promise<{ id: string }> }) {
         )}
         <Gruppo titolo="In lista" match={match} risposta="presente" numerati gestisci={gestisci} me={player} mioId={player._id} />
         <Gruppo titolo="Lista d'attesa" match={match} risposta="riserva" numerati gestisci={gestisci} mioId={player._id} />
-        <Gruppo titolo="Non ci sono" match={match} risposta="assente" mioId={player._id} />
+        <Gruppo titolo="Non ci sono" match={match} risposta="assente" convoca={convoca} mioId={player._id} />
         {mancanti.length > 0 && (
           <div>
             <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-zinc-500">
@@ -143,7 +146,13 @@ async function MatchDetail({ params }: { params: Promise<{ id: string }> }) {
             <ul className="space-y-2 opacity-60">
               {mancanti.map((p) => (
                 <li key={p._id}>
-                  <PlayerRow player={p} />
+                  {convoca ? (
+                    <SwipeRiga destra={{ azione: convocaGiocatore.bind(null, match._id, p._id), label: 'Convoca' }}>
+                      <PlayerRow player={p} />
+                    </SwipeRiga>
+                  ) : (
+                    <PlayerRow player={p} />
+                  )}
                 </li>
               ))}
             </ul>
@@ -161,6 +170,7 @@ function Gruppo({
   risposta,
   numerati,
   gestisci,
+  convoca,
   me,
   mioId,
 }: {
@@ -170,6 +180,8 @@ function Gruppo({
   numerati?: boolean
   /** L'organizzatore può spostare persone tra lista e lista d'attesa. */
   gestisci?: boolean
+  /** L'organizzatore convoca con uno swipe a destra (chi non c'è). */
+  convoca?: boolean
   /** Per mostrare accanto ai nomi in lista chi ha pagato la quota (e l'icona per pagare). */
   me?: Membro
   /** Il mio nome va in cima e in grassetto (il numero resta la mia posizione in lista). */
@@ -187,46 +199,55 @@ function Gruppo({
         {titolo} ({items.length})
       </h3>
       <ul className="space-y-2">
-        {items.map((c) => (
-          <li key={c._key} className="flex items-center gap-2">
-            {numerati && <span className="w-5 text-right text-xs tabular-nums text-zinc-400">{c.posizione}</span>}
-            <div className="min-w-0 flex-1">
-              <PlayerRow
-                player={c.giocatore}
-                mio={c.giocatore?._id === mioId}
-                // pagamento a sinistra del voto: l'icona Satispay apre Satispay
-                prima={me && <PagamentoInLista match={match} me={me} playerId={c.giocatore._id} />}
-                right={
-                  <>
-                    {c.aggiunto && risposta === 'presente' && (
-                      <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-xs text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">aggiunto</span>
-                    )}
-                    {gestisci && risposta === 'riserva' && (
-                      <form action={aggiungiDaAttesa.bind(null, match._id, c._key)}>
-                        <SubmitButton className={`${buttonClass('secondary')} px-2 py-1 text-xs`} title="Mettilo in lista: i partecipanti salgono di uno">
-                          ➕ Aggiungi
-                        </SubmitButton>
-                      </form>
-                    )}
-                    {gestisci && risposta === 'presente' && c.aggiunto && (
-                      <form action={rimettiInAttesa.bind(null, match._id, c._key)}>
-                        <SubmitButton className="rounded px-2 py-1 text-xs text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800" title="Rimettilo in lista d'attesa">
-                          ↩ In attesa
-                        </SubmitButton>
-                      </form>
-                    )}
-                  </>
-                }
-              />
-            </div>
-          </li>
-        ))}
+        {items.map((c) => {
+          const riga = (
+            <PlayerRow
+              player={c.giocatore}
+              mio={c.giocatore?._id === mioId}
+              // pagamento a sinistra del voto: l'icona Satispay apre Satispay
+              prima={me && <PagamentoInLista match={match} me={me} playerId={c.giocatore._id} />}
+              right={
+                <>
+                  {c.aggiunto && risposta === 'presente' && (
+                    <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-xs text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">aggiunto</span>
+                  )}
+                  {gestisci && risposta === 'riserva' && (
+                    <form action={aggiungiDaAttesa.bind(null, match._id, c._key)}>
+                      <SubmitButton className={`${buttonClass('secondary')} px-2 py-1 text-xs`} title="Mettilo in lista: i partecipanti salgono di uno">
+                        ➕ Aggiungi
+                      </SubmitButton>
+                    </form>
+                  )}
+                  {gestisci && risposta === 'presente' && c.aggiunto && (
+                    <form action={rimettiInAttesa.bind(null, match._id, c._key)}>
+                      <SubmitButton className="rounded px-2 py-1 text-xs text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800" title="Rimettilo in lista d'attesa">
+                        ↩ In attesa
+                      </SubmitButton>
+                    </form>
+                  )}
+                </>
+              }
+            />
+          )
+          return (
+            <li key={c._key} className="flex items-center gap-2">
+              {numerati && <span className="w-5 text-right text-xs tabular-nums text-zinc-400">{c.posizione}</span>}
+              <div className="min-w-0 flex-1">
+                {convoca ? (
+                  <SwipeRiga destra={{ azione: convocaGiocatore.bind(null, match._id, c.giocatore._id), label: 'Convoca' }}>{riga}</SwipeRiga>
+                ) : (
+                  riga
+                )}
+              </div>
+            </li>
+          )
+        })}
       </ul>
     </div>
   )
 }
 
-// Organizzatore, squadre già fatte: ⇄ sposta il giocatore nell'altra squadra, 🗑️ lo toglie dalla partita.
+// Organizzatore, squadre già fatte: ⇄ sposta il giocatore nell'altra squadra (lo swipe lo rimette tra quelli da allocare).
 function RitoccoSquadra({ match, player, verso }: { match: Match; player: Player; verso: 'A' | 'B' }) {
   return (
     <span className="flex shrink-0 items-center gap-1">
@@ -237,18 +258,6 @@ function RitoccoSquadra({ match, player, verso }: { match: Match; player: Player
           className="flex h-8 w-8 items-center justify-center rounded-lg bg-zinc-100 text-base hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700"
         >
           ⇄
-        </SubmitButton>
-      </form>
-      <form action={togliDallaPartita.bind(null, match._id, player._id)}>
-        <SubmitButton
-          confirm={`Togliere ${displayName(player)} dalla partita? Passa tra i “non ci sono”.`}
-          title="Togli dalla partita"
-          aria-label={`Togli ${displayName(player)} dalla partita`}
-          className="flex h-8 w-8 items-center justify-center rounded-lg bg-red-50 text-red-600 hover:bg-red-100 dark:bg-red-950 dark:hover:bg-red-900"
-        >
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4" aria-hidden>
-            <path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6M10 11v6M14 11v6" />
-          </svg>
         </SubmitButton>
       </form>
     </span>
@@ -290,12 +299,18 @@ function Squadre({ match, mioId, gestisci }: { match: Match; mioId: string; gest
               <ul className="space-y-2">
                 {mioInCima(players, mioId, (p) => p._id).map((p) => (
                   <li key={p._id}>
-                    <PlayerRow
-                      player={p}
-                      mio={p._id === mioId}
-                      prima={<Prestazione match={match} playerId={p._id} />}
-                      right={gestisci && <RitoccoSquadra match={match} player={p} verso={lettera === 'A' ? 'B' : 'A'} />}
-                    />
+                    {gestisci ? (
+                      <SwipeRiga sinistra={{ azione: togliDallaSquadra.bind(null, match._id, p._id), label: 'Togli' }}>
+                        <PlayerRow
+                          player={p}
+                          mio={p._id === mioId}
+                          prima={<Prestazione match={match} playerId={p._id} />}
+                          right={<RitoccoSquadra match={match} player={p} verso={lettera === 'A' ? 'B' : 'A'} />}
+                        />
+                      </SwipeRiga>
+                    ) : (
+                      <PlayerRow player={p} mio={p._id === mioId} prima={<Prestazione match={match} playerId={p._id} />} />
+                    )}
                   </li>
                 ))}
               </ul>
@@ -306,27 +321,35 @@ function Squadre({ match, mioId, gestisci }: { match: Match; mioId: string; gest
       {gestisci && senzaSquadra.length > 0 && (
         <Card className="space-y-2 border-dashed">
           <h2 className="font-semibold">Senza squadra</h2>
-          <p className="text-xs text-zinc-500">In lista ma non ancora in una squadra: scegli dove metterli.</p>
+          <p className="text-xs text-zinc-500">In lista ma non ancora in una squadra: scegli dove metterli, o fai swipe a sinistra per toglierli dalla partita.</p>
           <ul className="space-y-2">
             {senzaSquadra.map((p) => (
               <li key={p._id}>
-                <PlayerRow
-                  player={p}
-                  mio={p._id === mioId}
-                  right={
-                    <span className="flex shrink-0 gap-1">
-                      {(['A', 'B'] as const).map((l) => (
-                        <form key={l} action={cambiaSquadra.bind(null, match._id, p._id, l)}>
-                          <SubmitButton
-                            className={`rounded-lg px-2 py-1 text-xs font-semibold text-white ${l === 'A' ? 'bg-blue-600' : 'bg-orange-500'}`}
-                          >
-                            → {l}
-                          </SubmitButton>
-                        </form>
-                      ))}
-                    </span>
-                  }
-                />
+                <SwipeRiga
+                  sinistra={{
+                    azione: togliDallaPartita.bind(null, match._id, p._id),
+                    label: 'Elimina',
+                    confirm: `Togliere ${displayName(p)} dalla partita? Passa tra i “non ci sono”.`,
+                  }}
+                >
+                  <PlayerRow
+                    player={p}
+                    mio={p._id === mioId}
+                    right={
+                      <span className="flex shrink-0 gap-1">
+                        {(['A', 'B'] as const).map((l) => (
+                          <form key={l} action={cambiaSquadra.bind(null, match._id, p._id, l)}>
+                            <SubmitButton
+                              className={`rounded-lg px-2 py-1 text-xs font-semibold text-white ${l === 'A' ? 'bg-blue-600' : 'bg-orange-500'}`}
+                            >
+                              → {l}
+                            </SubmitButton>
+                          </form>
+                        ))}
+                      </span>
+                    }
+                  />
+                </SwipeRiga>
               </li>
             ))}
           </ul>

@@ -95,6 +95,43 @@ export async function rimettiInAttesa(matchId: string, key: string) {
   await modificaLista(matchId, key, 'presente', false, -1)
 }
 
+// L'organizzatore convoca un giocatore della rosa che non si è convocato: risponde "ci sono" al suo posto
+// (si mette in coda come gli altri: se la lista è piena va in lista d'attesa).
+export async function convocaGiocatore(matchId: string, giocatoreId: string) {
+  const admin = await requireForDoc(matchId, 'organizzatore')
+  const giocatore = await sanity.fetch<{ legaId: string; attivo?: boolean } | null>(`*[_type == "player" && _id == $id][0]{"legaId": lega._ref, attivo}`, {
+    id: giocatoreId,
+  })
+  if (!giocatore || giocatore.legaId !== admin.lega._id || giocatore.attivo === false) throw new Error('Il giocatore non è nella rosa')
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const doc = await sanity.fetch<{ _rev: string; stato: Stato; torneo?: unknown; postiDisponibili: number; convocazioni?: RawConvocazione[] } | null>(
+      `*[_type == "match" && _id == $id][0]{_rev, stato, torneo, postiDisponibili, convocazioni}`,
+      { id: matchId },
+    )
+    if (!doc) throw new Error('Partita non trovata')
+    if ((doc.stato !== 'aperta' && doc.stato !== 'chiusa') || doc.torneo) throw new Error('In questa partita non si può convocare')
+    const list = [...(doc.convocazioni ?? [])]
+    const i = list.findIndex((c) => c.giocatore?._ref === giocatoreId)
+    if (i >= 0 && list[i].risposta !== 'assente') return
+    const entry = {
+      _key: i >= 0 ? list[i]._key : randomUUID(),
+      _type: 'convocazione',
+      giocatore: { _type: 'reference', _ref: giocatoreId },
+      risposta: 'presente' as Risposta,
+      rispostoIl: new Date().toISOString(),
+    }
+    if (i >= 0) list[i] = { ...list[i], ...entry }
+    else list.push(entry)
+    try {
+      await sanity.patch(matchId).ifRevisionId(doc._rev).set({ convocazioni: assegnaPosti(list, doc.postiDisponibili) }).commit()
+      refresh()
+      return
+    } catch (err) {
+      if (attempt === 2) throw err
+    }
+  }
+}
+
 async function modificaLista(matchId: string, key: string, da: Risposta, aggiunto: boolean, delta: number) {
   for (let attempt = 0; attempt < 3; attempt++) {
     const doc = await sanity.fetch<{ _rev: string; stato: Stato; postiDisponibili: number; convocazioni?: (RawConvocazione & { aggiunto?: boolean })[] } | null>(
@@ -365,6 +402,14 @@ export async function togliDallaPartita(matchId: string, giocatoreId: string) {
     )
     const senza = (s?: { _key: string; _ref: string }[]) => (s ?? []).filter((r) => r._ref !== giocatoreId)
     return { convocazioni: assegnaPosti(list, doc.postiDisponibili), squadraA: senza(doc.squadraA), squadraB: senza(doc.squadraB) }
+  })
+}
+
+// Rimette un giocatore tra quelli da allocare: esce dalla sua squadra ma resta in lista.
+export async function togliDallaSquadra(matchId: string, giocatoreId: string) {
+  await ritoccaSquadre(matchId, (doc) => {
+    const senza = (s?: { _key: string; _ref: string }[]) => (s ?? []).filter((r) => r._ref !== giocatoreId)
+    return { squadraA: senza(doc.squadraA), squadraB: senza(doc.squadraB) }
   })
 }
 
@@ -741,7 +786,7 @@ export async function uniscitiConInvito(codice: string) {
       `*[_type == "player" && lega._ref == $lega && clerkUserId == $id][0]._id`,
       { lega: lega._id, id: utente.id },
     )
-    if (vecchia) await sanity.patch(vecchia).set({ attivo: true }).commit()
+    if (vecchia) await sanity.patch(vecchia).set({ attivo: true }).unset(['rimossoIl']).commit()
     else await nuovaScheda(lega._id, utente, false)
   }
   await attivaLega(lega._id)
@@ -766,7 +811,7 @@ export async function aggiungimiAllaLega(legaId: string) {
       lega: legaId,
       id: utente.id,
     })
-    if (vecchia) await sanity.patch(vecchia).set({ attivo: true, isAdmin: true }).commit()
+    if (vecchia) await sanity.patch(vecchia).set({ attivo: true, isAdmin: true }).unset(['rimossoIl']).commit()
     else await nuovaScheda(legaId, utente, true)
   }
   await attivaLega(legaId)
@@ -1181,6 +1226,29 @@ export async function esciDallaLega(legaId: string) {
     }).catch(() => undefined)
   }
   if ((await cookies()).get(COOKIE_LEGA)?.value === legaId) (await cookies()).delete(COOKIE_LEGA)
+  refresh()
+}
+
+// L'organizzatore toglie un giocatore dalla rosa e dalla lega. La scheda resta (lo storico delle partite giocate
+// non cambia) ma non è più attiva e non compare più nella rosa; esce anche dalle partite non ancora giocate.
+// Se riceve un nuovo invito rientra con la sua scheda.
+export async function rimuoviDallaLega(giocatoreId: string) {
+  const admin = await requireForDoc(giocatoreId, 'organizzatore')
+  if (admin._id === giocatoreId) throw new Error('Per uscire dalla lega usa “Esci dalla lega”')
+  const ora = new Date().toISOString()
+  const partite = await sanity.fetch<(SquadreRaw & { _id: string })[]>(
+    `*[_type == "match" && lega._ref == $lega && stato in ["aperta", "chiusa"] && !defined(torneo) && data > $ora && references($id)]{_id, _rev, postiDisponibili, convocazioni, squadraA, squadraB}`,
+    { lega: admin.lega._id, ora, id: giocatoreId },
+  )
+  const tx = sanity.transaction().patch(giocatoreId, (p) => p.set({ attivo: false, isAdmin: false, puoInserireRisultati: false, rimossoIl: ora }))
+  const senza = (s?: { _key: string; _ref: string }[]) => (s ?? []).filter((r) => r._ref !== giocatoreId)
+  for (const m of partite) {
+    const list = (m.convocazioni ?? []).filter((c) => c.giocatore?._ref !== giocatoreId)
+    tx.patch(m._id, (p) =>
+      p.ifRevisionId(m._rev).set({ convocazioni: assegnaPosti(list, m.postiDisponibili), squadraA: senza(m.squadraA), squadraB: senza(m.squadraB) }),
+    )
+  }
+  await tx.commit()
   refresh()
 }
 
@@ -1674,7 +1742,7 @@ export async function entraInSquadra(codice: string) {
       lega: torneo.legaId,
       id: utente.id,
     })
-    if (vecchia) await sanity.patch(vecchia).set({ attivo: true }).commit()
+    if (vecchia) await sanity.patch(vecchia).set({ attivo: true }).unset(['rimossoIl']).commit()
     else await nuovaScheda(torneo.legaId, utente, false)
     me = vecchia ?? `player-${torneo.legaId}-${utente.id}`
   }

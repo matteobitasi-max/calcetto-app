@@ -64,12 +64,14 @@ export type Player = {
   isAdmin?: boolean
   puoInserireRisultati?: boolean
   attivo?: boolean
+  /** Tolto dalla lega da un organizzatore (non compare più nella rosa). */
+  rimosso?: boolean
   /** Ha già fatto l'accesso (la scheda è collegata a un account). */
   collegato?: boolean
   caratteristiche?: Partial<Record<Skill, number>>
 }
 
-export const playerFields = `_id, "legaId": lega._ref, nome, cognome, soprannome, email, telefono, dataNascita, foto, ruolo, piede, badge, notifiche, isAdmin, puoInserireRisultati, attivo, "collegato": defined(clerkUserId), caratteristiche`
+export const playerFields = `_id, "legaId": lega._ref, nome, cognome, soprannome, email, telefono, dataNascita, foto, ruolo, piede, badge, notifiche, isAdmin, puoInserireRisultati, attivo, "rimosso": defined(rimossoIl), "collegato": defined(clerkUserId), caratteristiche`
 
 
 // Chi può segnare risultato, marcatori e MVP.

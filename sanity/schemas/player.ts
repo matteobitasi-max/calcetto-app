@@ -77,6 +77,13 @@ export const player = defineType({
       initialValue: true,
     }),
     defineField({
+      name: 'rimossoIl',
+      title: 'Tolto dalla lega il',
+      description: 'Tolto dalla rosa da un organizzatore: non compare più nemmeno tra i non attivi (rientra se riceve un nuovo invito)',
+      type: 'datetime',
+      readOnly: true,
+    }),
+    defineField({
       name: 'ruolo',
       title: 'Ruolo preferito',
       type: 'string',
