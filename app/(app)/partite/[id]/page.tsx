@@ -247,24 +247,6 @@ function Gruppo({
   )
 }
 
-// Organizzatore, squadre già fatte: ⇄ sposta il giocatore nell'altra squadra (lo swipe lo rimette tra quelli da allocare).
-function RitoccoSquadra({ match, player, verso }: { match: Match; player: Player; verso: 'A' | 'B' }) {
-  const nome = (verso === 'A' ? match.nomeA : match.nomeB) ?? nomeSquadra(verso)
-  return (
-    <span className="flex shrink-0 items-center gap-1">
-      <form action={cambiaSquadra.bind(null, match._id, player._id, verso)}>
-        <SubmitButton
-          title={`Sposta in ${nome}`}
-          aria-label={`Sposta ${displayName(player)} in ${nome}`}
-          className="flex h-8 w-8 items-center justify-center rounded-lg bg-zinc-100 text-base hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700"
-        >
-          ⇄
-        </SubmitButton>
-      </form>
-    </span>
-  )
-}
-
 function Squadre({ match, mioId, gestisci }: { match: Match; mioId: string; gestisci: boolean }) {
   const teams: ['A' | 'B', Player[], string][] = [
     ['A', match.squadraA, 'border-t-blue-500'],
@@ -301,13 +283,12 @@ function Squadre({ match, mioId, gestisci }: { match: Match; mioId: string; gest
                 {mioInCima(players, mioId, (p) => p._id).map((p) => (
                   <li key={p._id}>
                     {gestisci ? (
-                      <SwipeRiga sinistra={{ azione: togliDallaSquadra.bind(null, match._id, p._id), label: 'Togli' }}>
-                        <PlayerRow
-                          player={p}
-                          mio={p._id === mioId}
-                          prima={<Prestazione match={match} playerId={p._id} />}
-                          right={<RitoccoSquadra match={match} player={p} verso={lettera === 'A' ? 'B' : 'A'} />}
-                        />
+                      // swipe a sinistra: torna tra quelli da allocare; a destra: passa nell'altra squadra
+                      <SwipeRiga
+                        sinistra={{ azione: togliDallaSquadra.bind(null, match._id, p._id), label: 'Togli' }}
+                        destra={{ azione: cambiaSquadra.bind(null, match._id, p._id, lettera === 'A' ? 'B' : 'A'), label: '⇄ Scambia' }}
+                      >
+                        <PlayerRow player={p} mio={p._id === mioId} prima={<Prestazione match={match} playerId={p._id} />} />
                       </SwipeRiga>
                     ) : (
                       <PlayerRow player={p} mio={p._id === mioId} prima={<Prestazione match={match} playerId={p._id} />} />
