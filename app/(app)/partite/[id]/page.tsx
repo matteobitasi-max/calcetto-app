@@ -286,7 +286,7 @@ function Squadre({ match, mioId, gestisci }: { match: Match; mioId: string; gest
                       // swipe a sinistra: torna tra quelli da allocare; a destra: passa nell'altra squadra
                       <SwipeRiga
                         sinistra={{ azione: togliDallaSquadra.bind(null, match._id, p._id), label: 'Togli' }}
-                        destra={{ azione: cambiaSquadra.bind(null, match._id, p._id, lettera === 'A' ? 'B' : 'A'), label: '⇄ Scambia' }}
+                        destra={{ azione: cambiaSquadra.bind(null, match._id, p._id, lettera === 'A' ? 'B' : 'A'), label: 'Scambia' }}
                       >
                         <PlayerRow player={p} mio={p._id === mioId} prima={<Prestazione match={match} playerId={p._id} />} />
                       </SwipeRiga>
