@@ -312,6 +312,62 @@ export async function salvaFormazioni(
   redirect(`/partite/${matchId}`)
 }
 
+// Ritocchi alle squadre già fatte (organizzatori, a convocazioni chiuse, non nei tornei).
+type SquadreRaw = {
+  _rev: string
+  stato: Stato
+  torneo?: unknown
+  postiDisponibili: number
+  convocazioni?: (RawConvocazione & { aggiunto?: boolean })[]
+  squadraA?: { _key: string; _ref: string }[]
+  squadraB?: { _key: string; _ref: string }[]
+}
+
+async function ritoccaSquadre(matchId: string, cambia: (doc: SquadreRaw) => Record<string, unknown> | null) {
+  await requireForDoc(matchId, 'organizzatore')
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const doc = await sanity.fetch<SquadreRaw | null>(
+      `*[_type == "match" && _id == $id][0]{_rev, stato, torneo, postiDisponibili, convocazioni, squadraA, squadraB}`,
+      { id: matchId },
+    )
+    if (!doc) throw new Error('Partita non trovata')
+    if (doc.stato !== 'chiusa' || doc.torneo) throw new Error('Le squadre di questa partita non si possono modificare')
+    const set = cambia(doc)
+    if (!set) return
+    try {
+      await sanity.patch(matchId).ifRevisionId(doc._rev).set(set).commit()
+      refresh()
+      return
+    } catch (err) {
+      if (attempt === 2) throw err
+    }
+  }
+}
+
+// Sposta un giocatore in lista nella squadra A o B (anche chi non era ancora in nessuna).
+export async function cambiaSquadra(matchId: string, giocatoreId: string, verso: 'A' | 'B') {
+  await ritoccaSquadre(matchId, (doc) => {
+    const inLista = doc.convocazioni?.some((c) => c.giocatore?._ref === giocatoreId && c.risposta === 'presente')
+    if (!inLista) return null
+    const senza = (s?: { _key: string; _ref: string }[]) => (s ?? []).filter((r) => r._ref !== giocatoreId)
+    const [a, b] = [senza(doc.squadraA), senza(doc.squadraB)]
+    ;(verso === 'A' ? a : b).push(ref(giocatoreId))
+    return { squadraA: a, squadraB: b }
+  })
+}
+
+// Toglie un giocatore dalla partita: esce dalla sua squadra e passa tra i "non ci sono".
+// Se c'è qualcuno in lista d'attesa, sale in lista (senza squadra: l'organizzatore lo mette dove vuole).
+export async function togliDallaPartita(matchId: string, giocatoreId: string) {
+  await ritoccaSquadre(matchId, (doc) => {
+    const list = (doc.convocazioni ?? []).map((c) =>
+      c.giocatore?._ref === giocatoreId ? { ...c, risposta: 'assente' as Risposta, aggiunto: false } : c,
+    )
+    const senza = (s?: { _key: string; _ref: string }[]) => (s ?? []).filter((r) => r._ref !== giocatoreId)
+    return { convocazioni: assegnaPosti(list, doc.postiDisponibili), squadraA: senza(doc.squadraA), squadraB: senza(doc.squadraB) }
+  })
+}
+
 // Risultato, marcatori e MVP: dopo la fine della partita, per organizzatori e refertatori.
 // Il punteggio di ogni squadra è la somma dei gol dei suoi giocatori più autogol/altri.
 export async function salvaRisultato(matchId: string, _prev: FormState, formData: FormData): Promise<FormState> {

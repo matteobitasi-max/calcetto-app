@@ -8,7 +8,7 @@ import { getCollegamento, stravaConfigurato } from '@/lib/strava'
 import { KmPartita } from '@/components/km-partita'
 import { MeteoPartita } from '@/components/meteo-partita'
 import { formatData, giornoPartita, oraPartita } from '@/lib/dates'
-import { aggiungiDaAttesa, allungaFinestra, apriConvocazioni, cambiaStato, scegliLega, rimettiInAttesa } from '@/app/actions'
+import { aggiungiDaAttesa, allungaFinestra, apriConvocazioni, cambiaSquadra, cambiaStato, scegliLega, rimettiInAttesa, togliDallaPartita } from '@/app/actions'
 import { Countdown } from '@/components/countdown'
 import { ApriConvocazioni } from '@/components/apri-convocazioni'
 import { baseUrl } from '@/lib/url'
@@ -110,7 +110,7 @@ async function MatchDetail({ params }: { params: Promise<{ id: string }> }) {
       {player.isAdmin && match.stato !== 'giocata' && <AdminPanel match={match} whatsappUrl={await whatsappUrl(match, player.lega.nome)} />}
 
       {match.squadraA.length + match.squadraB.length > 0 && (
-        <Squadre match={match} mioId={player._id} />
+        <Squadre match={match} mioId={player._id} gestisci={!!player.isAdmin && match.stato === 'chiusa' && !match.torneo} />
       )}
 
       {player.isAdmin && <Cassa match={match} mioId={player._id} />}
@@ -226,7 +226,36 @@ function Gruppo({
   )
 }
 
-function Squadre({ match, mioId }: { match: Match; mioId: string }) {
+// Organizzatore, squadre già fatte: ⇄ sposta il giocatore nell'altra squadra, 🗑️ lo toglie dalla partita.
+function RitoccoSquadra({ match, player, verso }: { match: Match; player: Player; verso: 'A' | 'B' }) {
+  return (
+    <span className="flex shrink-0 items-center gap-1">
+      <form action={cambiaSquadra.bind(null, match._id, player._id, verso)}>
+        <SubmitButton
+          title={`Sposta nella Squadra ${verso}`}
+          aria-label={`Sposta ${displayName(player)} nella Squadra ${verso}`}
+          className="flex h-8 w-8 items-center justify-center rounded-lg bg-zinc-100 text-base hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700"
+        >
+          ⇄
+        </SubmitButton>
+      </form>
+      <form action={togliDallaPartita.bind(null, match._id, player._id)}>
+        <SubmitButton
+          confirm={`Togliere ${displayName(player)} dalla partita? Passa tra i “non ci sono”.`}
+          title="Togli dalla partita"
+          aria-label={`Togli ${displayName(player)} dalla partita`}
+          className="flex h-8 w-8 items-center justify-center rounded-lg bg-red-50 text-red-600 hover:bg-red-100 dark:bg-red-950 dark:hover:bg-red-900"
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4" aria-hidden>
+            <path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6M10 11v6M14 11v6" />
+          </svg>
+        </SubmitButton>
+      </form>
+    </span>
+  )
+}
+
+function Squadre({ match, mioId, gestisci }: { match: Match; mioId: string; gestisci: boolean }) {
   const teams: ['A' | 'B', Player[], string][] = [
     ['A', match.squadraA, 'border-t-blue-500'],
     ['B', match.squadraB, 'border-t-orange-500'],
@@ -234,6 +263,10 @@ function Squadre({ match, mioId }: { match: Match; mioId: string }) {
   const mia = match.squadraA.some((p) => p._id === mioId) ? 'A' : match.squadraB.some((p) => p._id === mioId) ? 'B' : null
   // Nelle partite dei tornei le squadre hanno un nome.
   const nome = (l: 'A' | 'B') => (l === 'A' ? match.nomeA : match.nomeB) ?? `Squadra ${l}`
+  const inSquadra = new Set([...match.squadraA, ...match.squadraB].map((p) => p._id))
+  const senzaSquadra = presenti(match)
+    .map((c) => c.giocatore)
+    .filter((p) => p && !inSquadra.has(p._id))
   return (
     <div className="space-y-3">
       {mia && match.stato !== 'giocata' && (
@@ -257,7 +290,12 @@ function Squadre({ match, mioId }: { match: Match; mioId: string }) {
               <ul className="space-y-2">
                 {mioInCima(players, mioId, (p) => p._id).map((p) => (
                   <li key={p._id}>
-                    <PlayerRow player={p} mio={p._id === mioId} prima={<Prestazione match={match} playerId={p._id} />} />
+                    <PlayerRow
+                      player={p}
+                      mio={p._id === mioId}
+                      prima={<Prestazione match={match} playerId={p._id} />}
+                      right={gestisci && <RitoccoSquadra match={match} player={p} verso={lettera === 'A' ? 'B' : 'A'} />}
+                    />
                   </li>
                 ))}
               </ul>
@@ -265,6 +303,35 @@ function Squadre({ match, mioId }: { match: Match; mioId: string }) {
           )
         })}
       </div>
+      {gestisci && senzaSquadra.length > 0 && (
+        <Card className="space-y-2 border-dashed">
+          <h2 className="font-semibold">Senza squadra</h2>
+          <p className="text-xs text-zinc-500">In lista ma non ancora in una squadra: scegli dove metterli.</p>
+          <ul className="space-y-2">
+            {senzaSquadra.map((p) => (
+              <li key={p._id}>
+                <PlayerRow
+                  player={p}
+                  mio={p._id === mioId}
+                  right={
+                    <span className="flex shrink-0 gap-1">
+                      {(['A', 'B'] as const).map((l) => (
+                        <form key={l} action={cambiaSquadra.bind(null, match._id, p._id, l)}>
+                          <SubmitButton
+                            className={`rounded-lg px-2 py-1 text-xs font-semibold text-white ${l === 'A' ? 'bg-blue-600' : 'bg-orange-500'}`}
+                          >
+                            → {l}
+                          </SubmitButton>
+                        </form>
+                      ))}
+                    </span>
+                  }
+                />
+              </li>
+            ))}
+          </ul>
+        </Card>
+      )}
     </div>
   )
 }
