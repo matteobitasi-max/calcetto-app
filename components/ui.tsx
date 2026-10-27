@@ -219,37 +219,55 @@ export async function PlayerRow({
   )
 }
 
-// Le caratteristiche a barre. Pro: la parte guadagnata rispetto ai voti di partenza è viola trasparente.
+// Le caratteristiche a barre. Pro: rispetto ai voti di partenza, la parte guadagnata è viola trasparente
+// e quella persa rosso trasparente.
 export async function SkillBars({ player }: { player: Player }) {
   const t = await getT()
   const voci = (Object.entries(SKILLS) as [Skill, string][]).map(([key, label]) => {
     const value = player.caratteristiche?.[key] ?? 0
-    const base = player.caratteristicheBase?.[key]
-    const guadagno = base != null && value > base ? Math.round((value - base) * 100) / 100 : 0
-    return { key, label, value, base: guadagno ? base! : value, guadagno }
+    const base = player.caratteristicheBase?.[key] ?? value
+    return { key, label, value, base, diff: Math.round((value - base) * 100) / 100 }
   })
-  const miglioramenti = voci.some((v) => v.guadagno > 0)
+  const su = voci.some((v) => v.diff > 0)
+  const giu = voci.some((v) => v.diff < 0)
   return (
     <div className="space-y-3">
       <ul className="space-y-2">
-        {voci.map(({ key, label, value, base, guadagno }) => (
+        {voci.map(({ key, label, value, base, diff }) => (
           <li key={key} className="grid grid-cols-[6rem_1fr_4.5rem] items-center gap-2 text-sm">
             <span>{t(label)}</span>
             <span className="flex h-2 overflow-hidden rounded bg-zinc-200 dark:bg-zinc-800">
-              <span className={`block h-2 bg-green-600 ${guadagno ? 'rounded-l' : 'rounded'}`} style={{ width: `${base * 10}%` }} />
-              {guadagno > 0 && <span className="block h-2 rounded-r bg-violet-500/45" style={{ width: `${guadagno * 10}%` }} />}
+              <span className={`block h-2 bg-green-600 ${diff ? 'rounded-l' : 'rounded'}`} style={{ width: `${Math.min(value, base) * 10}%` }} />
+              {diff > 0 && <span className="block h-2 rounded-r bg-violet-500/45" style={{ width: `${diff * 10}%` }} />}
+              {diff < 0 && <span className="block h-2 rounded-r bg-red-500/35" style={{ width: `${-diff * 10}%` }} />}
             </span>
             <span className="text-right tabular-nums">
               {t.numero(value)}
-              {guadagno > 0 && <span className="ml-1 text-xs font-semibold text-violet-600 dark:text-violet-400">+{t.numero(guadagno)}</span>}
+              {diff !== 0 && (
+                <span className={`ml-1 text-xs font-semibold ${diff > 0 ? 'text-violet-600 dark:text-violet-400' : 'text-red-600 dark:text-red-400'}`}>
+                  {diff > 0 ? '+' : '−'}
+                  {t.numero(Math.abs(diff))}
+                </span>
+              )}
             </span>
           </li>
         ))}
       </ul>
-      {miglioramenti && (
-        <p className="flex items-center gap-1.5 text-xs text-zinc-500">
-          <span className="inline-block h-2 w-4 rounded bg-violet-500/45" />
-          {t('Miglioramento rispetto ai voti di partenza (Pro)')}
+      {(su || giu) && (
+        <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-zinc-500">
+          {su && (
+            <span className="flex items-center gap-1.5">
+              <span className="inline-block h-2 w-4 rounded bg-violet-500/45" />
+              {t('Migliorato')}
+            </span>
+          )}
+          {giu && (
+            <span className="flex items-center gap-1.5">
+              <span className="inline-block h-2 w-4 rounded bg-red-500/35" />
+              {t('Peggiorato')}
+            </span>
+          )}
+          <span>{t('rispetto ai voti di partenza (Pro)')}</span>
         </p>
       )}
     </div>

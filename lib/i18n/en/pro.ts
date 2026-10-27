@@ -49,5 +49,7 @@ export const pro: Record<string, string> = {
   'Il pagamento è addebitato sul tuo account Google Play. L’abbonamento si rinnova automaticamente se non lo disdici prima della scadenza, da Google Play → Abbonamenti.': 'Payment is charged to your Google Play account. The subscription renews automatically unless cancelled before it ends, in Google Play → Subscriptions.',
   'Termini d’uso': 'Terms of use',
   'Il marchio PRO accanto al tuo nome, in tutte le leghe': 'The PRO badge next to your name, in every league',
-  'Miglioramento rispetto ai voti di partenza (Pro)': 'Improvement over the starting ratings (Pro)',
+  'Migliorato': 'Improved',
+  'Peggiorato': 'Dropped',
+  'rispetto ai voti di partenza (Pro)': 'compared with the starting ratings (Pro)',
 }
