@@ -1,12 +1,10 @@
-// Gli organizzatori (admin) di una lega: pallino arancione con la "A".
+import { LogoC } from './logo-c'
+
+// Gli organizzatori (admin) di una lega: la "C" del logo.
 export function PallinoAdmin({ size = 20, title = 'Organizzatore' }: { size?: number; title?: string }) {
   return (
-    <span
-      title={title}
-      className="inline-flex shrink-0 items-center justify-center rounded-full bg-orange-500 font-bold text-white"
-      style={{ width: size, height: size, fontSize: size * 0.55 }}
-    >
-      A
+    <span title={title} className="inline-flex shrink-0">
+      <LogoC size={size} />
     </span>
   )
 }

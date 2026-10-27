@@ -2,7 +2,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import type { ComponentProps, ReactNode } from 'react'
 import { PallinoAdmin } from './pallino-admin'
-import { LogoC } from './logo-c'
+import { MarchioPro } from './logo-c'
 import { BADGE, SKILLS, displayName, iniziali, overall, type Badge, type Player, type Skill } from '@/lib/roster'
 import type { Risposta, Stato } from '@/lib/matches'
 import { finestra } from '@/lib/finestra'
@@ -122,7 +122,7 @@ const STILE_BADGE: Record<Badge, string> = {
   promessa: 'bg-violet-100 text-violet-800 ring-violet-300 dark:bg-violet-950 dark:text-violet-300 dark:ring-violet-800',
 }
 
-// La fascia da capitano: banda gialla con la "A" (come organizzatori e capitani delle squadre).
+// La fascia da capitano: banda gialla con la "A".
 function FasciaCapitano() {
   return (
     <svg viewBox="0 0 24 16" className="h-3 w-[18px]" aria-hidden>
@@ -135,7 +135,7 @@ function FasciaCapitano() {
   )
 }
 
-// L'organizzatore della lega: il pallino arancione con la "A", toccandolo si apre la spiegazione.
+// L'organizzatore della lega: la "C" del logo, toccandolo si apre la spiegazione.
 export async function IconaOrganizzatore() {
   const t = await getT()
   return (
@@ -192,11 +192,7 @@ export async function PlayerRow({
       <Avatar player={player} />
       <Link href={`/giocatori/${player._id}`} className="min-w-0 flex-1 hover:underline">
         <div className="flex min-w-0 items-center gap-1.5">
-          {player.pro && (
-            <span title="The Cap Pro" className="flex shrink-0">
-              <LogoC size={16} />
-            </span>
-          )}
+          {player.pro && <MarchioPro />}
           <span className={`truncate ${mio ? 'font-extrabold' : 'font-medium'}`}>{displayName(player)}</span>
           <PlayerBadge badge={player.badge} />
         </div>

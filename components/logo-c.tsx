@@ -22,3 +22,13 @@ export function LogoC({ size = 22 }: { size?: number }) {
     </svg>
   )
 }
+
+// Chi ha l'abbonamento Pro: la C con la scritta PRO accanto.
+export function MarchioPro({ size = 16 }: { size?: number }) {
+  return (
+    <span title="The Cap Pro" className="inline-flex shrink-0 items-center gap-0.5">
+      <LogoC size={size} />
+      <span className="rounded bg-amber-400 px-1 text-[9px] font-extrabold leading-[14px] text-zinc-900">PRO</span>
+    </span>
+  )
+}

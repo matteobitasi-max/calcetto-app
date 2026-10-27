@@ -64,7 +64,7 @@ export type Player = {
   isAdmin?: boolean
   puoInserireRisultati?: boolean
   attivo?: boolean
-  /** Ha l'abbonamento Pro (C del logo accanto al nome). */
+  /** Ha l'abbonamento Pro (C con la scritta PRO accanto al nome). */
   pro?: boolean
   /** Pro: data dell'ultima partita già valutata per aggiornare le caratteristiche. */
   revisioneIl?: string

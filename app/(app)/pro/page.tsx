@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { Suspense, type ReactNode } from 'react'
-import { LogoC } from '@/components/logo-c'
+import { MarchioPro } from '@/components/logo-c'
 import { getUtente, requirePlayer } from '@/lib/player'
 import { chiaviRevenueCat, mioAbbonamento, pagamentiConfigurati } from '@/lib/abbonamenti'
 import { AttivaPro } from '@/components/attiva-pro'
@@ -44,7 +44,7 @@ const FUNZIONI: { titolo: string; voci: [ReactNode, string][]; link?: [string, s
   {
     titolo: '👤 Il tuo abbonamento',
     voci: [
-      [<LogoC key="c" size={18} />, 'La C di The Cap accanto al tuo nome, in tutte le leghe'],
+      [<MarchioPro key="c" size={16} />, 'Il marchio PRO accanto al tuo nome, in tutte le leghe'],
       ['👑', 'Tutte le funzioni Pro nelle leghe che organizzi'],
     ],
   },
@@ -102,7 +102,7 @@ async function Vetrina() {
           <ul className="space-y-2 text-sm text-zinc-600 dark:text-zinc-300">
             {f.voci.map(([icona, testo]) => (
               <li key={testo} className="flex gap-2">
-                <span className="flex w-6 shrink-0 justify-center">{icona}</span>
+                <span className="flex min-w-6 shrink-0 justify-center">{icona}</span>
                 <span>{t(testo)}</span>
               </li>
             ))}

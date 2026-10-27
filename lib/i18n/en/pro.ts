@@ -48,4 +48,5 @@ export const pro: Record<string, string> = {
   'Il pagamento è addebitato sul tuo account Apple. L’abbonamento si rinnova automaticamente se non lo disdici almeno 24 ore prima della scadenza, dalle impostazioni dell’account Apple.': 'Payment is charged to your Apple account. The subscription renews automatically unless cancelled at least 24 hours before it ends, in your Apple account settings.',
   'Il pagamento è addebitato sul tuo account Google Play. L’abbonamento si rinnova automaticamente se non lo disdici prima della scadenza, da Google Play → Abbonamenti.': 'Payment is charged to your Google Play account. The subscription renews automatically unless cancelled before it ends, in Google Play → Subscriptions.',
   'Termini d’uso': 'Terms of use',
+  'Il marchio PRO accanto al tuo nome, in tutte le leghe': 'The PRO badge next to your name, in every league',
 }
