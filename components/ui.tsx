@@ -8,6 +8,7 @@ import type { Risposta, Stato } from '@/lib/matches'
 import { finestra } from '@/lib/finestra'
 import { avatarUrl, immagineUrl } from '@/lib/image'
 import { FotoZoom } from './foto-zoom'
+import { PezzoBarra } from './pezzo-barra'
 import { Medaglia } from './medaglia'
 import { buttonClass, inputClass } from './ui-classes'
 import { getT } from '@/lib/lingua'
@@ -220,7 +221,7 @@ export async function PlayerRow({
 }
 
 // Le caratteristiche a barre. Pro: rispetto ai voti di partenza, la parte guadagnata è viola trasparente
-// e quella persa rosso trasparente.
+// e quella persa rosso trasparente; toccandole si vede di quanto.
 export async function SkillBars({ player }: { player: Player }) {
   const t = await getT()
   const voci = (Object.entries(SKILLS) as [Skill, string][]).map(([key, label]) => {
@@ -234,22 +235,19 @@ export async function SkillBars({ player }: { player: Player }) {
     <div className="space-y-3">
       <ul className="space-y-2">
         {voci.map(({ key, label, value, base, diff }) => (
-          <li key={key} className="grid grid-cols-[6rem_1fr_4.5rem] items-center gap-2 text-sm">
+          <li key={key} className="grid grid-cols-[6rem_1fr_2.5rem] items-center gap-2 text-sm">
             <span>{t(label)}</span>
-            <span className="flex h-2 overflow-hidden rounded bg-zinc-200 dark:bg-zinc-800">
+            <span className="flex h-2 rounded bg-zinc-200 dark:bg-zinc-800">
               <span className={`block h-2 bg-green-600 ${diff ? 'rounded-l' : 'rounded'}`} style={{ width: `${Math.min(value, base) * 10}%` }} />
-              {diff > 0 && <span className="block h-2 rounded-r bg-violet-500/45" style={{ width: `${diff * 10}%` }} />}
-              {diff < 0 && <span className="block h-2 rounded-r bg-red-500/35" style={{ width: `${-diff * 10}%` }} />}
-            </span>
-            <span className="text-right tabular-nums">
-              {t.numero(value)}
               {diff !== 0 && (
-                <span className={`ml-1 text-xs font-semibold ${diff > 0 ? 'text-violet-600 dark:text-violet-400' : 'text-red-600 dark:text-red-400'}`}>
-                  {diff > 0 ? '+' : '−'}
-                  {t.numero(Math.abs(diff))}
-                </span>
+                <PezzoBarra
+                  larghezza={Math.abs(diff) * 10}
+                  su={diff > 0}
+                  testo={t(diff > 0 ? '+{diff} (da {base})' : '−{diff} (da {base})', { diff: t.numero(Math.abs(diff)), base: t.numero(base) })}
+                />
               )}
             </span>
+            <span className="text-right tabular-nums">{t.numero(value)}</span>
           </li>
         ))}
       </ul>
@@ -267,7 +265,7 @@ export async function SkillBars({ player }: { player: Player }) {
               {t('Peggiorato')}
             </span>
           )}
-          <span>{t('rispetto ai voti di partenza (Pro)')}</span>
+          <span>{t('rispetto ai voti di partenza (Pro): tocca la parte colorata per vedere di quanto')}</span>
         </p>
       )}
     </div>

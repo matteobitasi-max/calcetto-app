@@ -52,4 +52,7 @@ export const pro: Record<string, string> = {
   'Migliorato': 'Improved',
   'Peggiorato': 'Dropped',
   'rispetto ai voti di partenza (Pro)': 'compared with the starting ratings (Pro)',
+  '+{diff} (da {base})': '+{diff} (from {base})',
+  '−{diff} (da {base})': '−{diff} (from {base})',
+  'rispetto ai voti di partenza (Pro): tocca la parte colorata per vedere di quanto': 'compared with the starting ratings (Pro): tap the coloured part to see by how much',
 }
