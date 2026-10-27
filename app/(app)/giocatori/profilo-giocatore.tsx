@@ -15,7 +15,6 @@ import { caricaFoto } from '@/app/actions'
 import { AvatarUpload } from '@/components/avatar-upload'
 import { NotificheToggle } from '@/components/notifiche-toggle'
 import { PreferenzeNotifiche } from '@/components/preferenze-notifiche'
-import { EliminaAccount } from '@/components/elimina-account'
 import { Avatar, Card, Overall, PlayerBadge, SkillBars, buttonClass } from '@/components/ui'
 
 // Il profilo di un giocatore: usato sia per /giocatori/[id] sia per il mio /profilo.
@@ -150,7 +149,6 @@ export async function ProfiloGiocatore({ id }: { id: string }) {
           <SignOutButton redirectUrl="/sign-in">
             <button className={`${buttonClass('secondary')} w-full`}>{t('Esci')}</button>
           </SignOutButton>
-          <EliminaAccount />
         </div>
       )}
     </div>
