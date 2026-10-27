@@ -12,6 +12,10 @@ export const abbonamento = defineType({
     defineField({ name: 'attivo', title: 'Attivo', type: 'boolean', initialValue: true }),
     defineField({ name: 'dal', title: 'Attivo dal', type: 'datetime' }),
     defineField({ name: 'scadenza', title: 'Scade il', description: 'Vuoto = senza scadenza', type: 'datetime' }),
+    // Abbonamenti pagati nelle app: li scrive il server da RevenueCat (non modificarli a mano).
+    defineField({ name: 'store', title: 'Store', type: 'string', readOnly: true, description: 'APP_STORE / PLAY_STORE: pagato nell\u2019app' }),
+    defineField({ name: 'prodotto', title: 'Prodotto', type: 'string', readOnly: true }),
+    defineField({ name: 'rinnovo', title: 'Rinnovo automatico', type: 'boolean', readOnly: true }),
   ],
   preview: {
     select: { email: 'email', attivo: 'attivo', scadenza: 'scadenza' },

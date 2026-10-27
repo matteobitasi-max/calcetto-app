@@ -1,7 +1,9 @@
 import Link from 'next/link'
 import { Suspense, type ReactNode } from 'react'
 import { LogoC } from '@/components/logo-c'
-import { requirePlayer } from '@/lib/player'
+import { getUtente, requirePlayer } from '@/lib/player'
+import { chiaviRevenueCat, mioAbbonamento, pagamentiConfigurati } from '@/lib/abbonamenti'
+import { AttivaPro } from '@/components/attiva-pro'
 import { legaPro } from '@/lib/pro'
 import { ButtonLink, Card, Loading, PageTitle } from '@/components/ui'
 import { getT } from '@/lib/lingua'
@@ -57,14 +59,32 @@ const FUNZIONI: { titolo: string; voci: [ReactNode, string][]; link?: [string, s
 
 // Cosa comprende la versione Pro, e se è attiva nella lega in cui sono.
 async function Vetrina() {
-  const [me, t] = await Promise.all([requirePlayer(), getT()])
-  const attiva = await legaPro(me.lega._id)
+  const [me, t, utente] = await Promise.all([requirePlayer(), getT(), getUtente()])
+  const [attiva, mio] = await Promise.all([legaPro(me.lega._id), utente ? mioAbbonamento(utente.id) : null])
   return (
     <div className="space-y-4">
+      {utente && pagamentiConfigurati() ? (
+        <Card className={`space-y-3 ${mio ? 'border-green-600 bg-green-50 dark:bg-green-950' : 'border-amber-400'}`}>
+          {!mio && (
+            <p className="text-sm">
+              {me.isAdmin
+                ? t('Con Pro, {lega} e tutte le leghe che organizzi hanno le funzioni qui sotto. Lo paghi solo tu: i giocatori le usano gratis.', { lega: me.lega.nome })
+                : t('Con Pro, le leghe che organizzi hanno le funzioni qui sotto. Lo paghi solo tu: i giocatori le usano gratis.')}
+            </p>
+          )}
+          <AttivaPro utente={utente.id} chiavi={chiaviRevenueCat()} mio={mio} />
+        </Card>
+      ) : null}
       <Card className={attiva ? 'border-green-600 bg-green-50 dark:bg-green-950' : ''}>
         {attiva ? (
           <p className="text-sm font-medium text-green-900 dark:text-green-200">
             ✅ {t('La versione Pro è attiva in {lega}: tutto quello che vedi qui sotto è già disponibile.', { lega: me.lega.nome })}
+          </p>
+        ) : pagamentiConfigurati() ? (
+          <p className="text-sm">
+            {me.isAdmin
+              ? t('In {lega} la versione Pro non è ancora attiva.', { lega: me.lega.nome })
+              : t('In {lega} la versione Pro non è attiva: la attiva un organizzatore della lega con il suo abbonamento.', { lega: me.lega.nome })}
           </p>
         ) : (
           <p className="text-sm">

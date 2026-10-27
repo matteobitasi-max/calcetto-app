@@ -20,6 +20,7 @@ import { LETTERE_GIRONI, SQUADRE_PREDEFINITE, classifica, giornate, incrociGiron
 import { daCreare, primoTurnoTeste, primoTurnoValido, tabellone } from '@/lib/tabellone'
 import { nomeSquadra } from '@/lib/teams'
 import { formaDellaLega, legaPro } from '@/lib/pro'
+import { sincronizzaAbbonamento } from '@/lib/abbonamenti'
 import { COOKIE_LINGUA, isLingua, type T } from '@/lib/i18n'
 import { getLingua, getT } from '@/lib/lingua'
 
@@ -1920,4 +1921,17 @@ export async function eliminaTorneo(torneoId: string) {
   tx.delete(torneoId)
   await tx.commit()
   redirect('/tornei')
+}
+
+// Dopo un acquisto o un ripristino nell'app: risincronizza subito il mio abbonamento Pro
+// (senza aspettare il webhook di RevenueCat) e aggiorna la pagina.
+export async function aggiornaPro(): Promise<FormState> {
+  const utente = await getUtente()
+  if (!utente) return { error: await tr('Devi aver fatto l’accesso.') }
+  try {
+    await sincronizzaAbbonamento(utente.id, utente.emails[0])
+  } catch {
+    return { error: await tr('Non riesco a verificare l’abbonamento. Riprova tra qualche minuto.') }
+  }
+  refresh()
 }

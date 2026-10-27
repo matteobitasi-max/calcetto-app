@@ -34,7 +34,7 @@ async function VetrinaPro() {
         <li>📅 {t('Calendario del girone generato da solo')}</li>
         <li>📊 {t('Classifica, marcatori e risultati sempre aggiornati')}</li>
       </ul>
-      <p className="text-sm text-zinc-500">{t('I tornei arrivano presto con la versione Pro.')}</p>
+      <p className="text-sm text-zinc-500">{t('I tornei sono inclusi nella versione Pro.')}</p>
       <Link href="/pro" className="inline-block text-sm font-semibold text-green-700 hover:underline dark:text-green-400">
         {t('Scopri tutto il Pro ›')}
       </Link>
