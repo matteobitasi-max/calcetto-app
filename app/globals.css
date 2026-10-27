@@ -94,3 +94,40 @@ body {
       repeating-linear-gradient(to right, var(--erba-chiara) 0 48px, var(--erba-scura) 48px 96px);
   }
 }
+
+/* Le linee del campo, che scorrono con la pagina: bordi bianchi tutto intorno, metà campo con il cerchio
+   a metà pagina, e una porta con le sue aree in cima (si vede appena aperta la pagina) e una in fondo
+   (si vede scorrendo fino in fondo). Stanno dietro ai riquadri. */
+.linee-campo {
+  position: relative;
+}
+.linee-campo::before,
+.linee-campo::after {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0.95;
+}
+/* bordi, linea di metà campo e cerchio di centrocampo */
+.linee-campo::after {
+  inset: 14px 6px;
+  border: 2px solid white;
+  background:
+    radial-gradient(circle at 50% 50%, transparent 58px, white 58px 60px, transparent 60px),
+    radial-gradient(circle at 50% 50%, white 3px, transparent 3.5px),
+    linear-gradient(white, white) center / 100% 2px no-repeat;
+}
+/* le due porte con area piccola, area di rigore, dischetto e lunetta */
+.linee-campo::before {
+  inset: 0 6px;
+  background:
+    url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='300'%20height='100'%20viewBox='0%200%20300%20100'%3E%3Cg%20fill='none'%20stroke='white'%20stroke-width='2'%3E%3Crect%20x='115'%20y='1'%20width='70'%20height='13'/%3E%3Cpath%20d='M125%201v13M135%201v13M145%201v13M155%201v13M165%201v13M175%201v13M115%207.5h70'%20stroke-width='0.75'%20stroke-opacity='0.7'/%3E%3Crect%20x='95'%20y='14'%20width='110'%20height='24'/%3E%3Crect%20x='40'%20y='14'%20width='220'%20height='62'/%3E%3Cpath%20d='M114.3%2076A40%2040%200%200%200%20185.7%2076'/%3E%3C/g%3E%3Ccircle%20cx='150'%20cy='56'%20r='2.2'%20fill='white'/%3E%3C/svg%3E") top center / 300px 100px no-repeat,
+    url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='300'%20height='100'%20viewBox='0%200%20300%20100'%3E%3Cg%20transform='matrix%281%200%200%20-1%200%20100%29'%3E%3Cg%20fill='none'%20stroke='white'%20stroke-width='2'%3E%3Crect%20x='115'%20y='1'%20width='70'%20height='13'/%3E%3Cpath%20d='M125%201v13M135%201v13M145%201v13M155%201v13M165%201v13M175%201v13M115%207.5h70'%20stroke-width='0.75'%20stroke-opacity='0.7'/%3E%3Crect%20x='95'%20y='14'%20width='110'%20height='24'/%3E%3Crect%20x='40'%20y='14'%20width='220'%20height='62'/%3E%3Cpath%20d='M114.3%2076A40%2040%200%200%200%20185.7%2076'/%3E%3C/g%3E%3Ccircle%20cx='150'%20cy='56'%20r='2.2'%20fill='white'/%3E%3C/g%3E%3C/svg%3E") bottom center / 300px 100px no-repeat;
+}
+@media (prefers-color-scheme: dark) {
+  .linee-campo::before,
+  .linee-campo::after {
+    opacity: 0.3;
+  }
+}

@@ -44,7 +44,7 @@ export default async function AppLayout({ children }: LayoutProps<'/'>) {
       <NotificheNativeListener />
       <UsaApp />
       <KmAutomatici />
-      <main className="mx-auto w-full max-w-2xl flex-1 p-4 pb-[max(1rem,var(--safe-area-inset-bottom,env(safe-area-inset-bottom)))]">
+      <main className="linee-campo mx-auto w-full max-w-2xl flex-1 p-4 pb-[max(1rem,var(--safe-area-inset-bottom,env(safe-area-inset-bottom)))]">
         {children}
       </main>
     </div>
