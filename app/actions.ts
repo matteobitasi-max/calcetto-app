@@ -427,7 +427,9 @@ export async function decidiProposta(giocatoreId: string, approva: boolean) {
   if (!proposta) return refresh()
   const patch = sanity.patch(giocatoreId).set({ revisioneIl: proposta.fino })
   if (approva) {
-    patch.setIfMissing({ caratteristiche: {} })
+    // i voti di partenza si fissano alla prima proposta approvata (per mostrare il miglioramento)
+    const prima = await sanity.fetch<Player['caratteristiche'] | null>(`*[_id == $id][0].caratteristiche`, { id: giocatoreId })
+    patch.setIfMissing({ caratteristiche: {}, caratteristicheBase: prima ?? {} })
     for (const [k, m] of Object.entries(proposta.modifiche)) patch.set({ [`caratteristiche.${k}`]: m.a })
   }
   await patch.commit()
@@ -677,6 +679,9 @@ export async function salvaGiocatore(playerId: string | null, _prev: FormState, 
     const toUnset = Object.entries(optional)
       .filter(([k, v]) => v === undefined && (k !== 'foto' || formData.get('rimuoviFoto') === 'on'))
       .map(([k]) => k)
+    // voti cambiati a mano: diventano i nuovi voti di partenza (sparisce il miglioramento in viola)
+    const prima = await sanity.fetch<Player['caratteristiche'] | null>(`*[_id == $id][0].caratteristiche`, { id })
+    if (Object.keys(SKILLS).some((k) => (prima?.[k as Skill] ?? 5) !== fields.caratteristiche[k as Skill])) toUnset.push('caratteristicheBase')
     await sanity.patch(id).set(fields).unset(toUnset).commit()
   } else {
     id = (await sanity.create({ _type: 'player', lega: { _type: 'reference', _ref: admin.lega._id }, ...fields }))._id

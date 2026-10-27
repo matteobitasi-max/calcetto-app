@@ -219,23 +219,40 @@ export async function PlayerRow({
   )
 }
 
+// Le caratteristiche a barre. Pro: la parte guadagnata rispetto ai voti di partenza è viola trasparente.
 export async function SkillBars({ player }: { player: Player }) {
   const t = await getT()
+  const voci = (Object.entries(SKILLS) as [Skill, string][]).map(([key, label]) => {
+    const value = player.caratteristiche?.[key] ?? 0
+    const base = player.caratteristicheBase?.[key]
+    const guadagno = base != null && value > base ? Math.round((value - base) * 100) / 100 : 0
+    return { key, label, value, base: guadagno ? base! : value, guadagno }
+  })
+  const miglioramenti = voci.some((v) => v.guadagno > 0)
   return (
-    <ul className="space-y-2">
-      {(Object.entries(SKILLS) as [Skill, string][]).map(([key, label]) => {
-        const value = player.caratteristiche?.[key] ?? 0
-        return (
-          <li key={key} className="grid grid-cols-[6rem_1fr_2rem] items-center gap-2 text-sm">
+    <div className="space-y-3">
+      <ul className="space-y-2">
+        {voci.map(({ key, label, value, base, guadagno }) => (
+          <li key={key} className="grid grid-cols-[6rem_1fr_4.5rem] items-center gap-2 text-sm">
             <span>{t(label)}</span>
-            <span className="h-2 rounded bg-zinc-200 dark:bg-zinc-800">
-              <span className="block h-2 rounded bg-green-600" style={{ width: `${value * 10}%` }} />
+            <span className="flex h-2 overflow-hidden rounded bg-zinc-200 dark:bg-zinc-800">
+              <span className={`block h-2 bg-green-600 ${guadagno ? 'rounded-l' : 'rounded'}`} style={{ width: `${base * 10}%` }} />
+              {guadagno > 0 && <span className="block h-2 rounded-r bg-violet-500/45" style={{ width: `${guadagno * 10}%` }} />}
             </span>
-            <span className="text-right tabular-nums">{t.numero(value)}</span>
+            <span className="text-right tabular-nums">
+              {t.numero(value)}
+              {guadagno > 0 && <span className="ml-1 text-xs font-semibold text-violet-600 dark:text-violet-400">+{t.numero(guadagno)}</span>}
+            </span>
           </li>
-        )
-      })}
-    </ul>
+        ))}
+      </ul>
+      {miglioramenti && (
+        <p className="flex items-center gap-1.5 text-xs text-zinc-500">
+          <span className="inline-block h-2 w-4 rounded bg-violet-500/45" />
+          {t('Miglioramento rispetto ai voti di partenza (Pro)')}
+        </p>
+      )}
+    </div>
   )
 }
 

@@ -73,9 +73,11 @@ export type Player = {
   /** Ha già fatto l'accesso (la scheda è collegata a un account). */
   collegato?: boolean
   caratteristiche?: Partial<Record<Skill, number>>
+  /** Pro: i voti messi dall'organizzatore prima delle proposte approvate (per mostrare i miglioramenti). */
+  caratteristicheBase?: Partial<Record<Skill, number>>
 }
 
-export const playerFields = `_id, "legaId": lega._ref, nome, cognome, soprannome, email, telefono, dataNascita, foto, ruolo, piede, badge, notifiche, isAdmin, puoInserireRisultati, attivo, revisioneIl, "rimosso": defined(rimossoIl), "collegato": defined(clerkUserId), caratteristiche,
+export const playerFields = `_id, "legaId": lega._ref, nome, cognome, soprannome, email, telefono, dataNascita, foto, ruolo, piede, badge, notifiche, isAdmin, puoInserireRisultati, attivo, revisioneIl, "rimosso": defined(rimossoIl), "collegato": defined(clerkUserId), caratteristiche, caratteristicheBase,
   "pro": defined(clerkUserId) && count(*[_type == "abbonamento" && clerkUserId == ^.clerkUserId && attivo != false && (!defined(scadenza) || scadenza > now())]) > 0`
 
 

@@ -131,6 +131,15 @@ export const player = defineType({
       validation: (r) => r.required(),
       fields: (Object.keys(SKILLS) as (keyof typeof SKILLS)[]).map(rating),
     }),
+    defineField({
+      name: 'caratteristicheBase',
+      title: 'Caratteristiche di partenza (Pro)',
+      description: 'I voti messi dall\u2019organizzatore prima delle proposte approvate: nel profilo il miglioramento si vede in viola. Si azzera quando l\u2019organizzatore cambia i voti a mano.',
+      type: 'object',
+      options: { columns: 2, collapsible: true, collapsed: true },
+      readOnly: true,
+      fields: (Object.keys(SKILLS) as (keyof typeof SKILLS)[]).map(rating),
+    }),
   ],
   orderings: [{ title: 'Nome', name: 'nomeAsc', by: [{ field: 'nome', direction: 'asc' }] }],
   preview: {
