@@ -31,7 +31,7 @@ async function Editor({ params }: { params: Promise<{ id: string }> }) {
   const torneo = await getTorneo(id)
   if (!torneo) notFound()
   const [, t] = await Promise.all([requireIn(torneo.legaId, 'organizzatore'), getT()])
-  if (!(await puoCreareTornei())) notFound()
+  if (!(await puoCreareTornei(torneo.legaId))) notFound()
 
   const nelTorneo = new Set(torneo.squadre.flatMap((s) => s.giocatori.map((g) => g._id)))
   const rosa = (await getPlayers(torneo.legaId))

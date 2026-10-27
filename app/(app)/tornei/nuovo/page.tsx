@@ -43,9 +43,10 @@ async function VetrinaPro() {
 }
 
 async function Form({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
-  const [{ lega, giorno, scegli }, mie, attiva, pro, t] = await Promise.all([searchParams, getMemberships(), getCurrentPlayer(), puoCreareTornei(), getT()])
-  if (!pro) return <VetrinaPro />
+  const [{ lega, giorno, scegli }, mie, attiva, t] = await Promise.all([searchParams, getMemberships(), getCurrentPlayer(), getT()])
   const organizzate = mie.filter((m) => m.isAdmin)
+  // Il Pro si guarda sulla lega scelta: senza leghe da organizzare, si vede solo cosa offre.
+  if (!organizzate.length && !attiva?.isAdmin) return <VetrinaPro />
   const giornoScelto = typeof giorno === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(giorno) ? giorno : undefined
 
   // Come per una nuova partita: la lega attiva se la organizzo, altrimenti si sceglie.
@@ -70,6 +71,7 @@ async function Form({ searchParams }: { searchParams: Promise<Record<string, str
   }
   const admin =
     typeof lega === 'string' ? await requireIn(lega, 'organizzatore') : attiva?.isAdmin || !organizzate.length ? await requireAdmin() : organizzate[0]
+  if (!(await puoCreareTornei(admin.lega._id))) return <VetrinaPro />
   const rosa = (await getPlayers(admin.lega._id))
     .filter((p) => p.attivo !== false)
     .map((p) => ({ id: p._id, nome: displayName(p), forza: forza(p), ruolo: p.ruolo }))

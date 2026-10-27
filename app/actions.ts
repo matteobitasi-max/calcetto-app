@@ -1594,7 +1594,7 @@ async function aggiornaTabellone(torneoId: string) {
 // Le partite sono normali partite della lega (con squadre già fatte e senza convocazioni).
 export async function creaTorneo(_prev: FormState, formData: FormData): Promise<FormState> {
   const admin = await requireIn(str(formData, 'legaId'), 'organizzatore')
-  if (!(await puoCreareTornei())) return { error: await tr('I tornei sono una funzione Pro.') }
+  if (!(await puoCreareTornei(admin.lega._id))) return { error: await tr('I tornei sono una funzione Pro.') }
   const utente = await getUtente()
 
   const nome = str(formData, 'nome')
@@ -1760,7 +1760,7 @@ function maxDalModulo(formData: FormData): number | null | string {
 // L'organizzatore cambia nomi, capitani e giocatori delle squadre: valgono anche per le partite non ancora giocate.
 export async function salvaSquadreTorneo(torneoId: string, _prev: FormState, formData: FormData): Promise<FormState> {
   const admin = await requireForDoc(torneoId, 'organizzatore')
-  if (!(await puoCreareTornei())) return { error: await tr('I tornei sono una funzione Pro.') }
+  if (!(await puoCreareTornei(admin.lega._id))) return { error: await tr('I tornei sono una funzione Pro.') }
   const torneo = await sanity.fetch<{ _rev: string; squadre: SquadraDoc[] } | null>(`*[_type == "tournament" && _id == $id][0]{_rev, squadre}`, { id: torneoId })
   if (!torneo) return { error: await tr('Torneo non trovato.') }
   const max = maxDalModulo(formData)

@@ -1,6 +1,6 @@
 import 'server-only'
 import { sanity } from './sanity'
-import { isTitolare } from './player'
+import { legaPro } from './pro'
 import type { SanityImage } from './roster'
 
 export type SquadraTorneo = { _key: string; nome: string; colore?: string; logo?: SanityImage; girone?: string; capitanoId?: string; codiceInvito?: string; giocatori: { _id: string; nome: string; cognome?: string; soprannome?: string; foto?: SanityImage }[] }
@@ -54,5 +54,6 @@ export function getTorneo(id: string) {
 export const iscrizioniAperte = (t: Pick<Torneo, 'iscrizioniChiuse' | 'primaPartita'>, adesso = new Date()) =>
   !t.iscrizioniChiuse && (!t.primaPartita || adesso < new Date(t.primaPartita))
 
-// I tornei sono una funzione Pro. Finché il Pro non c'è, li può creare solo il titolare dell'app (per provarli).
-export const puoCreareTornei = () => isTitolare()
+// I tornei sono una funzione Pro: si creano e si modificano nelle leghe con il Pro attivo
+// (un organizzatore abbonato; il titolare dell'app li prova ovunque).
+export const puoCreareTornei = (legaId: string) => legaPro(legaId)
