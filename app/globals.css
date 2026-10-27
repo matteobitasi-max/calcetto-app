@@ -61,8 +61,8 @@ body {
    Le strisce stanno ferme mentre la pagina scorre (livello fisso dietro i contenuti:
    su iPhone "background-attachment: fixed" non funziona). */
 .campo {
-  --erba-chiara: #d2eecf;
-  --erba-scura: #bde2b8;
+  --erba-chiara: #bfe3ba;
+  --erba-scura: #a9d7a3;
   position: relative;
   isolation: isolate;
 }
