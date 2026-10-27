@@ -4,6 +4,7 @@ import { useEffect, useState, useSyncExternalStore, useTransition } from 'react'
 import { Capacitor } from '@capacitor/core'
 import { Purchases, PACKAGE_TYPE, type PurchasesPackage } from '@revenuecat/purchases-capacitor'
 import { aggiornaPro } from '@/app/actions'
+import { ENTITLEMENT_PRO } from '@/lib/entitlement'
 import { buttonClass } from './ui-classes'
 import { useT } from './lingua'
 
@@ -83,7 +84,7 @@ export function AttivaPro({ utente, chiavi, mio }: { utente: string; chiavi: { a
     try {
       await prepara(utente, chiave!)
       const { customerInfo } = await Purchases.restorePurchases()
-      if (customerInfo.entitlements.active.pro) dopo()
+      if (customerInfo.entitlements.active[ENTITLEMENT_PRO]) dopo()
       else setMessaggio(t('Nessun abbonamento Pro trovato su questo account dello store.'))
     } catch {
       setErrore(t('Ripristino non riuscito. Riprova.'))

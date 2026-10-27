@@ -1,12 +1,13 @@
 import 'server-only'
 import { sanity } from './sanity'
+import { ENTITLEMENT_PRO } from './entitlement'
 
 // Abbonamenti Pro pagati dentro le app (App Store e Google Play), gestiti da RevenueCat.
 // RevenueCat conosce l'utente con il suo id di Clerk; ogni volta che qualcosa cambia (acquisto, rinnovo,
 // disdetta, scadenza) chiede al server di risincronizzare, e il server riscrive la scheda "abbonamento"
 // con la data di scadenza vera. Le schede create a mano dallo Studio restano a parte.
 
-export const ENTITLEMENT_PRO = 'pro'
+export { ENTITLEMENT_PRO }
 
 export const pagamentiConfigurati = () => !!process.env.REVENUECAT_SECRET_KEY
 
