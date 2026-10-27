@@ -59,7 +59,7 @@ export function FotoSquadra({
 export function SquadreEditor({
   rosa,
   numSquadre,
-  nomiIniziali = SQUADRE_PREDEFINITE.map((s) => s.nome),
+  nomiIniziali = [],
   coloriIniziali = SQUADRE_PREDEFINITE.map((s) => s.colore),
   fotoIniziali = [],
   squadraIniziale = {},
@@ -82,7 +82,7 @@ export function SquadreEditor({
   onFoto?: (squadra: number, url: string) => void
 }) {
   const t = useT()
-  const [nomi, setNomi] = useState(() => SQUADRE_PREDEFINITE.map((s, i) => nomiIniziali[i] ?? s.nome))
+  const [nomi, setNomi] = useState(() => SQUADRE_PREDEFINITE.map((_, i) => nomiIniziali[i] ?? nomePredefinito(i, t.lingua)))
   const [squadraDi, setSquadraDi] = useState<Record<string, string>>(squadraIniziale)
   const [capitani, setCapitani] = useState<(string | undefined)[]>(capitaniIniziali)
   const colore = (i: number) => coloriIniziali[i] || SQUADRE_PREDEFINITE[i].colore

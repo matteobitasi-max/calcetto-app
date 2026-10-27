@@ -16,7 +16,7 @@ import { daysBetween, romeLocalToISO } from '@/lib/dates'
 import { inviaAGiocatori, inviaATutti, rimuoviIscrizione, salvaIscrizione, salvaTokenNativo, type PushSub } from '@/lib/push'
 import { assicuraRicorrenze, getSeries, occurrenceId, rimuoviFutureVuote, type Series } from '@/lib/series'
 import { iscrizioniAperte, puoCreareTornei } from '@/lib/tornei'
-import { LETTERE_GIRONI, SQUADRE_PREDEFINITE, classifica, giornate, incrociGironi } from '@/lib/girone'
+import { LETTERE_GIRONI, SQUADRE_PREDEFINITE, classifica, nomePredefinito, giornate, incrociGironi } from '@/lib/girone'
 import { daCreare, primoTurnoTeste, primoTurnoValido, tabellone } from '@/lib/tabellone'
 import { nomeSquadra } from '@/lib/teams'
 import { formaDellaLega, legaPro } from '@/lib/pro'
@@ -1415,10 +1415,11 @@ async function nuovoCodiceSquadra(usati: Set<string>) {
 // Il capitano è quello scelto, altrimenti quello di prima se è ancora in squadra, altrimenti il primo giocatore.
 async function squadreDalModulo(formData: FormData, legaId: string, quante: number, esistenti?: SquadraDoc[]): Promise<SquadraDoc[] | string> {
   const rosa = new Set(await sanity.fetch<string[]>(`*[_type == "player" && lega._ref == $lega && attivo != false]._id`, { lega: legaId }))
+  const lingua = await getLingua()
   const squadre: SquadraDoc[] = Array.from({ length: quante }, (_, i) => ({
     _key: esistenti?.[i]?._key ?? `s${i + 1}`,
     _type: 'squadraTorneo',
-    nome: str(formData, `nome_${i}`).slice(0, 30) || SQUADRE_PREDEFINITE[i].nome,
+    nome: str(formData, `nome_${i}`).slice(0, 30) || nomePredefinito(i, lingua),
     colore: esistenti?.[i]?.colore || SQUADRE_PREDEFINITE[i].colore,
     ...(esistenti?.[i]?.logo ? { logo: esistenti[i].logo } : {}),
     ...(esistenti?.[i]?.girone ? { girone: esistenti[i].girone } : {}),

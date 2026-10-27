@@ -58,22 +58,22 @@ export function classifica(
 
 // Nomi e colori proposti per le squadre.
 export const SQUADRE_PREDEFINITE = [
-  { nome: 'Rossi', en: 'Reds', colore: '#dc2626' },
-  { nome: 'Blu', en: 'Blues', colore: '#2563eb' },
-  { nome: 'Verdi', en: 'Greens', colore: '#16a34a' },
-  { nome: 'Gialli', en: 'Yellows', colore: '#eab308' },
-  { nome: 'Neri', en: 'Blacks', colore: '#27272a' },
-  { nome: 'Bianchi', en: 'Whites', colore: '#a1a1aa' },
-  { nome: 'Arancioni', en: 'Oranges', colore: '#ea580c' },
-  { nome: 'Viola', en: 'Purples', colore: '#9333ea' },
-  { nome: 'Celesti', en: 'Sky Blues', colore: '#38bdf8' },
-  { nome: 'Rosa', en: 'Pinks', colore: '#ec4899' },
-  { nome: 'Granata', en: 'Maroons', colore: '#7f1d1d' },
-  { nome: 'Grigi', en: 'Greys', colore: '#6b7280' },
-  { nome: 'Turchesi', en: 'Turquoises', colore: '#14b8a6' },
-  { nome: 'Lime', en: 'Limes', colore: '#84cc16' },
-  { nome: 'Marroni', en: 'Browns', colore: '#92400e' },
-  { nome: 'Oro', en: 'Golds', colore: '#ca8a04' },
+  { nome: 'Squadra 1', en: 'Team 1', colore: '#dc2626' },
+  { nome: 'Squadra 2', en: 'Team 2', colore: '#2563eb' },
+  { nome: 'Squadra 3', en: 'Team 3', colore: '#16a34a' },
+  { nome: 'Squadra 4', en: 'Team 4', colore: '#eab308' },
+  { nome: 'Squadra 5', en: 'Team 5', colore: '#27272a' },
+  { nome: 'Squadra 6', en: 'Team 6', colore: '#a1a1aa' },
+  { nome: 'Squadra 7', en: 'Team 7', colore: '#ea580c' },
+  { nome: 'Squadra 8', en: 'Team 8', colore: '#9333ea' },
+  { nome: 'Squadra 9', en: 'Team 9', colore: '#38bdf8' },
+  { nome: 'Squadra 10', en: 'Team 10', colore: '#ec4899' },
+  { nome: 'Squadra 11', en: 'Team 11', colore: '#7f1d1d' },
+  { nome: 'Squadra 12', en: 'Team 12', colore: '#6b7280' },
+  { nome: 'Squadra 13', en: 'Team 13', colore: '#14b8a6' },
+  { nome: 'Squadra 14', en: 'Team 14', colore: '#84cc16' },
+  { nome: 'Squadra 15', en: 'Team 15', colore: '#92400e' },
+  { nome: 'Squadra 16', en: 'Team 16', colore: '#ca8a04' },
 ]
 
 // Nome proposto per la squadra n. `i`, nella lingua dell'app.
