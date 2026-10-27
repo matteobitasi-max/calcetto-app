@@ -7,7 +7,7 @@ import type { CapacitorConfig } from '@capacitor/cli'
 //   simulatore iPhone:  npm run dev  +  npm run app:ios       (→ localhost)
 //   emulatore Android:  npm run dev  +  npm run app:android   (→ 10.0.2.2)
 //   prima di una build per gli store:  npm run app:online
-const url = process.env.CAP_SERVER_URL ?? 'https://calcetto-app-brown.vercel.app'
+const url = process.env.CAP_SERVER_URL ?? 'https://www.thecapfc.app'
 
 const config: CapacitorConfig = {
   appId: 'com.matteobitasi.thecap',

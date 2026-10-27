@@ -10,7 +10,7 @@
     "app:sync": "cap sync",
     "app:android": "CAP_SERVER_URL=http://10.0.2.2:3000 cap sync android && cap open android",
     "app:ios": "CAP_SERVER_URL=http://localhost:3000 cap sync ios && cap open ios",
-    "app:online": "CAP_SERVER_URL=https://calcetto-app-brown.vercel.app cap sync"
+    "app:online": "CAP_SERVER_URL=https://www.thecapfc.app cap sync"
   },
   "dependencies": {
     "@capacitor-firebase/messaging": "^8.5.2",

@@ -11,7 +11,7 @@ public class PrivacySaluteActivity extends Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("https://calcetto-app-brown.vercel.app/privacy")));
+        startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("https://www.thecapfc.app/privacy")));
         finish();
     }
 }
