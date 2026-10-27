@@ -2,7 +2,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import type { ComponentProps, ReactNode } from 'react'
 import { PallinoAdmin } from './pallino-admin'
-import { MarchioPro } from './logo-c'
+import { EtichettaPro, MarchioPro } from './logo-c'
 import { BADGE, SKILLS, displayName, iniziali, overall, type Badge, type Player, type Skill } from '@/lib/roster'
 import type { Risposta, Stato } from '@/lib/matches'
 import { finestra } from '@/lib/finestra'
@@ -135,8 +135,8 @@ function FasciaCapitano() {
   )
 }
 
-// L'organizzatore della lega: la "C" del logo, toccandolo si apre la spiegazione.
-export async function IconaOrganizzatore() {
+// L'organizzatore della lega: la "C" del logo (con PRO accanto se è abbonato), toccandola si apre la spiegazione.
+export async function IconaOrganizzatore({ pro = false }: { pro?: boolean }) {
   const t = await getT()
   return (
     <Medaglia
@@ -145,7 +145,10 @@ export async function IconaOrganizzatore() {
       testo={t('Gestisce la lega: crea le partite, apre e chiude le convocazioni, fa le squadre, inserisce i risultati e invita i giocatori.')}
       className="shrink-0 rounded-md"
     >
-      <PallinoAdmin size={22} title={t('Organizzatore')} />
+      <span className="inline-flex items-center gap-0.5">
+        <PallinoAdmin size={22} title={t('Organizzatore')} />
+        {pro && <EtichettaPro />}
+      </span>
     </Medaglia>
   )
 }
@@ -176,6 +179,7 @@ export async function PlayerRow({
   mostraAccesso = false,
   mio = false,
   forma,
+  organizzatore = false,
 }: {
   player: Player
   prima?: ReactNode
@@ -185,6 +189,8 @@ export async function PlayerRow({
   mio?: boolean
   /** Pro: forma del giocatore, freccia accanto al voto. */
   forma?: number
+  /** Mostra la C dell'organizzatore (nella rosa). */
+  organizzatore?: boolean
 }) {
   const t = await getT()
   return (
@@ -192,7 +198,6 @@ export async function PlayerRow({
       <Avatar player={player} />
       <Link href={`/giocatori/${player._id}`} className="min-w-0 flex-1 hover:underline">
         <div className="flex min-w-0 items-center gap-1.5">
-          {player.pro && <MarchioPro />}
           <span className={`truncate ${mio ? 'font-extrabold' : 'font-medium'}`}>{displayName(player)}</span>
           <PlayerBadge badge={player.badge} />
         </div>
@@ -204,6 +209,8 @@ export async function PlayerRow({
           </div>
         )}
       </Link>
+      {/* a destra, prima del voto: la C dell'organizzatore (con PRO se è abbonato), o C PRO per gli abbonati */}
+      {organizzatore ? <IconaOrganizzatore pro={!!player.pro} /> : player.pro && <MarchioPro />}
       {prima}
       {forma != null && <FrecciaForma forma={forma} />}
       <Overall player={player} />

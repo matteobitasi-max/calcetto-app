@@ -2,7 +2,7 @@ import { Suspense } from 'react'
 import { displayName, mioInCima, overall, requirePlayer, type Player } from '@/lib/player'
 import { getPlayers, getUpcomingMatches } from '@/lib/matches'
 import { getT } from '@/lib/lingua'
-import { ButtonLink, Card, IconaOrganizzatore, Loading, PageTitle, PlayerRow } from '@/components/ui'
+import { ButtonLink, Card, Loading, PageTitle, PlayerRow } from '@/components/ui'
 import { SwipeRiga } from '@/components/swipe-riga'
 import { convocaGiocatore, rimuoviDallaLega } from '@/app/actions'
 import type { ReactNode } from 'react'
@@ -98,13 +98,8 @@ async function Rosa() {
                   forma={analisi?.forma.get(p._id)}
                   mostraAccesso
                   // ruolo a sinistra del voto, così i voti restano allineati a destra
-                  prima={
-                    p.isAdmin ? (
-                      <IconaOrganizzatore />
-                    ) : (
-                      p.puoInserireRisultati && <span title={t('Può inserire i risultati')}>📝</span>
-                    )
-                  }
+                  organizzatore={!!p.isAdmin}
+                  prima={!p.isAdmin && p.puoInserireRisultati && <span title={t('Può inserire i risultati')}>📝</span>}
                 />,
               )}
             </li>
