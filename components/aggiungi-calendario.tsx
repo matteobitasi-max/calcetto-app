@@ -5,22 +5,31 @@ import { Card } from './ui-base'
 import { buttonClass } from './ui-classes'
 import { useT } from './lingua'
 
-// Il tasto nel Calendario: il calendario del telefono si abbona al mio link e da lì le partite
+// L'icona nel riquadro del Calendario: il calendario del telefono si abbona al mio link e da lì le partite
 // compaiono e si aggiornano da sole. iPhone e Mac aprono il link webcal://, Android passa da Google Calendar.
 export function AggiungiCalendario({ percorso }: { percorso: string }) {
   const t = useT()
   const [aperto, setAperto] = useState(false)
   const [copiato, setCopiato] = useState(false)
 
-  if (!aperto) {
-    return (
-      <button type="button" onClick={() => setAperto(true)} className={`${buttonClass('secondary')} w-full`}>
-        📅 {t('Aggiungi le partite al calendario del telefono')}
-      </button>
-    )
-  }
+  const icona = (
+    <button
+      type="button"
+      onClick={() => setAperto((x) => !x)}
+      aria-label={t('Aggiungi le partite al calendario del telefono')}
+      aria-expanded={aperto}
+      title={t('Aggiungi le partite al calendario del telefono')}
+      className="rounded-lg p-1.5 text-zinc-500 hover:bg-zinc-100 hover:text-green-700 dark:hover:bg-zinc-800 dark:hover:text-green-400"
+    >
+      <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+        <rect x="3" y="5" width="18" height="16" rx="2" />
+        <path d="M16 3v4M8 3v4M3 10h18M12 13v5M9.5 15.5h5" />
+      </svg>
+    </button>
+  )
+  if (!aperto) return icona
 
-  // si apre solo dopo un tocco, quindi qui siamo già nel browser
+  // le opzioni si vedono solo dopo un tocco, quindi lì siamo già nel browser
   const android = /Android/i.test(navigator.userAgent)
   const link = () => `${window.location.origin}${percorso}`
   const webcal = () => link().replace(/^https?:/, 'webcal:')
@@ -37,28 +46,28 @@ export function AggiungiCalendario({ percorso }: { percorso: string }) {
   )
 
   return (
-    <Card className="space-y-3">
-      <div className="flex items-start justify-between gap-2">
+    <span className="relative">
+      {icona}
+      {/* toccando fuori si chiude */}
+      <button type="button" aria-label={t('Chiudi')} onClick={() => setAperto(false)} className="fixed inset-0 z-10 cursor-default" />
+      <Card className="absolute left-1/2 top-full z-20 mt-2 w-72 -translate-x-1/2 space-y-3 text-left shadow-xl">
         <h2 className="font-semibold">📅 {t('Partite nel calendario del telefono')}</h2>
-        <button type="button" onClick={() => setAperto(false)} aria-label={t('Chiudi')} className="rounded-lg px-2 text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800">
-          ✕
+        <p className="text-sm font-normal text-zinc-500">
+          {t('Le partite di tutte le tue leghe compaiono nel calendario del telefono, con un promemoria 2 ore prima. Se una partita viene spostata o annullata, il calendario si aggiorna da solo.')}
+        </p>
+        <div className="space-y-2">{android ? [gcal, apple] : [apple, gcal]}</div>
+        <button
+          type="button"
+          onClick={async () => {
+            await navigator.clipboard.writeText(link())
+            setCopiato(true)
+          }}
+          className="w-full text-center text-sm font-medium text-green-700 hover:underline dark:text-green-400"
+        >
+          {copiato ? `✓ ${t('Link copiato')}` : t('Altro calendario (Outlook…): copia il link')}
         </button>
-      </div>
-      <p className="text-sm text-zinc-500">
-        {t('Le partite di tutte le tue leghe compaiono nel calendario del telefono, con un promemoria 2 ore prima. Se una partita viene spostata o annullata, il calendario si aggiorna da solo.')}
-      </p>
-      <div className="space-y-2">{android ? [gcal, apple] : [apple, gcal]}</div>
-      <button
-        type="button"
-        onClick={async () => {
-          await navigator.clipboard.writeText(link())
-          setCopiato(true)
-        }}
-        className="w-full text-center text-sm font-medium text-green-700 hover:underline dark:text-green-400"
-      >
-        {copiato ? `✓ ${t('Link copiato')}` : t('Altro calendario (Outlook…): copia il link')}
-      </button>
-      <p className="text-xs text-zinc-500">{t('Il link è personale: non condividerlo.')}</p>
-    </Card>
+        <p className="text-xs font-normal text-zinc-500">{t('Il link è personale: non condividerlo.')}</p>
+      </Card>
+    </span>
   )
 }

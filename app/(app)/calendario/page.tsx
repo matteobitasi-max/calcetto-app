@@ -97,13 +97,15 @@ async function Calendario({ searchParams }: { searchParams: Promise<Record<strin
           mese={meseCorrente}
         />
       )}
-      {utente && <AggiungiCalendario percorso={percorsoCalendario(utente.id, t.lingua)} />}
       <Card>
         <div className="mb-4 flex items-center justify-between">
           <Link href={url({ mese: prec })} className="rounded-lg px-3 py-1 text-lg hover:bg-zinc-100 dark:hover:bg-zinc-800" aria-label={t('Mese precedente')}>
             ‹
           </Link>
-          <h1 className="text-lg font-bold capitalize">{titolo}</h1>
+          <div className="flex items-center gap-1">
+            <h1 className="text-lg font-bold capitalize">{titolo}</h1>
+            {utente && <AggiungiCalendario percorso={percorsoCalendario(utente.id, t.lingua)} />}
+          </div>
           <Link href={url({ mese: succ })} className="rounded-lg px-3 py-1 text-lg hover:bg-zinc-100 dark:hover:bg-zinc-800" aria-label={t('Mese successivo')}>
             ›
           </Link>
