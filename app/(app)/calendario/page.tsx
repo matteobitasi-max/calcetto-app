@@ -1,6 +1,8 @@
 import Link from 'next/link'
 import { Suspense } from 'react'
-import { getMemberships, requirePlayer } from '@/lib/player'
+import { getMemberships, getUtente, requirePlayer } from '@/lib/player'
+import { percorsoCalendario } from '@/lib/calendario'
+import { AggiungiCalendario } from '@/components/aggiungi-calendario'
 import { finestra, getMatchesBetween, presenti, type Match, type Stato } from '@/lib/matches'
 import { isoToRomeLocal } from '@/lib/dates'
 import { getT } from '@/lib/lingua'
@@ -38,7 +40,7 @@ export default function CalendarioPage({ searchParams }: PageProps<'/calendario'
 const pad = (n: number) => String(n).padStart(2, '0')
 
 async function Calendario({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
-  const [{ mese, lega, giorno }, , mie, t] = await Promise.all([searchParams, requirePlayer(), getMemberships(), getT()])
+  const [{ mese, lega, giorno }, , mie, t, utente] = await Promise.all([searchParams, requirePlayer(), getMemberships(), getT(), getUtente()])
   // Solo le leghe di cui faccio parte (non quella in cui il super admin è entrato da ospite):
   // di default tutte, o quella scelta dalla tendina.
   const membri = mie
@@ -95,6 +97,7 @@ async function Calendario({ searchParams }: { searchParams: Promise<Record<strin
           mese={meseCorrente}
         />
       )}
+      {utente && <AggiungiCalendario percorso={percorsoCalendario(utente.id, t.lingua)} />}
       <Card>
         <div className="mb-4 flex items-center justify-between">
           <Link href={url({ mese: prec })} className="rounded-lg px-3 py-1 text-lg hover:bg-zinc-100 dark:hover:bg-zinc-800" aria-label={t('Mese precedente')}>

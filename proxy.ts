@@ -2,9 +2,9 @@ import { NextResponse } from 'next/server'
 import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server'
 import { COOKIE_LINGUA } from '@/lib/i18n/cookie'
 
-// Lo Studio ha il suo login Sanity, quindi non passa da Clerk. /api/cron si protegge con CRON_SECRET. /accesso-app gestisce da sé
+// Lo Studio ha il suo login Sanity, quindi non passa da Clerk. /api/cron si protegge con CRON_SECRET, /api/calendario con il codice firmato. /accesso-app gestisce da sé
 // chi non ha ancora fatto l'accesso (login delle app nel browser).
-const isPublicRoute = createRouteMatcher(['/sign-in(.*)', '/accesso-app(.*)', '/account-eliminato', '/api/strava/callback', '/api/cron/(.*)', '/studio(.*)'])
+const isPublicRoute = createRouteMatcher(['/sign-in(.*)', '/accesso-app(.*)', '/account-eliminato', '/api/strava/callback', '/api/cron/(.*)', '/api/calendario/(.*)', '/studio(.*)'])
 
 // Al primo accesso dopo il login (o su un telefono nuovo) si sceglie la lingua: solo per le pagine
 // aperte nel browser, non per i dati delle pagine o le azioni.
