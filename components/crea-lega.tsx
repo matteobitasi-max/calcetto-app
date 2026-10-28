@@ -1,38 +1,16 @@
 'use client'
 
-import Link from 'next/link'
 import { useActionState, useState } from 'react'
 import { creaLega } from '@/app/actions'
 import { buttonClass, inputClass } from './ui-classes'
 import { useT } from '@/components/lingua'
 
 // "Crea una lega": nome (obbligatorio) e città (facoltativa, per il meteo).
-// Il pulsante si attiva con il nome; creata la lega, compare l'invito da mandare su WhatsApp.
+// Il pulsante si attiva con il nome; creata la lega, si apre subito (in home c'è l'invito per gli amici).
 export function CreaLega() {
   const t = useT()
   const [esito, crea, pending] = useActionState(creaLega, undefined)
   const [nome, setNome] = useState('')
-
-  if (esito?.creata) {
-    const testo = `⚽ ${t('Entra nella lega “{lega}” su The Cap:', { lega: esito.creata.nome })}\n${esito.creata.invito}`
-    return (
-      <div className="space-y-3 text-center">
-        <p className="font-semibold">✅ {t('“{lega}” è pronta!', { lega: esito.creata.nome })}</p>
-        <p className="text-sm text-zinc-500">{t('Ora invita i tuoi amici: chi apre il link entra subito nella lega.')}</p>
-        <a
-          href={`https://wa.me/?text=${encodeURIComponent(testo)}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className={`${buttonClass('primary')} w-full justify-center`}
-        >
-          💬 {t('Invita su WhatsApp')}
-        </a>
-        <Link href="/" className="block text-sm font-medium text-green-700 hover:underline dark:text-green-400">
-          {t('Entra nella lega →')}
-        </Link>
-      </div>
-    )
-  }
 
   return (
     <form action={crea} className="space-y-3">

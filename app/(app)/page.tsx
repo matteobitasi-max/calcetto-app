@@ -1,9 +1,11 @@
 import Link from 'next/link'
 import { Suspense, type ReactNode } from 'react'
 import { IntervisteLega } from '@/components/interviste-lega'
+import { CodiceInvito, InvitoLink } from '@/components/invito-link'
+import { baseUrl } from '@/lib/url'
 import { redirect } from 'next/navigation'
 import { getCurrentPlayer, getMemberships, type Player } from '@/lib/player'
-import { finestra, formatoInCorso, getPastMatches, getUpcomingMatches, ordinati, presenti, type Match } from '@/lib/matches'
+import { finestra, formatoInCorso, getPastMatches, getPlayers, getUpcomingMatches, ordinati, presenti, type Match } from '@/lib/matches'
 import { getT } from '@/lib/lingua'
 import type { T } from '@/lib/i18n'
 import { nomeSquadra } from '@/lib/teams'
@@ -34,7 +36,9 @@ async function Partite() {
 
   const legaId = player.lega._id
   await assicuraRicorrenze({ legaId })
-  const [upcoming, past] = await Promise.all([getUpcomingMatches(legaId), getPastMatches(legaId, 100)])
+  const [upcoming, past, rosa] = await Promise.all([getUpcomingMatches(legaId), getPastMatches(legaId, 100), getPlayers(legaId)])
+  // lega appena creata (o ancora senza amici): l'invito in cima
+  const daSolo = player.isAdmin && !!player.lega.codiceInvito && rosa.filter((p) => p.attivo !== false).length <= 1
 
   const [prossima, ...altreInProgramma] = upcoming
   const ultima = past.find((m) => m.stato === 'giocata' && m.risultato?.golA != null)
@@ -43,6 +47,15 @@ async function Partite() {
   return (
     <div className="space-y-6 pb-16">
       <NotificheToggle variant="banner" />
+
+      {daSolo && (
+        <Card className="space-y-3 border-2 border-green-600">
+          <h2 className="font-semibold">📨 {t('Invita i tuoi amici')}</h2>
+          <p className="text-sm text-zinc-500">{t('“{lega}” è pronta! Chi apre il link entra subito nella lega.', { lega: player.lega.nome })}</p>
+          <InvitoLink url={`${await baseUrl()}/invito/${player.lega.codiceInvito}`} nomeLega={player.lega.nome} />
+          <CodiceInvito codice={player.lega.codiceInvito!} />
+        </Card>
+      )}
 
       {/* Anche nelle leghe in cui gioco soltanto, se ne organizzo almeno una: la lega si sceglie dopo */}
       {(player.isAdmin || mie.some((m) => m.isAdmin)) && <PillNuovaPartita />}

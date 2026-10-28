@@ -804,10 +804,10 @@ async function nuovaScheda(legaId: string, utente: NonNullable<Awaited<ReturnTyp
   })
 }
 
-export type EsitoNuovaLega = { error?: string; creata?: { nome: string; invito: string } } | undefined
+export type EsitoNuovaLega = { error?: string } | undefined
 
 // Nuova lega (con la città facoltativa per il meteo): chi la crea è organizzatore.
-// Restituisce il link d'invito, da condividere subito su WhatsApp.
+// Creata la lega, si apre: in home c'è l'invito da mandare agli amici.
 export async function creaLega(_prev: EsitoNuovaLega, formData: FormData): Promise<EsitoNuovaLega> {
   const utente = await getUtente()
   if (!utente) return { error: await tr('Accesso richiesto.') }
@@ -821,7 +821,7 @@ export async function creaLega(_prev: EsitoNuovaLega, formData: FormData): Promi
   const lega = await sanity.create({ _type: 'league', nome, codiceInvito, creataDa: utente.id, ...(citta && { citta }) })
   await nuovaScheda(lega._id, utente, true)
   await attivaLega(lega._id)
-  return { creata: { nome, invito: `${await baseUrl()}/invito/${codiceInvito}` } }
+  redirect('/')
 }
 
 // Entrare con il link d'invito: chi ce l'ha entra subito nella rosa.
@@ -1332,10 +1332,15 @@ export async function esciDallaLega(legaId: string) {
 export async function rimuoviDallaLega(giocatoreId: string) {
   const admin = await requireForDoc(giocatoreId, 'organizzatore')
   if (admin._id === giocatoreId) throw new Error('Per uscire dalla lega usa “Esci dalla lega”')
+  await togliDallaRosa(giocatoreId, admin.lega._id)
+  refresh()
+}
+
+async function togliDallaRosa(giocatoreId: string, legaId: string) {
   const ora = new Date().toISOString()
   const partite = await sanity.fetch<(SquadreRaw & { _id: string })[]>(
     `*[_type == "match" && lega._ref == $lega && stato in ["aperta", "chiusa"] && !defined(torneo) && data > $ora && references($id)]{_id, _rev, postiDisponibili, convocazioni, squadraA, squadraB}`,
-    { lega: admin.lega._id, ora, id: giocatoreId },
+    { lega: legaId, ora, id: giocatoreId },
   )
   const tx = sanity.transaction().patch(giocatoreId, (p) => p.set({ attivo: false, isAdmin: false, puoInserireRisultati: false, rimossoIl: ora }))
   const senza = (s?: { _key: string; _ref: string }[]) => (s ?? []).filter((r) => r._ref !== giocatoreId)
@@ -1346,7 +1351,45 @@ export async function rimuoviDallaLega(giocatoreId: string) {
     )
   }
   await tx.commit()
+}
+
+// Un organizzatore di più leghe porta un giocatore in un'altra delle sue leghe, con i suoi dati e le sue
+// caratteristiche. "Sposta" lo toglie anche da questa (lo storico delle partite resta qui); "aggiungi" lo lascia
+// in entrambe. Se nell'altra lega c'era già (lo stesso account, o la stessa email), si riattiva quella scheda.
+export async function spostaGiocatore(giocatoreId: string, _prev: FormState, formData: FormData): Promise<FormState> {
+  const admin = await requireForDoc(giocatoreId, 'organizzatore')
+  const destinazione = str(formData, 'lega')
+  const togli = formData.get('modo') !== 'aggiungi'
+  if (!destinazione || destinazione === admin.lega._id) return { error: await tr('Scegli un’altra lega.') }
+  await requireIn(destinazione, 'organizzatore')
+  if (togli && admin._id === giocatoreId) return { error: await tr('Per uscire da questa lega usa “Esci dalla lega”.') }
+
+  const g = await sanity.fetch<(Player & { clerkUserId?: string; dataNascita?: string; caratteristiche?: Record<string, number> }) | null>(
+    `*[_type == "player" && _id == $id][0]`,
+    { id: giocatoreId },
+  )
+  if (!g) return { error: await tr('Giocatore non trovato.') }
+  const gia = await sanity.fetch<string | null>(
+    `*[_type == "player" && lega._ref == $lega && ((defined($utente) && clerkUserId == $utente) || (defined($email) && lower(email) == lower($email)))][0]._id`,
+    { lega: destinazione, utente: g.clerkUserId ?? null, email: g.email ?? null },
+  )
+  if (gia) {
+    await sanity.patch(gia).set({ attivo: true }).unset(['rimossoIl']).commit()
+  } else {
+    const campi = ['nome', 'cognome', 'soprannome', 'email', 'telefono', 'dataNascita', 'foto', 'ruolo', 'piede', 'caratteristiche', 'clerkUserId'] as const
+    await sanity.create({
+      ...(g.clerkUserId && { _id: `player-${destinazione}-${g.clerkUserId}` }),
+      _type: 'player',
+      lega: { _type: 'reference', _ref: destinazione },
+      ...Object.fromEntries(campi.filter((c) => g[c] != null).map((c) => [c, g[c]])),
+      isAdmin: false,
+      attivo: true,
+    })
+  }
+  if (togli) await togliDallaRosa(giocatoreId, admin.lega._id)
+  if (togli) redirect('/giocatori')
   refresh()
+  return {}
 }
 
 // L'organizzatore elimina la lega con tutto quello che contiene (partite, serie, giocatori). Non si torna indietro.

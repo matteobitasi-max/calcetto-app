@@ -2,7 +2,7 @@ import { Suspense } from 'react'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { SignOutButton } from '@clerk/nextjs'
-import { displayName, eta, membroDi } from '@/lib/player'
+import { displayName, eta, getMemberships, membroDi } from '@/lib/player'
 import { getKmTotali, getPartitePunteggio, getPlayer, getPlayerStats, getStorico, type PartitaGiocata, type PlayerStats } from '@/lib/matches'
 import { classifica } from '@/lib/punteggio'
 import { TROFEI, trofeiLega, type IdTrofeo } from '@/lib/trofei'
@@ -12,7 +12,8 @@ import { getT } from '@/lib/lingua'
 import type { T } from '@/lib/i18n'
 import { ScegliLingua } from '@/components/scegli-lingua'
 import { immagineUrl } from '@/lib/image'
-import { caricaFoto } from '@/app/actions'
+import { caricaFoto, spostaGiocatore } from '@/app/actions'
+import { SpostaGiocatore } from '@/components/sposta-giocatore'
 import { AvatarUpload } from '@/components/avatar-upload'
 import { NotificheToggle } from '@/components/notifiche-toggle'
 import { PreferenzeNotifiche } from '@/components/preferenze-notifiche'
@@ -25,12 +26,13 @@ export async function ProfiloGiocatore({ id }: { id: string }) {
   // Le schede si vedono solo tra membri della stessa lega.
   const me = await membroDi(player?.legaId)
   if (!player || !me) notFound()
-  const [stats, storico, partite, kmTotali, trofeiTutti, t] = await Promise.all([
+  const [stats, storico, partite, kmTotali, trofeiTutti, mie, t] = await Promise.all([
     getPlayerStats(id, me.lega._id),
     getStorico(id),
     getPartitePunteggio(me.lega._id),
     getKmTotali(me.lega._id),
     trofeiLega(me.lega._id),
+    getMemberships(),
     getT(),
   ])
   const trofei = trofeiTutti.get(id) ?? {}
@@ -41,6 +43,8 @@ export async function ProfiloGiocatore({ id }: { id: string }) {
   const canEdit = !!me.isAdmin
   const mio = me._id === player._id
   const cambiaFoto = canEdit || mio
+  // le altre leghe che organizzo: lì posso portare il giocatore
+  const altreLeghe = canEdit ? mie.filter((m) => m.isAdmin && m.lega._id !== me.lega._id).map((m) => ({ id: m.lega._id, nome: m.lega.nome })) : []
   const ruoli = [
     player.isAdmin && t('organizzatore'),
     !player.isAdmin && player.puoInserireRisultati && t('refertatore'),
@@ -120,6 +124,12 @@ export async function ProfiloGiocatore({ id }: { id: string }) {
       <Suspense>
         <IntervisteLega legaId={me.lega._id} playlist={me.lega.playlistInterviste} giocatore={player._id} />
       </Suspense>
+
+      {altreLeghe.length > 0 && (
+        <Card className="p-0!">
+          <SpostaGiocatore nome={displayName(player)} leghe={altreLeghe} azione={spostaGiocatore.bind(null, player._id)} />
+        </Card>
+      )}
 
       <Storico partite={storico} mio={mio} t={t} />
 
