@@ -24,4 +24,8 @@ export const notifiche: Record<string, string> = {
   "Nessun dispositivo con le notifiche attive: attivale qui sopra, poi riprova.": "No device with notifications on: turn them on above, then try again.",
   "Inviata a {n} dispositivi su {tot}: dovrebbe arrivare tra pochi secondi.": "Sent to {n} of {tot} devices: it should arrive in a few seconds.",
   "Mandami una notifica di prova": "Send me a test notification",
+  "Ricordate le pettorine": "Remember the bibs",
+  "{n} convocati": "{n} called up",
+  "{n} convocati su {posti}": "{n} of {posti} called up",
+  "SOLLECITO CONVOCAZIONI": "CALL-UP REMINDER",
 }

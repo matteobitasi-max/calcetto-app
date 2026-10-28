@@ -16,12 +16,13 @@ export async function GET(request: Request) {
   const ora = new Date()
   const tra30 = new Date(ora.getTime() + 30 * 60_000)
   const partite = await sanity.fetch<
-    { _id: string; data: string; luogo: string; chiusura: string; lega: string; mancanti: string[] }[]
+    { _id: string; data: string; luogo: string; chiusura: string; lega: string; mancanti: string[]; convocati: number; posti: number; automatici?: boolean }[]
   >(
     `*[_type == "match" && coalesce(stato, "aperta") == "aperta"
        && aperturaConvocazioni <= $ora && chiusuraConvocazioni > $ora && chiusuraConvocazioni <= $tra30
        && coalesce(promemoriaPer, "") != chiusuraConvocazioni]{
       _id, data, luogo, "chiusura": chiusuraConvocazioni, "lega": lega->nome,
+      "convocati": count(convocazioni[risposta == "presente"]), "posti": postiDisponibili, "automatici": postiAutomatici,
       "mancanti": *[_type == "player" && lega._ref == ^.lega._ref && attivo != false
         && !(_id in ^.convocazioni[].giocatore._ref)]._id
     }`,
@@ -36,11 +37,11 @@ export async function GET(request: Request) {
     const r = await inviaAGiocatori(
       p.mancanti,
       (t) => ({
-        title: `⏳ ${p.lega}: ${t('convocazioni chiudono tra {n} minuti', { n: minuti })}`,
-        body: t('Partita di {data} · {luogo}. Ci sei?', {
+        title: `📣 ${t('SOLLECITO CONVOCAZIONI')} – ${p.automatici ? t('{n} convocati', { n: p.convocati }) : t('{n} convocati su {posti}', { n: p.convocati, posti: p.posti })}`,
+        body: `${p.lega} · ${t('convocazioni chiudono tra {n} minuti', { n: minuti })}\n${t('Partita di {data} · {luogo}. Ci sei?', {
           data: t.data(p.data, { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' }),
           luogo: p.luogo,
-        }),
+        })}`,
         url: `/partite/${p._id}`,
         tag: `promemoria-${p._id}`,
       }),

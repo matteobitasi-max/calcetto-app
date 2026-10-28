@@ -305,6 +305,22 @@ export async function cambiaStato(matchId: string, stato: Stato) {
     if (posti) patch.set({ postiDisponibili: posti, convocazioni: assegnaPosti(doc.convocazioni, posti) })
   }
   await patch.commit()
+  // Convocazioni chiuse: chi è in lista lo sa (e si ricorda le pettorine)
+  if (stato === 'chiusa' && doc?.stato !== 'chiusa') {
+    const match = await getMatch(matchId)
+    if (match) {
+      await inviaAGiocatori(
+        presenti(match).map((c) => c.giocatore._id),
+        (t) => ({
+          title: `🔒 ${t('Convocazioni chiuse')} – ${t('Ricordate le pettorine')}`,
+          body: `${t.data(match.data, { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })} · ${match.luogo}\n${convocati(match, t)}`,
+          url: `/partite/${matchId}`,
+          tag: matchId,
+        }),
+        'convocazioni',
+      ).catch(() => undefined)
+    }
+  }
   refresh()
 }
 
@@ -735,6 +751,12 @@ export async function allungaFinestra(matchId: string, minuti: number) {
 
 export type AvvisoState = { inviate?: number; totali?: number; error?: string } | undefined
 
+// "7 convocati su 10" (o solo "7 convocati" quando il numero lo decidono le convocazioni).
+const convocati = (match: Match, t: T) => {
+  const n = presenti(match).length
+  return match.postiAutomatici ? t('{n} convocati', { n }) : t('{n} convocati su {posti}', { n, posti: match.postiDisponibili })
+}
+
 // Apre subito le convocazioni (se non lo sono già per orario) e avvisa tutti.
 export async function apriConvocazioni(matchId: string): Promise<AvvisoState> {
   const { lega } = await requireForDoc(matchId, 'organizzatore')
@@ -752,14 +774,26 @@ export async function apriConvocazioni(matchId: string): Promise<AvvisoState> {
     .commit()
 
   const breve = { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' } as const
+  const chiusura = stato === 'non_ancora' ? fine : match.chiusuraConvocazioni
+  // Prima volta: "Convocazioni aperte" con i dettagli; con le convocazioni già aperte ("Avvisa di nuovo"): il sollecito.
   const risultato = await inviaATutti(
     match.legaId,
-    (t) => ({
-      title: `⚽ ${lega.nome}: ${t('convocazioni aperte!')}`,
-      body: `${t.data(match.data, breve)} · ${match.luogo}\n${t('{n} posti, rispondi entro {data}', { n: match.postiDisponibili, data: t.data(match.chiusuraConvocazioni, breve) })}`,
-      url: `/partite/${matchId}`,
-      tag: matchId,
-    }),
+    (t) =>
+      stato === 'aperta'
+        ? {
+            title: `📣 ${t('SOLLECITO CONVOCAZIONI')} – ${convocati(match, t)}`,
+            body: `${lega.nome} · ${t.data(match.data, breve)} · ${match.luogo}\n${t('Rispondi entro {data}', { data: t.data(chiusura, breve) })}`,
+            url: `/partite/${matchId}`,
+            tag: matchId,
+          }
+        : {
+            title: `⚽ ${t('Convocazioni aperte')}`,
+            body: `${lega.nome} · ${t.data(match.data, breve)} · ${match.luogo}\n${
+              match.postiAutomatici ? t('Rispondi entro {data}', { data: t.data(chiusura, breve) }) : t('{n} posti, rispondi entro {data}', { n: match.postiDisponibili, data: t.data(chiusura, breve) })
+            }`,
+            url: `/partite/${matchId}`,
+            tag: matchId,
+          },
     'convocazioni',
   )
   refresh()
