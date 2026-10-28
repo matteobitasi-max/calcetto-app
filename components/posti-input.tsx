@@ -21,7 +21,8 @@ const chip = (attivo: boolean) =>
 export function PostiInput({ defaultValue = 10, defaultAutomatico = true }: { defaultValue?: number; defaultAutomatico?: boolean }) {
   const t = useT()
   const [automatico, setAutomatico] = useState(defaultAutomatico)
-  const [value, setValue] = useState(defaultValue)
+  // testo del campo: si può cancellare e riscrivere (un numero vuoto non diventa 0)
+  const [value, setValue] = useState(String(defaultValue))
   return (
     <div className="space-y-2">
       <div className="flex flex-wrap gap-2">
@@ -34,9 +35,9 @@ export function PostiInput({ defaultValue = 10, defaultAutomatico = true }: { de
             type="button"
             onClick={() => {
               setAutomatico(false)
-              setValue(n)
+              setValue(String(n))
             }}
-            className={chip(!automatico && value === n)}
+            className={chip(!automatico && Number(value) === n)}
           >
             {n} · {label}
           </button>
@@ -58,7 +59,8 @@ export function PostiInput({ defaultValue = 10, defaultAutomatico = true }: { de
           max={Math.max(MAX_GIOCATORI, defaultValue)}
           required
           value={value}
-          onChange={(e) => setValue(Number(e.target.value))}
+          inputMode="numeric"
+          onChange={(e) => setValue(e.target.value.replace(/\D/g, '').replace(/^0+/, ''))}
           className={inputClass}
         />
       )}
