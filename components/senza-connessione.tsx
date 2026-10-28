@@ -5,17 +5,34 @@ import { useEffect, useRef, useState } from 'react'
 import { LOGO_OFFLINE } from '@/lib/logo-offline'
 import { useT } from '@/components/lingua'
 
-// Il server risponde? (un file piccolo, senza cache, con un limite di 5 secondi)
-async function raggiungibile() {
-  const stop = new AbortController()
-  const timer = setTimeout(() => stop.abort(), 5000)
+const aspetta = (ms: number) => new Promise((r) => setTimeout(r, ms))
+
+// Il server risponde? (un file piccolo, senza cache, con un limite di 8 secondi). Sulla rete mobile
+// la prima richiesta può fallire mentre la connessione si sveglia: prima di dire di no si riprova.
+async function raggiungibile(tentativi = 2) {
+  for (let i = 0; i < tentativi; i++) {
+    if (i) await aspetta(2000)
+    const stop = new AbortController()
+    const timer = setTimeout(() => stop.abort(), 8000)
+    try {
+      const r = await fetch(`/icon-192.png?ping=${Date.now()}`, { cache: 'no-store', signal: stop.signal })
+      if (r.ok) return true
+    } catch {
+      // si riprova
+    } finally {
+      clearTimeout(timer)
+    }
+  }
+  return false
+}
+
+// Una richiesta al nostro server (non a Clerk, YouTube, ecc., che possono fallire per conto loro).
+const alNostroServer = (risorsa: RequestInfo | URL) => {
   try {
-    const r = await fetch(`/icon-192.png?ping=${Date.now()}`, { cache: 'no-store', signal: stop.signal })
-    return r.ok
+    const url = typeof risorsa === 'string' || risorsa instanceof URL ? new URL(risorsa, location.href) : new URL(risorsa.url)
+    return url.origin === location.origin
   } catch {
     return false
-  } finally {
-    clearTimeout(timer)
   }
 }
 
@@ -41,7 +58,7 @@ export function SenzaConnessione() {
     }
     const ricontrolla = async () => {
       clearTimeout(attesa)
-      if (navigator.onLine && (await raggiungibile())) return tornato()
+      if (navigator.onLine && (await raggiungibile(1))) return tornato()
       attesa = setTimeout(ricontrolla, 5000)
     }
     const giu = () => {
@@ -60,12 +77,17 @@ export function SenzaConnessione() {
       try {
         return await fetchOriginale(...argomenti)
       } catch (e) {
-        if (!(e instanceof DOMException && e.name === 'AbortError')) verifica()
+        if (!(e instanceof DOMException && e.name === 'AbortError') && alNostroServer(argomenti[0])) verifica()
         throw e
       }
     }
 
-    const primoPiano = () => document.visibilityState === 'visible' && verifica()
+    // tornando nell'app la rete mobile può metterci un attimo: si controlla dopo un paio di secondi
+    let primoPianoTimer: ReturnType<typeof setTimeout> | undefined
+    const primoPiano = () => {
+      clearTimeout(primoPianoTimer)
+      if (document.visibilityState === 'visible') primoPianoTimer = setTimeout(verifica, 2000)
+    }
     const online = () => offlineRef.current && ricontrolla()
     window.addEventListener('offline', giu)
     window.addEventListener('online', online)
@@ -74,6 +96,7 @@ export function SenzaConnessione() {
 
     return () => {
       clearTimeout(attesa)
+      clearTimeout(primoPianoTimer)
       window.fetch = fetchOriginale
       window.removeEventListener('offline', giu)
       window.removeEventListener('online', online)
@@ -97,7 +120,7 @@ export function SenzaConnessione() {
       <button
         type="button"
         onClick={async () => {
-          if (navigator.onLine && (await raggiungibile())) {
+          if (navigator.onLine && (await raggiungibile(1))) {
             offlineRef.current = false
             setOffline(false)
             router.refresh()
