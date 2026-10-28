@@ -238,4 +238,6 @@ export const partite: Record<string, string> = {
   "Nessuna partita in questo giorno.": "No matches on this day.",
   "Torneo da questo giorno": "Tournament from this day",
   "Tutte le mie leghe ({n})": "All my leagues ({n})",
+  "Le modifiche valgono solo per questa partita.": "Changes apply to this match only.",
+  "Modifica invece tutta la serie": "Edit the whole series instead",
 }

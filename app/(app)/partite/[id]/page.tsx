@@ -42,6 +42,8 @@ async function MatchDetail({ params }: { params: Promise<{ id: string }> }) {
   const formato = formatoInCorso(match)
   const aggiunti = presenti(match).filter((c) => c.aggiunto).length
   const gestisci = !!player.isAdmin && match.stato !== 'giocata' && match.stato !== 'annullata'
+  // orario, campo, convocazioni, posti, quota e note: finché la partita non è giocata (anche a convocazioni chiuse)
+  const modificabile = gestisci && !match.torneo
   const risposto = new Set(match.convocazioni.map((c) => c.giocatore?._id))
   // L'organizzatore può convocare chi manca con uno swipe a destra (anche a convocazioni chiuse).
   const convoca = gestisci && !match.torneo
@@ -90,14 +92,14 @@ async function MatchDetail({ params }: { params: Promise<{ id: string }> }) {
 
         {match.note && <p className="whitespace-pre-line text-sm">{match.note}</p>}
         <FinestraInfo match={match} />
-        {match.serieId && (
+        {(match.serieId || modificabile) && (
           <p className="text-sm text-zinc-500">
-            🔁 {t('Partita ricorrente')}
-            {player.isAdmin && (
+            {match.serieId && `🔁 ${t('Partita ricorrente')}`}
+            {modificabile && (
               <>
-                {' · '}
-                <Link href={`/partite/ricorrenti/${match.serieId}`} className="text-green-700 hover:underline dark:text-green-400">
-                  {t('modifica la serie')}
+                {match.serieId && ' · '}
+                <Link href={`/partite/${match._id}/modifica`} className="font-medium text-green-700 hover:underline dark:text-green-400">
+                  ✏️ {t('Modifica partita')}
                 </Link>
               </>
             )}
