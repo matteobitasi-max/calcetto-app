@@ -13,7 +13,7 @@ export function StrisciaInterviste({ video }: { video: VideoIntervista[] }) {
 
   return (
     <>
-      <div className="-mx-4 flex snap-x gap-3 overflow-x-auto px-4 pb-1 [scrollbar-width:none]">
+      <div className="-mx-4 flex snap-x items-start gap-3 overflow-x-auto px-4 pb-1 [scrollbar-width:none]">
         {video.map((v) => (
           <button
             key={v.id}
