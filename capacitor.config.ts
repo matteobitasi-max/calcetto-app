@@ -21,7 +21,7 @@ const config: CapacitorConfig = {
     cleartext: url.startsWith('http://'),
     // Il login di Clerk passa dai suoi domini: devono restare dentro l'app,
     // altrimenti vengono aperti nel browser esterno e la sessione si perde.
-    allowNavigation: ['*.accounts.dev', '*.clerk.accounts.dev', 'clerk.*', 'accounts.*'],
+    allowNavigation: ['*.accounts.dev', '*.clerk.accounts.dev', 'clerk.*', 'accounts.*', 'clerk.thecapfc.app', 'accounts.thecapfc.app'],
   },
   ios: {
     contentInset: 'never',
