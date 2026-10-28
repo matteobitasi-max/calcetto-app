@@ -9,6 +9,7 @@ const aspetta = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
 // Il server risponde? (un file piccolo, senza cache, con un limite di 8 secondi). Sulla rete mobile
 // la prima richiesta può fallire mentre la connessione si sveglia: prima di dire di no si riprova.
+let ultimoErrore = ''
 async function raggiungibile(tentativi = 2) {
   for (let i = 0; i < tentativi; i++) {
     if (i) await aspetta(2000)
@@ -17,8 +18,9 @@ async function raggiungibile(tentativi = 2) {
     try {
       const r = await fetch(`/icon-192.png?ping=${Date.now()}`, { cache: 'no-store', signal: stop.signal })
       if (r.ok) return true
-    } catch {
-      // si riprova
+      ultimoErrore = `ping ${r.status}`
+    } catch (e) {
+      ultimoErrore = `ping ${stop.signal.aborted ? 'timeout 8s' : (e as Error)?.message || String(e)}`
     } finally {
       clearTimeout(timer)
     }
@@ -45,6 +47,8 @@ export function SenzaConnessione() {
   const t = useT()
   const router = useRouter()
   const [offline, setOffline] = useState(false)
+  // perché è comparso l'avviso (piccolo, in fondo): per capire i problemi di connessione da uno screenshot
+  const [motivo, setMotivo] = useState('')
   const offlineRef = useRef(false)
 
   useEffect(() => {
@@ -61,14 +65,17 @@ export function SenzaConnessione() {
       if (navigator.onLine && (await raggiungibile(1))) return tornato()
       attesa = setTimeout(ricontrolla, 5000)
     }
-    const giu = () => {
+    const giu = (perche?: unknown) => {
       if (offlineRef.current) return
+      setMotivo([typeof perche === 'string' ? perche : 'evento offline', `onLine=${navigator.onLine}`, ultimoErrore, location.host].filter(Boolean).join(' · '))
       offlineRef.current = true
       setOffline(true)
       attesa = setTimeout(ricontrolla, 5000)
     }
+    let ultimaRichiesta = ''
     const verifica = async () => {
-      if (!navigator.onLine || !(await raggiungibile())) giu()
+      if (!navigator.onLine) return giu('navigator offline')
+      if (!(await raggiungibile())) giu(ultimaRichiesta || 'controllo')
     }
 
     // Le richieste al server che falliscono per la rete fanno comparire l'avviso.
@@ -77,7 +84,11 @@ export function SenzaConnessione() {
       try {
         return await fetchOriginale(...argomenti)
       } catch (e) {
-        if (!(e instanceof DOMException && e.name === 'AbortError') && alNostroServer(argomenti[0])) verifica()
+        if (!(e instanceof DOMException && e.name === 'AbortError') && alNostroServer(argomenti[0])) {
+          const r = argomenti[0]
+          ultimaRichiesta = `fetch ${(typeof r === 'string' ? r : r instanceof URL ? r.pathname : r.url).slice(0, 60)}: ${(e as Error)?.message ?? e}`
+          verifica()
+        }
         throw e
       }
     }
@@ -92,7 +103,7 @@ export function SenzaConnessione() {
     window.addEventListener('offline', giu)
     window.addEventListener('online', online)
     document.addEventListener('visibilitychange', primoPiano)
-    if (!navigator.onLine) giu()
+    if (!navigator.onLine) giu('navigator offline all’avvio')
 
     return () => {
       clearTimeout(attesa)
@@ -130,6 +141,7 @@ export function SenzaConnessione() {
       >
         {t('Riprova')}
       </button>
+      {motivo && <p className="max-w-xs break-words text-[10px] text-zinc-400">{motivo}</p>}
     </div>
   )
 }
