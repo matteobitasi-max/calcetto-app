@@ -1,5 +1,5 @@
-import { redirect } from 'next/navigation'
 import Link from 'next/link'
+import { VaiA } from '@/components/vai-a'
 import { Suspense } from 'react'
 import { scegliLega, uniscitiConInvito } from '@/app/actions'
 import { membroDi, getUtente } from '@/lib/player'
@@ -21,7 +21,7 @@ export default function InvitoPage({ params }: PageProps<'/invito/[codice]'>) {
 async function Invito({ params }: { params: Promise<{ codice: string }> }) {
   const t = await getT()
   const { codice } = await params
-  if ((await getUtente())?.daCompletare) redirect(`/completa-profilo?dopo=/invito/${encodeURIComponent(codice)}`)
+  if ((await getUtente())?.daCompletare) return <VaiA href={`/completa-profilo?dopo=/invito/${encodeURIComponent(codice)}`} />
   const lega = await sanity.fetch<{ _id: string; nome: string; logo?: SanityImage; giocatori: number } | null>(
     `*[_type == "league" && codiceInvito == $codice][0]{_id, nome, logo, "giocatori": count(*[_type == "player" && lega._ref == ^._id && attivo != false])}`,
     { codice: codice.toUpperCase() },

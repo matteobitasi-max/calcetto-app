@@ -39,8 +39,12 @@
         document.getElementById('stato').textContent = inglese ? 'Retrying…' : 'Riprovo…'
         location.replace(SITO)
       }
-      // appena torna la connessione si riprova da solo
+      // appena torna la connessione si riprova da solo, e comunque ogni 10 secondi
       window.addEventListener('online', riprova)
+      setInterval(riprova, 10000)
+      // il motivo (dall'app: es. "NSURLErrorDomain -1009"), in piccolo
+      var errore = new URLSearchParams(location.search).get('errore')
+      if (errore) document.getElementById('stato').textContent = errore
     </script>
   </body>
 </html>

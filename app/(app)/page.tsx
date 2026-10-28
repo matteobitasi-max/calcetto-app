@@ -1,9 +1,9 @@
 import Link from 'next/link'
+import { VaiA } from '@/components/vai-a'
 import { Suspense, type ReactNode } from 'react'
 import { IntervisteLega } from '@/components/interviste-lega'
 import { CodiceInvito, InvitoLink } from '@/components/invito-link'
 import { baseUrl } from '@/lib/url'
-import { redirect } from 'next/navigation'
 import { getCurrentPlayer, getMemberships, getUtente, type Player } from '@/lib/player'
 import { finestra, formatoInCorso, getPastMatches, getPlayers, getUpcomingMatches, ordinati, presenti, type Match } from '@/lib/matches'
 import { getT } from '@/lib/lingua'
@@ -32,9 +32,9 @@ const breve = { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit
 async function Partite() {
   const [player, mie, utente, t] = await Promise.all([getCurrentPlayer(), getMemberships(), getUtente(), getT()])
   // primo accesso (anche chi entra già in una lega, es. aggiunto con la sua email): prima il profilo
-  if (utente?.daCompletare) redirect('/completa-profilo?dopo=/')
+  if (utente?.daCompletare) return <VaiA href={'/completa-profilo?dopo=/'} />
   // Nessuna lega: si sceglie se crearne una o entrare con un invito.
-  if (!player) redirect('/benvenuto')
+  if (!player) return <VaiA href="/benvenuto" />
 
   const legaId = player.lega._id
   await assicuraRicorrenze({ legaId })

@@ -71,9 +71,17 @@ class MainViewController: CAPBridgeViewController {
     private var strattoni: [Date] = []
     private var ferma = Date.distantPast
 
+    private var navigazione: NavigazioneResistente?
+
     override func capacitorDidLoad() {
         super.capacitorDidLoad()
         webView?.allowsBackForwardNavigationGestures = false
+        // davanti a quello di Capacitor: niente "Nessuna connessione" per un intoppo del 4G
+        if let webView, let originale = webView.navigationDelegate {
+            let filtro = NavigazioneResistente(originale: originale, bridge: bridge)
+            navigazione = filtro
+            webView.navigationDelegate = filtro
+        }
         bridge?.registerPluginInstance(SalutePlugin())
         avviaScossa()
     }
@@ -96,6 +104,70 @@ class MainViewController: CAPBridgeViewController {
                 self.webView?.evaluateJavaScript("window.dispatchEvent(new Event('scossa'))")
             }
         }
+    }
+}
+
+// Capacitor mostra la pagina "Nessuna connessione" (offline.html) appena un caricamento della pagina
+// non va a buon fine. Sui dati mobili succede anche con internet funzionante: un caricamento interrotto
+// da un altro (rete lenta) o un errore momentaneo ("connessione persa", tempo scaduto) che Safari supera
+// riprovando da solo. Qui: i caricamenti interrotti si ignorano, gli errori di rete si riprovano fino
+// a 3 volte; solo dopo si mostra la pagina, con il codice dell'errore (offline.html riprova da sola).
+class NavigazioneResistente: NSObject, WKNavigationDelegate {
+    private weak var originale: WKNavigationDelegate?
+    private weak var bridge: CAPBridgeProtocol?
+    private var tentativi = 0
+
+    init(originale: WKNavigationDelegate, bridge: CAPBridgeProtocol?) {
+        self.originale = originale
+        self.bridge = bridge
+    }
+
+    // tutto il resto lo fa Capacitor
+    override func responds(to aSelector: Selector!) -> Bool {
+        super.responds(to: aSelector) || (originale?.responds(to: aSelector) ?? false)
+    }
+
+    override func forwardingTarget(for aSelector: Selector!) -> Any? {
+        originale?.responds(to: aSelector) == true ? originale : super.forwardingTarget(for: aSelector)
+    }
+
+    func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+        tentativi = 0
+        originale?.webView?(webView, didFinish: navigation)
+    }
+
+    func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
+        gestisci(webView, error) { originale?.webView?(webView, didFailProvisionalNavigation: navigation, withError: error) }
+    }
+
+    func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
+        gestisci(webView, error) { originale?.webView?(webView, didFail: navigation, withError: error) }
+    }
+
+    private func gestisci(_ webView: WKWebView, _ error: Error, altrimenti: () -> Void) {
+        let e = error as NSError
+        // interrotto da un altro caricamento (o da un link aperto fuori dall'app): non è un problema di rete
+        if e.domain == NSURLErrorDomain && e.code == NSURLErrorCancelled { return }
+        if e.domain == "WebKitErrorDomain" && e.code == 102 { return }
+        let momentanei = [NSURLErrorNetworkConnectionLost, NSURLErrorTimedOut, NSURLErrorCannotConnectToHost,
+                          NSURLErrorCannotFindHost, NSURLErrorNotConnectedToInternet, NSURLErrorDNSLookupFailed,
+                          NSURLErrorSecureConnectionFailed]
+        let indirizzo = (e.userInfo[NSURLErrorFailingURLErrorKey] as? URL) ?? bridge?.config.serverURL
+        if e.domain == NSURLErrorDomain && momentanei.contains(e.code) && tentativi < 3, let indirizzo, indirizzo.scheme?.hasPrefix("http") == true {
+            tentativi += 1
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { webView.load(URLRequest(url: indirizzo)) }
+            return
+        }
+        tentativi = 0
+        // la pagina "Nessuna connessione", con il codice dell'errore (per capire cosa è successo)
+        if let pagina = bridge?.config.errorPathURL, var parti = URLComponents(url: pagina, resolvingAgainstBaseURL: false) {
+            parti.queryItems = [URLQueryItem(name: "errore", value: "\(e.domain) \(e.code)")]
+            if let url = parti.url {
+                webView.load(URLRequest(url: url))
+                return
+            }
+        }
+        altrimenti()
     }
 }
 

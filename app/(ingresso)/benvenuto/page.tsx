@@ -1,5 +1,5 @@
-import { redirect } from 'next/navigation'
 import Link from 'next/link'
+import { VaiA } from '@/components/vai-a'
 import { Suspense } from 'react'
 import { scegliLega, uniscitiConCodice } from '@/app/actions'
 import { CreaLega } from '@/components/crea-lega'
@@ -20,7 +20,7 @@ export default function BenvenutoPage() {
 
 async function Benvenuto() {
   const [utente, leghe, attiva, titolare, t] = await Promise.all([getUtente(), getMemberships(), getCurrentPlayer(), isTitolare(), getT()])
-  if (utente?.daCompletare) redirect('/completa-profilo?dopo=/benvenuto')
+  if (utente?.daCompletare) return <VaiA href={'/completa-profilo?dopo=/benvenuto'} />
 
   return (
     <div className="space-y-4">

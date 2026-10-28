@@ -1,5 +1,5 @@
-import { redirect } from 'next/navigation'
 import Link from 'next/link'
+import { VaiA } from '@/components/vai-a'
 import { Suspense } from 'react'
 import { entraNelTorneo } from '@/app/actions'
 import { membroDi, getUtente } from '@/lib/player'
@@ -25,7 +25,7 @@ type Squadra = { _key: string; nome: string; colore?: string; logo?: SanityImage
 async function Invito({ params }: { params: Promise<{ codice: string }> }) {
   const t = await getT()
   const { codice } = await params
-  if ((await getUtente())?.daCompletare) redirect(`/completa-profilo?dopo=/invito-torneo/${encodeURIComponent(codice)}`)
+  if ((await getUtente())?.daCompletare) return <VaiA href={`/completa-profilo?dopo=/invito-torneo/${encodeURIComponent(codice)}`} />
   const c = codice.toUpperCase()
   const torneo = await sanity.fetch<{
     _id: string
