@@ -130,6 +130,8 @@ export function AttivaPro({ utente, chiavi, mio }: { utente: string; chiavi: { a
     return <p className="text-sm">{t('Puoi attivare Pro dall’app The Cap sul tuo iPhone o telefono Android, nella pagina The Cap Pro.')}</p>
   }
   if (!pronta) {
+    // app aggiornata, ma gli acquisti su questo store non sono ancora configurati
+    if (Capacitor.isPluginAvailable('Purchases')) return <p className="text-sm text-zinc-500">{t('Pro non è ancora disponibile. Riprova più tardi.')}</p>
     return <p className="text-sm">{t('Aggiorna l’app The Cap dallo store per attivare Pro.')}</p>
   }
 
