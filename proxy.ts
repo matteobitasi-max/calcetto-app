@@ -2,9 +2,9 @@ import { NextResponse, type NextFetchEvent, type NextRequest } from 'next/server
 import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server'
 
 // Lo Studio ha il suo login Sanity, quindi non passa da Clerk. /api/cron si protegge con CRON_SECRET, /api/calendario con il codice firmato,
-// /api/revenuecat con REVENUECAT_WEBHOOK_AUTH. /accesso-app gestisce da sé
+// /api/revenuecat con REVENUECAT_WEBHOOK_AUTH. Gli inviti si aprono anche senza accesso (per scaricare l'app). /accesso-app gestisce da sé
 // chi non ha ancora fatto l'accesso (login delle app nel browser).
-const isPublicRoute = createRouteMatcher(['/sign-in(.*)', '/sign-up(.*)', '/accesso-app(.*)', '/account-eliminato', '/api/strava/callback', '/api/cron/(.*)', '/api/calendario/(.*)', '/api/revenuecat', '/studio(.*)'])
+const isPublicRoute = createRouteMatcher(['/sign-in(.*)', '/sign-up(.*)', '/accesso-app(.*)', '/invito/(.*)', '/invito-torneo/(.*)', '/invito-squadra/(.*)', '/account-eliminato', '/api/strava/callback', '/api/cron/(.*)', '/api/calendario/(.*)', '/api/revenuecat', '/studio(.*)'])
 
 const conClerk = clerkMiddleware(async (auth, req) => {
   if (!isPublicRoute(req)) await auth.protect()

@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { VaiA } from '@/components/vai-a'
+import { InvitoSenzaAccesso } from '@/components/invito-app'
 import { Suspense } from 'react'
 import { scegliLega, uniscitiConInvito } from '@/app/actions'
 import { membroDi, getUtente } from '@/lib/player'
@@ -39,7 +40,8 @@ async function Invito({ params }: { params: Promise<{ codice: string }> }) {
     )
   }
 
-  const giaDentro = !!(await membroDi(lega._id))
+  const utente = await getUtente()
+  const giaDentro = !!utente && !!(await membroDi(lega._id))
   const logo = avatarUrl(lega.logo, 160)
 
   return (
@@ -55,7 +57,9 @@ async function Invito({ params }: { params: Promise<{ codice: string }> }) {
           {t.n(lega.giocatori, '{n} giocatore nella rosa', '{n} giocatori nella rosa')}
         </p>
       </div>
-      {giaDentro ? (
+      {!utente ? (
+        <InvitoSenzaAccesso percorso={`/invito/${codice.toUpperCase()}`} codice={codice.toUpperCase()} />
+      ) : giaDentro ? (
         <form action={scegliLega.bind(null, lega._id, '/')}>
           <SubmitButton className={`${buttonClass('primary')} w-full`}>{t('Fai già parte della lega: apri')}</SubmitButton>
         </form>

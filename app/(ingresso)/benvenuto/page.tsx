@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { VaiA } from '@/components/vai-a'
+import { RiprendiInvito } from '@/components/invito-app'
 import { Suspense } from 'react'
 import { scegliLega, uniscitiConCodice } from '@/app/actions'
 import { CreaLega } from '@/components/crea-lega'
@@ -24,6 +25,7 @@ async function Benvenuto() {
 
   return (
     <div className="space-y-4">
+      <RiprendiInvito />
       <div className="text-center">
         <h1 className="text-2xl font-bold">{utente?.nome ? t('Ciao, {nome}! 👋', { nome: utente.nome }) : t('Ciao! 👋')}</h1>
         {!leghe.length && <p className="mt-1 text-sm text-zinc-500">{t('Crea la lega del tuo gruppo oppure entra con l’invito che ti hanno mandato.')}</p>}

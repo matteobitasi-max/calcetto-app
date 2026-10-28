@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { VaiA } from '@/components/vai-a'
+import { InvitoSenzaAccesso } from '@/components/invito-app'
 import { Suspense } from 'react'
 import { entraNelTorneo } from '@/app/actions'
 import { membroDi, getUtente } from '@/lib/player'
@@ -55,6 +56,20 @@ async function Invito({ params }: { params: Promise<{ codice: string }> }) {
     )
   }
 
+  // senza accesso (es. dal telefono senza l'app): prima si scarica l'app o si accede
+  if (!(await getUtente())) {
+    return (
+      <Card className="space-y-4 text-center">
+        <div>
+          <p className="text-4xl">🏆</p>
+          <p className="text-sm text-zinc-500">{t('Sei stato invitato al torneo')}</p>
+          <h1 className="text-2xl font-bold">{torneo.nome}</h1>
+          <p className="text-sm text-zinc-500">🏟️ {torneo.legaNome}</p>
+        </div>
+        <InvitoSenzaAccesso percorso={`/invito-torneo/${c}`} codice={c} />
+      </Card>
+    )
+  }
   const me = await membroDi(torneo.legaId)
   const mia = me ? torneo.squadre.find((s) => s.giocatori.includes(me._id)) : undefined
   const aperte = iscrizioniAperte(torneo)

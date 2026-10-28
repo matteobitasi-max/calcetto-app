@@ -12,6 +12,7 @@ import { NotificheNativeListener } from '@/components/notifiche-native'
 import { caricaLogoLega } from '@/app/actions'
 import { ScuotiFoto } from '@/components/scuoti-foto'
 import { UsaApp } from '@/components/usa-app'
+import { RiprendiInvito } from '@/components/invito-app'
 import { KmAutomatici } from '@/components/km-automatici'
 import { getT } from '@/lib/lingua'
 
@@ -43,6 +44,7 @@ export default async function AppLayout({ children }: LayoutProps<'/'>) {
       </header>
       <NotificheNativeListener />
       <UsaApp />
+      <RiprendiInvito />
       <KmAutomatici />
       <main className="linee-campo mx-auto w-full max-w-2xl flex-1 p-4 pb-[max(1rem,var(--safe-area-inset-bottom,env(safe-area-inset-bottom)))]">
         {children}

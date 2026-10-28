@@ -5,6 +5,7 @@ import { Browser } from '@capacitor/browser'
 import { Capacitor } from '@capacitor/core'
 import { SignIn, SignUp } from '@clerk/nextjs'
 import { SchedeAccesso } from './schede-accesso'
+import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { SchermataUsaApp, browserDelTelefono } from './usa-app'
 import { useT } from '@/components/lingua'
@@ -63,6 +64,7 @@ export function AccessoNativo({ registrati = false }: { registrati?: boolean }) 
 // Ritorno dal browser: thecap://accesso?ticket=... (chiude la finestra e fa entrare l'app)
 // e thecap://strava (collegamento a Strava fatto).
 export function RitornoAccesso() {
+  const router = useRouter()
   useEffect(() => {
     if (!accessoNelBrowser()) return
     const listener = App.addListener('appUrlOpen', ({ url }) => {
@@ -75,6 +77,12 @@ export function RitornoAccesso() {
         window.location.replace(torna.startsWith('/') ? torna : '/')
         return
       }
+      // link d'invito aperto nell'app (thecap://invito/CODICE, anche di tornei e squadre)
+      if (['invito', 'invito-torneo', 'invito-squadra'].includes(link.host)) {
+        const codice = link.pathname.replace(/^\//, '')
+        if (/^[A-Za-z0-9]+$/.test(codice)) router.push(`/${link.host}/${codice}`)
+        return
+      }
       if (link.host !== 'accesso') return
       const ticket = link.searchParams.get('ticket')
       if (!ticket) return
@@ -85,6 +93,6 @@ export function RitornoAccesso() {
     return () => {
       listener.then((l) => l.remove())
     }
-  }, [])
+  }, [router])
   return null
 }
