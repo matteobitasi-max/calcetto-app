@@ -60,6 +60,11 @@ export const StatoBadge = async ({ match }: { match: { stato: Stato; aperturaCon
   const t = await getT()
   const f = match.stato === 'aperta' ? finestra(match) : null
   const [label, cls] = STATO[f === 'non_ancora' || f === 'scaduta' ? f : match.stato] ?? STATO.aperta
+  // non ancora aperte: quando si aprono (es. "Convocazioni dal mar 3 nov, 20:00")
+  if (f === 'non_ancora') {
+    const quando = t.data(match.aperturaConvocazioni, { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
+    return <Badge label={t('Convocazioni dal {quando}', { quando })} className={cls} />
+  }
   return <Badge label={t(label)} className={cls} />
 }
 
