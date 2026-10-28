@@ -29,7 +29,15 @@ export const getUtente = cache(async () => {
     .map((e) => e.emailAddress.toLowerCase())
   const telefoni = user.phoneNumbers.filter((p) => p.verification?.status === 'verified').map((p) => p.phoneNumber)
   // Dati del profilo scelti nella pagina "Il mio account" (finiscono anche nelle schede giocatore).
-  const profilo = (user.privateMetadata ?? {}) as { telefono?: string; ruolo?: string; piede?: string; dataNascita?: string }
+  const profilo = (user.privateMetadata ?? {}) as {
+    telefono?: string
+    ruolo?: string
+    piede?: string
+    dataNascita?: string
+    /** foto profilo (immagine su Sanity): va anche nelle schede delle leghe in cui entro dopo */
+    fotoAsset?: string
+    profiloCompleto?: boolean
+  }
   return {
     id: user.id,
     nome: user.firstName,
@@ -41,6 +49,9 @@ export const getUtente = cache(async () => {
     ruolo: profilo.ruolo,
     piede: profilo.piede,
     dataNascita: profilo.dataNascita,
+    fotoAsset: profilo.fotoAsset,
+    // Chi si è registrato da quando c'è la pagina "Completa il tuo profilo" la vede una volta, al primo accesso.
+    daCompletare: !profilo.profiloCompleto && user.createdAt > Date.parse('2026-10-28T18:00:00Z'),
   }
 })
 

@@ -61,4 +61,8 @@ export const ingresso: Record<string, string> = {
   "Account eliminato con successo": "Account deleted successfully",
   "Abbiamo cancellato il tuo accesso, la tua foto e i tuoi dati personali in tutte le leghe. Grazie per aver giocato con The Cap!": "We deleted your sign-in, your photo and your personal data in every league. Thanks for playing with The Cap!",
   "Torna all’inizio": "Back to the start",
+  "Completa il tuo profilo": "Complete your profile",
+  "Così gli organizzatori ti conoscono e fanno squadre equilibrate. Puoi cambiarli quando vuoi in “Il mio account”.": "So organisers get to know you and make balanced teams. You can change this anytime in “My account”.",
+  "Continua": "Continue",
+  "Salta per ora": "Skip for now",
 }

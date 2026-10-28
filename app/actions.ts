@@ -797,6 +797,7 @@ async function nuovaScheda(legaId: string, utente: NonNullable<Awaited<ReturnTyp
     ...(utente.ruolo && { ruolo: utente.ruolo }),
     ...(utente.piede && { piede: utente.piede }),
     ...(utente.dataNascita && { dataNascita: utente.dataNascita }),
+    ...(utente.fotoAsset && { foto: { _type: 'image', asset: { _type: 'reference', _ref: utente.fotoAsset } } }),
     clerkUserId: utente.id,
     isAdmin,
     attivo: true,
@@ -1265,12 +1266,21 @@ export async function salvaAccount(_prev: FormState, formData: FormData): Promis
   }
   if (nome.length > 40 || cognome.length > 40) return { error: await tr('Nome e cognome: massimo 40 caratteri.') }
   if (telefonoScritto && !/^\+?\d{6,15}$/.test(telefono)) return { error: await tr('Il numero di telefono non sembra valido.') }
+  const upload = await uploadFoto(formData.get('foto'))
+  if (upload && 'error' in upload) return upload
 
   const { clerkClient } = await import('@clerk/nextjs/server')
   const clerk = await clerkClient()
   await clerk.users.updateUser(utente.id, { firstName: nome, lastName: cognome })
   await clerk.users.updateUserMetadata(utente.id, {
-    privateMetadata: { telefono: telefono || null, ruolo: ruolo || null, piede: piede || null, dataNascita: dataNascita || null },
+    privateMetadata: {
+      telefono: telefono || null,
+      ruolo: ruolo || null,
+      piede: piede || null,
+      dataNascita: dataNascita || null,
+      ...(upload && { fotoAsset: upload.foto.asset._ref }),
+      profiloCompleto: true,
+    },
   })
 
   const schede = await sanity.fetch<string[]>(`*[_type == "player" && clerkUserId == $id]._id`, { id: utente.id })
@@ -1280,14 +1290,26 @@ export async function salvaAccount(_prev: FormState, formData: FormData): Promis
     for (const id of schede) {
       tx.patch(id, (p) =>
         p
-          .set({ nome, ...Object.fromEntries(Object.entries(valori).filter(([, v]) => v)) })
+          .set({ nome, ...(upload && { foto: upload.foto }), ...Object.fromEntries(Object.entries(valori).filter(([, v]) => v)) })
           .unset(Object.entries(valori).filter(([, v]) => !v).map(([k]) => k)),
       )
     }
     await tx.commit()
   }
+  // dalla pagina "Completa il tuo profilo" si torna dove si stava andando
+  const dopo = str(formData, 'dopo')
+  if (dopo) redirect(dopo.startsWith('/') && !dopo.startsWith('//') ? dopo : '/')
   refresh()
   return {}
+}
+
+// "Completa il tuo profilo" → "Salta per ora": non la si rivede (i dati si mettono poi in "Il mio account").
+export async function saltaProfilo(dopo: string) {
+  const utente = await getUtente()
+  if (!utente) redirect('/sign-in')
+  const { clerkClient } = await import('@clerk/nextjs/server')
+  await (await clerkClient()).users.updateUserMetadata(utente.id, { privateMetadata: { profiloCompleto: true } })
+  redirect(dopo.startsWith('/') && !dopo.startsWith('//') ? dopo : '/')
 }
 
 // Un giocatore a caso della rosa (prima chi usa già l'app), per prendere il posto dell'organizzatore.

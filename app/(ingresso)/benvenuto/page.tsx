@@ -1,3 +1,4 @@
+import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { Suspense } from 'react'
 import { scegliLega, uniscitiConCodice } from '@/app/actions'
@@ -19,6 +20,7 @@ export default function BenvenutoPage() {
 
 async function Benvenuto() {
   const [utente, leghe, attiva, titolare, t] = await Promise.all([getUtente(), getMemberships(), getCurrentPlayer(), isTitolare(), getT()])
+  if (utente?.daCompletare) redirect('/completa-profilo?dopo=/benvenuto')
 
   return (
     <div className="space-y-4">

@@ -3,7 +3,8 @@ import { redirect } from 'next/navigation'
 import { Suspense } from 'react'
 import { SignOutButton } from '@clerk/nextjs'
 import { salvaAccount } from '@/app/actions'
-import { PIEDI, RUOLI, getMemberships, getUtente } from '@/lib/player'
+import { getMemberships, getUtente } from '@/lib/player'
+import { CampiProfilo } from '@/components/campi-profilo'
 import { ActionForm } from '@/components/action-form'
 import { EliminaAccount } from '@/components/elimina-account'
 import { PillSalva } from '@/components/pill-salva'
@@ -27,12 +28,7 @@ async function Account() {
   const [utente, leghe, t] = await Promise.all([getUtente(), getMemberships(), getT()])
   if (!utente) redirect('/sign-in')
   const strava = stravaConfigurato() ? await getCollegamento(utente.id) : null
-  // Se non li ho ancora scelti qui, si parte da quelli della mia scheda (es. messi dall'organizzatore).
   const scheda = leghe[0]
-  const telefono = utente.telefono ?? scheda?.telefono ?? ''
-  const ruolo = utente.ruolo ?? scheda?.ruolo ?? ''
-  const piede = utente.piede ?? scheda?.piede ?? ''
-  const dataNascita = utente.dataNascita ?? scheda?.dataNascita ?? ''
 
   return (
     <div className="space-y-4">
@@ -43,53 +39,10 @@ async function Account() {
 
       <ActionForm action={salvaAccount} className="space-y-4">
         <Card className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <Field label={t('Nome')}>
-              <input name="nome" required maxLength={40} defaultValue={utente.nome ?? ''} autoComplete="given-name" className={inputClass} />
-            </Field>
-            <Field label={t('Cognome')}>
-              <input name="cognome" maxLength={40} defaultValue={utente.cognome ?? ''} autoComplete="family-name" className={inputClass} />
-            </Field>
-          </div>
+          <CampiProfilo utente={utente} scheda={scheda} />
           <Field label="Email">
             <input value={utente.emails[0] ?? '—'} readOnly disabled className={`${inputClass} text-zinc-500`} />
           </Field>
-          <Field label={t('Telefono (facoltativo)')}>
-            <input
-              name="telefono"
-              type="tel"
-              inputMode="tel"
-              defaultValue={telefono}
-              placeholder="333 1234567"
-              autoComplete="tel"
-              className={inputClass}
-            />
-          </Field>
-          <Field label={t('Data di nascita (facoltativa)')}>
-            <input name="dataNascita" type="date" defaultValue={dataNascita} max={new Date().toISOString().slice(0, 10)} className={inputClass} />
-          </Field>
-          <div className="grid grid-cols-2 gap-4">
-            <Field label={t('Ruolo')}>
-              <select name="ruolo" defaultValue={ruolo} className={`${inputClass} capitalize`}>
-                <option value="">—</option>
-                {RUOLI.map((r) => (
-                  <option key={r} value={r}>
-                    {t(r)}
-                  </option>
-                ))}
-              </select>
-            </Field>
-            <Field label={t('Piede')}>
-              <select name="piede" defaultValue={piede} className={`${inputClass} capitalize`}>
-                <option value="">—</option>
-                {PIEDI.map((p) => (
-                  <option key={p} value={p}>
-                    {t(p)}
-                  </option>
-                ))}
-              </select>
-            </Field>
-          </div>
         </Card>
         <PillSalva />
       </ActionForm>
