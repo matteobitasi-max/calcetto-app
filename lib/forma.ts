@@ -6,7 +6,12 @@
 // dalla sua tecnica) e MVP. Le partite vecchie pesano sempre meno.
 //
 // Proposte (ogni PARTITE_PER_REVISIONE partite giocate dal giocatore): gol → tecnica, MVP → cervello,
-// km → fiato e scatto, risultati rispetto alle attese → un po' tutte. Da 0,10 a 0,25 per caratteristica
+// km → fiato e scatto, gol subiti dalla sua squadra → difesa, risultati rispetto alle attese → un po' tutte.
+//
+// Difesa: i gol subiti dalla sua squadra rispetto a quelli attesi. Attesi = gol medi di una squadra nella lega,
+// più alti se l'attacco avversario (tecnica media) è forte e più bassi se la difesa della sua squadra
+// (difesa media) è forte. Subirne meno del previsto alza la difesa; il merito è di tutta la squadra, per
+// questo pesa meno dei gol segnati (che sono solo suoi). Da 0,10 a 0,25 per caratteristica
 // (sotto 0,10 non si propone niente), a passi di 0,05; l'organizzatore approva o scarta.
 
 import { SKILLS, type Player, type Skill } from './roster'
@@ -44,7 +49,18 @@ export type PartitaForma = {
 type GiocatoreForma = Pick<Player, '_id' | 'caratteristiche' | 'revisioneIl'>
 
 // Una partita dal punto di vista di un giocatore.
-type Presenza = { partita: string; data: string; sorpresa: number; gol: number; mvp: boolean; km?: number; inCampo: number }
+type Presenza = {
+  partita: string
+  data: string
+  sorpresa: number
+  gol: number
+  mvp: boolean
+  km?: number
+  inCampo: number
+  /** Gol subiti dalla sua squadra, e quelli attesi. */
+  subiti: number
+  subitiAttesi: number
+}
 
 export type Modifica = { da: number; a: number }
 export type Proposta = {
@@ -55,7 +71,17 @@ export type Proposta = {
   fino: string
   modifiche: Partial<Record<Skill, Modifica>>
   /** I numeri da cui nasce la proposta, da mostrare all'organizzatore. */
-  perche: { golMedi: number; golAttesi: number; mvp: number; kmMedi?: number; kmAttesi?: number; risultati: number }
+  perche: {
+    golMedi: number
+    golAttesi: number
+    mvp: number
+    kmMedi?: number
+    kmAttesi?: number
+    risultati: number
+    /** Gol subiti a partita dalla sua squadra, e quelli attesi (difesa). Assenti nelle proposte salvate prima. */
+    subitiMedi?: number
+    subitiAttesi?: number
+  }
 }
 
 const limita = (x: number, m: number) => Math.max(-m, Math.min(m, x))
@@ -76,6 +102,15 @@ export function analisiForma(giocatori: GiocatoreForma[], tutte: PartitaForma[])
   const mediaKm = media(tuttiKm)
   const mediaTecnica = media(giocatori.map((g) => voto(g, 'tecnica'))) || 5
   const mediaFiato = media(giocatori.map((g) => voto(g, 'fiato'))) || 5
+  const mediaDifesa = media(giocatori.map((g) => voto(g, 'difesa'))) || 5
+  // gol fatti da una squadra in una partita, in media
+  const mediaGolSquadra = partite.length ? partite.reduce((s, m) => s + m.risultato!.golA! + m.risultato!.golB!, 0) / (2 * partite.length) : 0
+  // gol che una squadra dovrebbe subire contro quell'attacco, con la sua difesa
+  const subitiAttesi = (mia: string[], avversari: string[]) => {
+    const attacco = media(avversari.map((id) => voto(perId.get(id), 'tecnica'))) || mediaTecnica
+    const difesa = media(mia.map((id) => voto(perId.get(id), 'difesa'))) || mediaDifesa
+    return mediaGolSquadra * (attacco / mediaTecnica) * (mediaDifesa / difesa)
+  }
 
   const forma = new Map<string, number>()
   const storia = new Map<string, Presenza[]>()
@@ -89,6 +124,8 @@ export function analisiForma(giocatori: GiocatoreForma[], tutte: PartitaForma[])
     // sorpresa per la squadra A: +1 = molto meglio del previsto
     const sorpresa = limita((reale - attesa) / MAX_DIFF, 1)
     const inCampo = m.squadraA.length + m.squadraB.length
+    const attesiA = subitiAttesi(m.squadraA, m.squadraB)
+    const attesiB = subitiAttesi(m.squadraB, m.squadraA)
     const aggiorna = (id: string, segno: 1 | -1) => {
       const gol = m.marcatori.find((x) => x.giocatoreId === id)?.gol ?? 0
       const golAttesi = mediaGol * (voto(perId.get(id), 'tecnica') / mediaTecnica)
@@ -97,7 +134,12 @@ export function analisiForma(giocatori: GiocatoreForma[], tutte: PartitaForma[])
       const obiettivo = limita(segno * sorpresa + singolo, 1)
       forma.set(id, limita(MEMORIA * (forma.get(id) ?? 0) + PASSO * obiettivo, 1))
       const km = m.distanze.find((d) => d.giocatoreId === id)?.km ?? undefined
-      storia.set(id, [...(storia.get(id) ?? []), { partita: m._id, data: m.data, sorpresa: segno * sorpresa, gol, mvp, km: km || undefined, inCampo }])
+      const subiti = segno === 1 ? m.risultato!.golB! : m.risultato!.golA!
+      const attesi = segno === 1 ? attesiA : attesiB
+      storia.set(id, [
+        ...(storia.get(id) ?? []),
+        { partita: m._id, data: m.data, sorpresa: segno * sorpresa, gol, mvp, km: km || undefined, inCampo, subiti, subitiAttesi: attesi },
+      ])
     }
     m.squadraA.forEach((id) => aggiorna(id, 1))
     m.squadraB.forEach((id) => aggiorna(id, -1))
@@ -126,6 +168,10 @@ export function analisiForma(giocatori: GiocatoreForma[], tutte: PartitaForma[])
       spinta.fiato += 2 * rk
       spinta.scatto += rk
     }
+    // difesa: gol subiti in meno (o in più) del previsto, in proporzione ai gol di una partita (scarti oltre 2 gol non contano di più)
+    const subitiMedi = media(finestra.map((p) => p.subiti))
+    const subitiPrevisti = media(finestra.map((p) => p.subitiAttesi))
+    spinta.difesa += (0.3 * limita(subitiPrevisti - subitiMedi, 2)) / Math.max(mediaGolSquadra, 1)
 
     const modifiche: Proposta['modifiche'] = {}
     for (const k of Object.keys(SKILLS) as Skill[]) {
@@ -141,7 +187,7 @@ export function analisiForma(giocatori: GiocatoreForma[], tutte: PartitaForma[])
         partite: dopo.length,
         fino: finestra[finestra.length - 1].data,
         modifiche,
-        perche: { golMedi, golAttesi, mvp, kmMedi, kmAttesi, risultati },
+        perche: { golMedi, golAttesi, mvp, kmMedi, kmAttesi, risultati, subitiMedi, subitiAttesi: subitiPrevisti },
       })
     }
   }

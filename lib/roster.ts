@@ -7,6 +7,7 @@ export const SKILLS = {
   scatto: 'Scatto',
   reazione: 'Reazione',
   fiato: 'Fiato',
+  difesa: 'Difesa',
 } as const
 
 export const SKILL_DESCRIPTIONS: Record<Skill, string> = {
@@ -16,6 +17,7 @@ export const SKILL_DESCRIPTIONS: Record<Skill, string> = {
   scatto: 'Accelerazione nei primi metri',
   reazione: 'Riflessi e prontezza sulle palle vaganti',
   fiato: 'Resistenza: quanto regge fino alla fine',
+  difesa: 'Marcatura, contrasti, chiusure e copertura',
 }
 
 export type Skill = keyof typeof SKILLS
@@ -122,7 +124,7 @@ export function displayName(p: Pick<Player, 'nome' | 'cognome' | 'soprannome'>) 
   return p.soprannome || [p.nome, p.cognome].filter(Boolean).join(' ')
 }
 
-// Media delle sei caratteristiche, usata per bilanciare le squadre.
+// Media delle caratteristiche, usata per bilanciare le squadre.
 export function overall(p: Pick<Player, 'caratteristiche'>) {
   const c = p.caratteristiche ?? {}
   const keys = Object.keys(SKILLS) as Skill[]

@@ -277,4 +277,7 @@ export const comune: Record<string, string> = {
   Riprendi: 'Resume',
   Pausa: 'Pause',
   'scorri per il prossimo': 'swipe for the next one',
+  "Difesa": "Defence",
+  "Marcatura, contrasti, chiusure e copertura": "Marking, tackling, blocking and covering",
+  "{gol} gol subiti dalla sua squadra (attesi {attesi})": "{gol} goals conceded by their team (expected {attesi})",
 }

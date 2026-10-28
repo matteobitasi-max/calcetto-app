@@ -96,7 +96,10 @@ function Perche({ p, t }: { p: Proposta; t: T }) {
     <p className="rounded-lg bg-zinc-50 p-2 text-xs text-zinc-600 dark:bg-zinc-800/50 dark:text-zinc-300">
       {t('Ultime {n} partite:', { n: Math.min(p.partite, 10) })} ⚽ {t('{gol} gol a partita (attesi {attesi})', { gol: numero(r.golMedi), attesi: numero(r.golAttesi) })} · 🫑{' '}
       {r.mvp} MVP
-      {r.kmMedi != null && r.kmAttesi != null && ` · 🏃 ${t('{km} km (attesi {attesi})', { km: numero(r.kmMedi), attesi: numero(r.kmAttesi) })}`} ·{' '}
+      {r.kmMedi != null && r.kmAttesi != null && ` · 🏃 ${t('{km} km (attesi {attesi})', { km: numero(r.kmMedi), attesi: numero(r.kmAttesi) })}`}
+      {r.subitiMedi != null && r.subitiAttesi != null &&
+        ` · 🛡️ ${t('{gol} gol subiti dalla sua squadra (attesi {attesi})', { gol: numero(r.subitiMedi), attesi: numero(r.subitiAttesi) })}`}{' '}
+      ·{' '}
       {t('la sua squadra ha fatto {come}.', { come: risultati })}
     </p>
   )

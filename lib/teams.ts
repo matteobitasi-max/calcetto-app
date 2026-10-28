@@ -7,16 +7,18 @@ export const numeroSquadra = (l: 'A' | 'B') => (l === 'A' ? 1 : 2)
 export const nomeSquadra = (l: 'A' | 'B', t?: (testo: string, vars: { n: number }) => string) =>
   t ? t('Squadra {n}', { n: numeroSquadra(l) }) : `Squadra ${numeroSquadra(l)}`
 
-// Pesi per le formazioni: cervello, scatto, fiato e tecnica contano di più.
+// Pesi per le formazioni: cervello, scatto, fiato, tecnica e difesa contano di più.
 export const PESI: Record<Skill, number> = {
   cervello: 1.5,
   scatto: 1.5,
   fiato: 1.5,
   tecnica: 1.5,
+  difesa: 1.5,
   velocita: 0.5,
   reazione: 0.5,
 }
-export const CHIAVE: Skill[] = ['cervello', 'scatto', 'fiato', 'tecnica']
+// Le caratteristiche da dividere bene tra le due squadre (non tutti i difensori dalla stessa parte).
+export const CHIAVE: Skill[] = ['cervello', 'scatto', 'fiato', 'tecnica', 'difesa']
 
 // `forma` (Pro, da −1 a +1): chi è in forma conta un po' di più nelle formazioni.
 type Giocatore = Pick<Player, '_id' | 'ruolo' | 'caratteristiche'> & { forma?: number }
