@@ -10,6 +10,10 @@ const STRATTONI = 3 // strattoni ravvicinati che fanno una "scossa"
 const FINESTRA = 1200 // ms entro cui devono arrivare gli strattoni
 const PAUSA = 2000 // ms dopo una scossa prima di riconoscerne un'altra
 
+// App Android: regole più severe (prima bastava un gesto brusco). Conta strattoni distinti, cioè picchi
+// di almeno 1,3 g oltre la gravità, distanti almeno 150 ms: ne servono 4 in un secondo e mezzo.
+const ANDROID = { soglia: 1.3, strattoni: 4, finestra: 1500, distanza: 150 }
+
 type ConPermesso = typeof DeviceMotionEvent & { requestPermission?: () => Promise<'granted' | 'denied'> }
 
 // Scuotendo il telefono compare a tutto schermo una foto sorpresa della lega, a caso
@@ -44,6 +48,30 @@ export function ScuotiFoto({ urls }: { urls: string[] }) {
       setAperta(foto[i])
     }
 
+    // Android: la scossa la riconosce la pagina con le regole più severe; quella segnalata dall'app
+    // (MainActivity, più sensibile nelle versioni installate) si usa solo se il sensore qui non risponde.
+    const android = nativa && Capacitor.getPlatform() === 'android'
+    let sensoreAttivo = false
+    let picchi: number[] = []
+    const movimentoAndroid = (e: DeviceMotionEvent) => {
+      const a = e.accelerationIncludingGravity
+      if (a?.x == null || a.y == null || a.z == null) return
+      sensoreAttivo = true
+      const ora = Date.now()
+      if (ora < ferma) return
+      const forza = Math.sqrt(a.x * a.x + a.y * a.y + a.z * a.z) / 9.81
+      if (Math.abs(forza - 1) <= ANDROID.soglia) return
+      if (picchi.length && ora - picchi[picchi.length - 1] < ANDROID.distanza) return
+      picchi = [...picchi.filter((t) => ora - t < ANDROID.finestra), ora]
+      if (picchi.length >= ANDROID.strattoni) {
+        picchi = []
+        mostra()
+      }
+    }
+    const scossaNativa = () => {
+      if (!android || !sensoreAttivo) mostra()
+    }
+
     const movimento = (e: DeviceMotionEvent) => {
       const a = e.accelerationIncludingGravity
       if (a?.x == null || a.y == null || a.z == null) return
@@ -65,14 +93,16 @@ export function ScuotiFoto({ urls }: { urls: string[] }) {
       ;(DeviceMotionEvent as ConPermesso).requestPermission?.().catch(() => undefined)
     }
 
-    window.addEventListener('scossa', mostra)
+    window.addEventListener('scossa', scossaNativa)
     if (!nativa) window.addEventListener('devicemotion', movimento)
+    if (android) window.addEventListener('devicemotion', movimentoAndroid)
     if (!nativa && typeof DeviceMotionEvent !== 'undefined' && (DeviceMotionEvent as ConPermesso).requestPermission) {
       document.addEventListener('touchend', chiediPermesso, { once: true })
     }
     return () => {
-      window.removeEventListener('scossa', mostra)
+      window.removeEventListener('scossa', scossaNativa)
       window.removeEventListener('devicemotion', movimento)
+      window.removeEventListener('devicemotion', movimentoAndroid)
       document.removeEventListener('touchend', chiediPermesso)
     }
   }, [chiave])

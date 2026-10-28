@@ -15,9 +15,10 @@ import java.util.ArrayDeque;
 // l'evento "scossa" (components/scuoti-foto.tsx mostra una foto sorpresa).
 public class MainActivity extends BridgeActivity implements SensorEventListener {
 
-    private static final float STRATTONE = 0.7f; // scostamento dalla gravità (in g) per contare uno strattone
-    private static final int STRATTONI = 3; // strattoni ravvicinati che fanno una "scossa"
-    private static final long FINESTRA = 1200; // ms entro cui devono arrivare gli strattoni
+    private static final float STRATTONE = 1.3f; // scostamento dalla gravità (in g) per contare uno strattone
+    private static final int STRATTONI = 4; // strattoni ravvicinati che fanno una "scossa"
+    private static final long FINESTRA = 1500; // ms entro cui devono arrivare gli strattoni
+    private static final long DISTANZA = 150; // ms tra due strattoni (le letture di uno stesso colpo contano una volta)
     private static final long PAUSA = 2000; // ms dopo una scossa prima di riconoscerne un'altra
 
     private SensorManager sensori;
@@ -55,6 +56,7 @@ public class MainActivity extends BridgeActivity implements SensorEventListener 
         if (Math.abs(forza - 1) <= STRATTONE) return;
         long ora = System.currentTimeMillis();
         if (ora < ferma) return;
+        if (!strattoni.isEmpty() && ora - strattoni.peekLast() < DISTANZA) return;
         while (!strattoni.isEmpty() && ora - strattoni.peekFirst() > FINESTRA) strattoni.pollFirst();
         strattoni.addLast(ora);
         if (strattoni.size() < STRATTONI) return;
