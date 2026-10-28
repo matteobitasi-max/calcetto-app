@@ -11,7 +11,9 @@ export function idPlaylist(testo: string): string | null {
   const t = testo.trim()
   if (/^(PL|UU|OL|FL)[\w-]{10,}$/.test(t)) return t
   try {
-    const list = new URL(t).searchParams.get('list')
+    const url = new URL(t)
+    // youtube.com/playlist?list=… e watch?v=…&list=…, oppure studio.youtube.com/playlist/…/videos
+    const list = url.searchParams.get('list') ?? url.pathname.match(/^\/playlist\/([\w-]+)/)?.[1]
     return list && /^[\w-]{12,}$/.test(list) ? list : null
   } catch {
     return null
