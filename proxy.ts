@@ -5,11 +5,11 @@ import { COOKIE_LINGUA } from '@/lib/i18n/cookie'
 // Lo Studio ha il suo login Sanity, quindi non passa da Clerk. /api/cron si protegge con CRON_SECRET, /api/calendario con il codice firmato,
 // /api/revenuecat con REVENUECAT_WEBHOOK_AUTH. /accesso-app gestisce da sé
 // chi non ha ancora fatto l'accesso (login delle app nel browser).
-const isPublicRoute = createRouteMatcher(['/sign-in(.*)', '/accesso-app(.*)', '/account-eliminato', '/api/strava/callback', '/api/cron/(.*)', '/api/calendario/(.*)', '/api/revenuecat', '/studio(.*)'])
+const isPublicRoute = createRouteMatcher(['/sign-in(.*)', '/sign-up(.*)', '/accesso-app(.*)', '/account-eliminato', '/api/strava/callback', '/api/cron/(.*)', '/api/calendario/(.*)', '/api/revenuecat', '/studio(.*)'])
 
 // Al primo accesso dopo il login (o su un telefono nuovo) si sceglie la lingua: solo per le pagine
 // aperte nel browser, non per i dati delle pagine o le azioni.
-const senzaScelta = createRouteMatcher(['/lingua', '/sign-in(.*)', '/accesso-app(.*)', '/account-eliminato', '/api/(.*)', '/studio(.*)'])
+const senzaScelta = createRouteMatcher(['/lingua', '/sign-in(.*)', '/sign-up(.*)', '/accesso-app(.*)', '/account-eliminato', '/api/(.*)', '/studio(.*)'])
 
 const conClerk = clerkMiddleware(async (auth, req) => {
   if (!isPublicRoute(req)) await auth.protect()

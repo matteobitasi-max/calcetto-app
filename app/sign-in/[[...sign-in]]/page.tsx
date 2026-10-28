@@ -7,7 +7,7 @@ import { MenuLingua } from '@/components/menu-lingua'
 export default async function SignInPage() {
   const t = await getT()
   return (
-    <main className="relative flex flex-1 flex-col items-center justify-center gap-6 p-4">
+    <main className="relative flex flex-1 flex-col items-center justify-center gap-6 p-4 pt-20">
       <div className="absolute right-4 top-[max(1rem,var(--safe-area-inset-top,env(safe-area-inset-top)))]">
         <MenuLingua />
       </div>

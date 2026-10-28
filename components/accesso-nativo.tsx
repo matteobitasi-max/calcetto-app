@@ -3,7 +3,8 @@
 import { App } from '@capacitor/app'
 import { Browser } from '@capacitor/browser'
 import { Capacitor } from '@capacitor/core'
-import { SignIn } from '@clerk/nextjs'
+import { SignIn, SignUp } from '@clerk/nextjs'
+import { SchedeAccesso } from './schede-accesso'
 import { useEffect, useState } from 'react'
 import { SchermataUsaApp, browserDelTelefono } from './usa-app'
 import { useT } from '@/components/lingua'
@@ -14,7 +15,7 @@ const accessoNelBrowser = () => Capacitor.isNativePlatform() && Capacitor.isPlug
 
 // La pagina di accesso: nell'app il pulsante "Accedi" (finestra del browser), dal browser del
 // telefono l'invito ad aprire l'app, dal computer (o di ritorno con il codice) il login di Clerk.
-export function AccessoNativo() {
+export function AccessoNativo({ registrati = false }: { registrati?: boolean }) {
   const t = useT()
   const [modo, setModo] = useState<'app' | 'telefono' | 'clerk' | null>(null)
   const [aperto, setAperto] = useState(false)
@@ -28,7 +29,13 @@ export function AccessoNativo() {
 
   if (modo === null) return null
   if (modo === 'telefono') return <SchermataUsaApp />
-  if (modo === 'clerk') return <SignIn />
+  if (modo === 'clerk')
+    return (
+      <div className="flex w-full flex-col items-center gap-4">
+        <SchedeAccesso attiva={registrati ? 'registrati' : 'accedi'} accedi="/sign-in" registrati="/sign-up" />
+        {registrati ? <SignUp signInUrl="/sign-in" /> : <SignIn signUpUrl="/sign-up" />}
+      </div>
+    )
 
   const apri = async () => {
     setAperto(true)

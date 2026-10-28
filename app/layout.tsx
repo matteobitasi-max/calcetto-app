@@ -65,6 +65,9 @@ async function ConLingua({ children }: { children: React.ReactNode }) {
   return (
     <ClerkProvider
       localization={localizzazioneClerk(lingua)}
+      // accesso e registrazione separati (con le schede): un'email sconosciuta non diventa una registrazione a sorpresa
+      signInUrl="/sign-in"
+      signUpUrl="/sign-up"
       appearance={{
         options: {
           // Niente scritta "Development mode" nella schermata di accesso (chiavi Clerk di sviluppo).

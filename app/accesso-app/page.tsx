@@ -1,6 +1,7 @@
 import Image from 'next/image'
 import { Suspense } from 'react'
-import { SignIn } from '@clerk/nextjs'
+import { SignIn, SignUp } from '@clerk/nextjs'
+import { SchedeAccesso } from '@/components/schede-accesso'
 import { auth, clerkClient } from '@clerk/nextjs/server'
 import { TornaNellApp } from './torna-nell-app'
 import { getT } from '@/lib/lingua'
@@ -10,10 +11,10 @@ import { MenuLingua } from '@/components/menu-lingua'
 // quindi l'app apre questa pagina in una finestra del browser (components/accesso-nativo.tsx).
 // Fatto l'accesso, qui si crea un codice monouso e si torna nell'app con thecap://accesso,
 // dove il codice fa entrare anche l'app.
-export default async function AccessoAppPage() {
+export default async function AccessoAppPage({ searchParams }: PageProps<'/accesso-app'>) {
   const t = await getT()
   return (
-    <main className="relative flex flex-1 flex-col items-center justify-center gap-6 p-4">
+    <main className="relative flex flex-1 flex-col items-center justify-center gap-6 p-4 pt-20">
       <div className="absolute right-4 top-[max(1rem,var(--safe-area-inset-top,env(safe-area-inset-top)))]">
         <MenuLingua />
       </div>
@@ -23,16 +24,25 @@ export default async function AccessoAppPage() {
         <p className="text-zinc-500">{t('Crea la tua Squadra')}</p>
       </div>
       <Suspense>
-        <Accesso />
+        <Accesso searchParams={searchParams} />
       </Suspense>
     </main>
   )
 }
 
-async function Accesso() {
-  const { userId } = await auth()
+async function Accesso({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
+  const [{ userId }, { registrati }] = await Promise.all([auth(), searchParams])
   if (!userId) {
-    return <SignIn routing="hash" forceRedirectUrl="/accesso-app" signUpForceRedirectUrl="/accesso-app" />
+    return (
+      <div className="flex w-full flex-col items-center gap-4">
+        <SchedeAccesso attiva={registrati ? 'registrati' : 'accedi'} accedi="/accesso-app" registrati="/accesso-app?registrati=1" />
+        {registrati ? (
+          <SignUp routing="hash" signInUrl="/accesso-app" forceRedirectUrl="/accesso-app" signInForceRedirectUrl="/accesso-app" />
+        ) : (
+          <SignIn routing="hash" signUpUrl="/accesso-app?registrati=1" forceRedirectUrl="/accesso-app" signUpForceRedirectUrl="/accesso-app" />
+        )}
+      </div>
+    )
   }
   const client = await clerkClient()
   const { token } = await client.signInTokens.createSignInToken({ userId, expiresInSeconds: 60 })

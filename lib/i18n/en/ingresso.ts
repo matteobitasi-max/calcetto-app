@@ -65,4 +65,5 @@ export const ingresso: Record<string, string> = {
   "Così gli organizzatori ti conoscono e fanno squadre equilibrate. Puoi cambiarli quando vuoi in “Il mio account”.": "So organisers get to know you and make balanced teams. You can change this anytime in “My account”.",
   "Continua": "Continue",
   "Salta per ora": "Skip for now",
+  "Registrati": "Sign up",
 }
