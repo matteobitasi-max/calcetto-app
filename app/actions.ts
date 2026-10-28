@@ -7,6 +7,7 @@ import { redirect } from 'next/navigation'
 import { sanity } from '@/lib/sanity'
 import { BADGE, CATEGORIE_NOTIFICHE, COOKIE_LEGA, eta, normalizzaTelefono, PIEDI, RUOLI, SKILLS, displayName, requirePlayer, getUtente, getMemberships, isTitolare, membroDi, soloGiocatore, requireAdmin, requireForDoc, requireIn, type Player, type Skill } from '@/lib/player'
 import { assegnaPosti, finestra, getMatch, getPartiteTorneo, orarioPartita, presenti, risultatoDa, type FonteKm, type Match, type Risposta, type Stato } from '@/lib/matches'
+import { idPlaylist, intervisteDellaPlaylist } from '@/lib/interviste'
 import { kmStrava, scollega, stravaConfigurato, urlCollegamento } from '@/lib/strava'
 import { baseUrl } from '@/lib/url'
 import { cercaCitta } from '@/lib/meteo'
@@ -910,6 +911,23 @@ export async function salvaLega(legaId: string, _prev: FormState, formData: Form
   if (!upload && formData.get('rimuoviFoto') === 'on') patch.unset(['logo'])
   if (!cittaScritta) patch.unset(['citta'])
   await patch.commit()
+  refresh()
+  return {}
+}
+
+// Interviste: la playlist di YouTube da cui arrivano da sole (vuoto = nessuna).
+export async function salvaInterviste(legaId: string, _prev: FormState, formData: FormData): Promise<FormState> {
+  await requireIn(legaId, 'organizzatore')
+  const link = str(formData, 'playlist')
+  if (!link) {
+    await sanity.patch(legaId).unset(['playlistInterviste']).commit()
+    refresh()
+    return {}
+  }
+  const playlist = idPlaylist(link)
+  if (!playlist) return { error: await tr('Non è un link di una playlist di YouTube: copialo da Condividi nella pagina della playlist.') }
+  if (!(await intervisteDellaPlaylist(playlist))) return { error: await tr('Non riesco a leggere la playlist: deve essere Pubblica o Non in elenco, non Privata.') }
+  await sanity.patch(legaId).set({ playlistInterviste: playlist }).commit()
   refresh()
   return {}
 }

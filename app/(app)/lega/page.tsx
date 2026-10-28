@@ -1,5 +1,6 @@
 import { Suspense } from 'react'
-import { aggiungiFotoSorpresa, rigeneraInvito, rimuoviFotoSorpresa, salvaLega, salvaPagamentiLega } from '@/app/actions'
+import { aggiungiFotoSorpresa, rigeneraInvito, rimuoviFotoSorpresa, salvaInterviste, salvaLega, salvaPagamentiLega } from '@/app/actions'
+import { linkPlaylist } from '@/lib/interviste'
 import { FotoSorpreseEditor } from '@/components/foto-sorprese'
 import { isTitolare, requireAdmin } from '@/lib/player'
 import { avatarUrl, immagineUrl } from '@/lib/image'
@@ -66,6 +67,27 @@ async function Impostazioni() {
           </div>
           <SatispaySetup link={lega.satispayLink} qrUrl={immagineUrl(lega.satispayQr, 400)} />
           <PillSalva label={t('Salva pagamenti')} />
+        </ActionForm>
+      </Card>
+
+      <Card>
+        <ActionForm action={salvaInterviste.bind(null, lega._id)} className="space-y-4">
+          <div>
+            <h2 className="font-semibold">🎤 {t('Interviste')}</h2>
+            <p className="text-sm text-zinc-500">
+              {t('Incolla il link di una playlist di YouTube: ogni video che aggiungi alla playlist compare da solo nell’app, in home, nella partita e nel profilo di chi è nominato nel titolo.')}
+            </p>
+          </div>
+          <Field label={t('Link della playlist')}>
+            <input
+              name="playlist"
+              type="url"
+              defaultValue={lega.playlistInterviste ? linkPlaylist(lega.playlistInterviste) : ''}
+              placeholder="https://www.youtube.com/playlist?list=…"
+              className={inputClass}
+            />
+          </Field>
+          <PillSalva label={t('Salva playlist')} />
         </ActionForm>
       </Card>
 

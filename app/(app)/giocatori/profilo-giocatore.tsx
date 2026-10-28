@@ -1,3 +1,4 @@
+import { Suspense } from 'react'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { SignOutButton } from '@clerk/nextjs'
@@ -15,6 +16,7 @@ import { caricaFoto } from '@/app/actions'
 import { AvatarUpload } from '@/components/avatar-upload'
 import { NotificheToggle } from '@/components/notifiche-toggle'
 import { PreferenzeNotifiche } from '@/components/preferenze-notifiche'
+import { IntervisteLega } from '@/components/interviste-lega'
 import { Avatar, Card, Overall, PlayerBadge, SkillBars, buttonClass } from '@/components/ui'
 
 // Il profilo di un giocatore: usato sia per /giocatori/[id] sia per il mio /profilo.
@@ -114,6 +116,10 @@ export async function ProfiloGiocatore({ id }: { id: string }) {
         <h2 className="mb-3 font-semibold">{t('Caratteristiche')}</h2>
         <SkillBars player={player} />
       </Card>
+
+      <Suspense>
+        <IntervisteLega legaId={me.lega._id} playlist={me.lega.playlistInterviste} giocatore={player._id} />
+      </Suspense>
 
       <Storico partite={storico} mio={mio} t={t} />
 

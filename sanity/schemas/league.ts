@@ -49,6 +49,12 @@ export const league = defineType({
         defineField({ name: 'lon', type: 'number' }),
       ],
     }),
+    defineField({
+      name: 'playlistInterviste',
+      title: 'Playlist YouTube delle interviste',
+      description: 'ID della playlist: i video aggiunti compaiono da soli nell’app',
+      type: 'string',
+    }),
     defineField({ name: 'creataDa', title: 'Creata da (Clerk user ID)', type: 'string', readOnly: true }),
   ],
   preview: {

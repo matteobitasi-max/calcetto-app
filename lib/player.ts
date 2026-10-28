@@ -17,7 +17,7 @@ export const COOKIE_LEGA = 'lega'
 // dell'organizzatore ma non è un giocatore (niente scheda, convocazioni, pagamenti).
 export type Membro = Player & { lega: Lega; ospite?: boolean }
 
-const legaFields = `_id, nome, logo, codiceInvito, satispayLink, satispayQr, citta,
+const legaFields = `_id, nome, logo, codiceInvito, satispayLink, satispayQr, citta, playlistInterviste,
   "fotoSorprese": coalesce(fotoSorprese, []) + select(defined(fotoSorpresa) => [fotoSorpresa{..., "_key": "vecchia"}], [])`
 const membroFields = `${playerFields}, "lega": lega->{${legaFields}}`
 

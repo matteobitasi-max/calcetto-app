@@ -264,4 +264,14 @@ export const comune: Record<string, string> = {
   'Altro calendario (Outlook…): copia il link': 'Other calendar (Outlook…): copy the link',
   'Il link è personale: non condividerlo.': "This link is personal: don't share it.",
   'Convocazioni dal {quando}': 'Call-ups open from {quando}',
+  Interviste: 'Interviews',
+  Tutte: 'All',
+  'Incolla il link di una playlist di YouTube: ogni video che aggiungi alla playlist compare da solo nell’app, in home, nella partita e nel profilo di chi è nominato nel titolo.':
+    'Paste the link of a YouTube playlist: every video you add to it shows up in the app by itself, on the home page, in the match and in the profile of whoever is named in the title.',
+  'Link della playlist': 'Playlist link',
+  'Salva playlist': 'Save playlist',
+  'Non è un link di una playlist di YouTube: copialo da Condividi nella pagina della playlist.':
+    "That's not a YouTube playlist link: copy it from Share on the playlist page.",
+  'Non riesco a leggere la playlist: deve essere Pubblica o Non in elenco, non Privata.':
+    "I can't read the playlist: it must be Public or Unlisted, not Private.",
 }

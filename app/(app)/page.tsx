@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { Suspense, type ReactNode } from 'react'
+import { IntervisteLega } from '@/components/interviste-lega'
 import { redirect } from 'next/navigation'
 import { getCurrentPlayer, getMemberships, type Player } from '@/lib/player'
 import { finestra, formatoInCorso, getPastMatches, getUpcomingMatches, ordinati, presenti, type Match } from '@/lib/matches'
@@ -87,6 +88,10 @@ async function Partite() {
           </Link>
         </section>
       )}
+
+      <Suspense>
+        <IntervisteLega legaId={legaId} playlist={player.lega.playlistInterviste} />
+      </Suspense>
 
       {concluse.length > 0 && (
         <Tendina titolo={t('Partite concluse ({n})', { n: concluse.length })}>

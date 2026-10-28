@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation'
 import { Suspense } from 'react'
 import { canEnterResults, displayName, getCurrentPlayer, getUtente, membroDi, mioInCima, type Membro, type Player } from '@/lib/player'
 import { forza, nomeSquadra, numeroSquadra } from '@/lib/teams'
+import { IntervisteLega } from '@/components/interviste-lega'
 import { finestra, formatoInCorso, getMatch, getPlayers, orarioPartita, ordinati, presenti, risultatoDa, type Match, type Risposta } from '@/lib/matches'
 import { getCollegamento, stravaConfigurato } from '@/lib/strava'
 import { KmPartita } from '@/components/km-partita'
@@ -108,6 +109,11 @@ async function MatchDetail({ params }: { params: Promise<{ id: string }> }) {
           {!player.ospite && <RispostaButtons match={match} playerId={player._id} />}
         </div>
       </Card>
+      {match.stato === 'giocata' && (
+        <Suspense>
+          <IntervisteLega legaId={match.legaId} playlist={player.lega.playlistInterviste} partita={match.data} />
+        </Suspense>
+      )}
 
       <KmCard match={match} me={player} rosa={rosa} />
 
