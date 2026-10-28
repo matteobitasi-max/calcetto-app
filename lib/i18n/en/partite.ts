@@ -242,4 +242,5 @@ export const partite: Record<string, string> = {
   "Modifica invece tutta la serie": "Edit the whole series instead",
   "Escludi": "Remove",
   "Escludere {nome} dalla partita? Passa tra i “non ci sono”.": "Remove {nome} from the match? They move to “not coming”.",
+  "Si convoca chi vuole, fino a {max}: oltre si va in lista d’attesa. Quando chiudi le convocazioni il numero diventa pari: 11 iscritti → 5 contro 5 e l’ultimo in lista d’attesa.": "Anyone can join, up to {max}: after that they go on the waiting list. When you close call-ups the number becomes even: 11 players → 5 vs 5 and the last one waits.",
 }

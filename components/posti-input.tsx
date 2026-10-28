@@ -48,7 +48,7 @@ export function PostiInput({ defaultValue = 10, defaultAutomatico = true }: { de
           <input type="hidden" name="postiAutomatici" value="on" />
           <input type="hidden" name="postiDisponibili" value={MAX_ISCRITTI} />
           <p className="text-xs text-zinc-500">
-            {t('Si convoca chi vuole. Quando chiudi le convocazioni il numero diventa pari: 18 iscritti → 9 contro 9, 11 iscritti → 5 contro 5 e l’ultimo in lista d’attesa.')}
+            {t('Si convoca chi vuole, fino a {max}: oltre si va in lista d’attesa. Quando chiudi le convocazioni il numero diventa pari: 11 iscritti → 5 contro 5 e l’ultimo in lista d’attesa.', { max: MAX_ISCRITTI })}
           </p>
         </>
       ) : (

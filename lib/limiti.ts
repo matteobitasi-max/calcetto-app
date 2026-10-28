@@ -2,8 +2,8 @@
 // può poi aggiungere persone dalla lista d'attesa, superando questo limite.
 export const MAX_GIOCATORI = 14
 
-// "In base alle convocazioni": nessun tetto, si convoca chi vuole (fino a questo limite di sicurezza).
-export const MAX_ISCRITTI = 40
+// "In base alle convocazioni": si convoca chi vuole fino a questo tetto (9 contro 9); oltre si va in lista d'attesa.
+export const MAX_ISCRITTI = 18
 
 // Alla chiusura si gioca con un numero pari: 18 iscritti → 9 contro 9,
 // 11 iscritti → 5 contro 5 e l'ultimo arrivato in lista d'attesa.

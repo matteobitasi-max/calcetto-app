@@ -1,4 +1,5 @@
 import 'server-only'
+import { MAX_ISCRITTI } from './limiti'
 import { sanity } from './sanity'
 import { addDays, isoToRomeLocal, romeLocalToISO } from './dates'
 import { descriviRicorrenza } from './ricorrenza'
@@ -57,7 +58,7 @@ function occurrence(s: Series, day: string) {
     aperturaConvocazioni: romeLocalToISO(`${addDays(day, -s.aperturaGiorniPrima)}T${s.aperturaOra}`),
     chiusuraConvocazioni: romeLocalToISO(`${addDays(day, -s.chiusuraGiorniPrima)}T${s.chiusuraOra}`),
     luogo: s.luogo,
-    postiDisponibili: s.postiDisponibili,
+    postiDisponibili: s.postiAutomatici ? MAX_ISCRITTI : s.postiDisponibili,
     postiAutomatici: !!s.postiAutomatici,
     durataFinestraMinuti: s.durataFinestraMinuti ?? 120,
     ...(s.quota != null && { quota: s.quota }),
