@@ -1,14 +1,18 @@
 'use client'
 
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 import { useT } from './lingua'
 
 // "Accedi" e "Registrati" ben visibili sopra il riquadro di Clerk: chi arriva la prima volta sa dove andare.
 export function SchedeAccesso({ attiva, accedi, registrati }: { attiva: 'accedi' | 'registrati'; accedi: string; registrati: string }) {
   const t = useT()
+  // dove tornare dopo (es. il link d'invito): resta passando da una scheda all'altra
+  const torna = useSearchParams().get('redirect_url')
+  const conRitorno = (href: string) => (torna ? `${href}${href.includes('?') ? '&' : '?'}redirect_url=${encodeURIComponent(torna)}` : href)
   const scheda = (chi: 'accedi' | 'registrati', href: string, testo: string) => (
     <Link
-      href={href}
+      href={conRitorno(href)}
       replace
       aria-current={attiva === chi ? 'page' : undefined}
       className={`flex-1 rounded-lg px-3 py-2 text-center text-sm font-semibold transition ${

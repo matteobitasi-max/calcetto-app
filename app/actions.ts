@@ -827,7 +827,13 @@ export async function creaLega(_prev: EsitoNuovaLega, formData: FormData): Promi
 
 // Entrare con il link d'invito: chi ce l'ha entra subito nella rosa.
 export async function uniscitiConInvito(codice: string) {
-  const utente = await getUtente()
+  await entraConInvito(codice, await getUtente())
+}
+
+type Utente = Awaited<ReturnType<typeof getUtente>>
+
+// `utente`: i miei dati (appena salvati, se arrivo da "Completa il tuo profilo").
+async function entraConInvito(codice: string, utente: Utente) {
   if (!utente) redirect('/sign-in')
   const lega = await sanity.fetch<{ _id: string } | null>(`*[_type == "league" && codiceInvito == $codice][0]{_id}`, {
     codice: codice.toUpperCase(),
@@ -1297,8 +1303,23 @@ export async function salvaAccount(_prev: FormState, formData: FormData): Promis
     }
     await tx.commit()
   }
-  // dalla pagina "Completa il tuo profilo" si torna dove si stava andando
+  // dalla pagina "Completa il tuo profilo" si torna dove si stava andando: chi era arrivato con l'invito
+  // di una lega o di una squadra ci entra subito (quello di un torneo fa scegliere la squadra)
   const dopo = str(formData, 'dopo')
+  const aggiornato = {
+    ...utente,
+    nome,
+    cognome,
+    telefono: telefono || undefined,
+    ruolo: ruolo || undefined,
+    piede: piede || undefined,
+    dataNascita: dataNascita || undefined,
+    fotoAsset: upload ? upload.foto.asset._ref : utente.fotoAsset,
+  }
+  const invito = dopo.match(/^\/invito\/([A-Za-z0-9]+)$/)?.[1]
+  if (invito) await entraConInvito(invito, aggiornato)
+  const squadra = dopo.match(/^\/invito-squadra\/([A-Za-z0-9]+)$/)?.[1]
+  if (squadra) await entraConCodiceSquadra(squadra, aggiornato)
   if (dopo) redirect(dopo.startsWith('/') && !dopo.startsWith('//') ? dopo : '/')
   refresh()
   return {}
@@ -1882,11 +1903,15 @@ const torneoSquadreFields = `_id, _rev, nome, "legaId": lega._ref, maxGiocatori,
 // Entrare in una squadra con il link del capitano: chi non è nella lega ci entra, poi passa in quella squadra
 // (lasciando quella in cui era nello stesso torneo).
 export async function entraInSquadra(codice: string) {
+  await entraConCodiceSquadra(codice)
+}
+
+async function entraConCodiceSquadra(codice: string, utente?: Utente) {
   const torneo = await sanity.fetch<TorneoSquadre | null>(
     `*[_type == "tournament" && $codice in squadre[].codiceInvito][0]{${torneoSquadreFields}}`,
     { codice: codice.toUpperCase() },
   )
-  await entra(torneo, torneo?.squadre.find((sq) => sq.codiceInvito === codice.toUpperCase()))
+  await entra(torneo, torneo?.squadre.find((sq) => sq.codiceInvito === codice.toUpperCase()), utente)
 }
 
 // Con il link del torneo si sceglie la squadra.
@@ -1897,8 +1922,8 @@ export async function entraNelTorneo(codice: string, chiave: string) {
   await entra(torneo, torneo?.squadre.find((sq) => sq._key === chiave))
 }
 
-async function entra(torneo: TorneoSquadre | null, squadra: SquadraDoc | undefined) {
-  const utente = await getUtente()
+async function entra(torneo: TorneoSquadre | null, squadra: SquadraDoc | undefined, aggiornato?: Utente) {
+  const utente = aggiornato ?? (await getUtente())
   if (!utente) redirect('/sign-in')
   if (!torneo || !squadra) throw new Error('Invito non valido')
   if (!iscrizioniAperte(torneo)) throw new Error('Le iscrizioni a questo torneo sono chiuse')

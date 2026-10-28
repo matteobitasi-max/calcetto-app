@@ -1,24 +1,13 @@
 import { NextResponse, type NextFetchEvent, type NextRequest } from 'next/server'
 import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server'
-import { COOKIE_LINGUA } from '@/lib/i18n/cookie'
 
 // Lo Studio ha il suo login Sanity, quindi non passa da Clerk. /api/cron si protegge con CRON_SECRET, /api/calendario con il codice firmato,
 // /api/revenuecat con REVENUECAT_WEBHOOK_AUTH. /accesso-app gestisce da sé
 // chi non ha ancora fatto l'accesso (login delle app nel browser).
 const isPublicRoute = createRouteMatcher(['/sign-in(.*)', '/sign-up(.*)', '/accesso-app(.*)', '/account-eliminato', '/api/strava/callback', '/api/cron/(.*)', '/api/calendario/(.*)', '/api/revenuecat', '/studio(.*)'])
 
-// Al primo accesso dopo il login (o su un telefono nuovo) si sceglie la lingua: solo per le pagine
-// aperte nel browser, non per i dati delle pagine o le azioni.
-const senzaScelta = createRouteMatcher(['/lingua', '/sign-in(.*)', '/sign-up(.*)', '/accesso-app(.*)', '/account-eliminato', '/api/(.*)', '/studio(.*)'])
-
 const conClerk = clerkMiddleware(async (auth, req) => {
   if (!isPublicRoute(req)) await auth.protect()
-  const pagina = req.method === 'GET' && req.headers.get('accept')?.includes('text/html') && !req.headers.get('rsc')
-  if (pagina && !senzaScelta(req) && !req.cookies.get(COOKIE_LINGUA) && (await auth()).userId) {
-    const url = new URL('/lingua', req.url)
-    url.searchParams.set('dopo', req.nextUrl.pathname + req.nextUrl.search)
-    return NextResponse.redirect(url)
-  }
 })
 
 // L'accesso di produzione di Clerk funziona solo su thecapfc.app: chi apre ancora il vecchio indirizzo
