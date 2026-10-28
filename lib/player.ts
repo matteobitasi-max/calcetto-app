@@ -1,4 +1,5 @@
 import 'server-only'
+import { VERSIONE_TERMINI, type Consensi } from './consensi'
 import { cache } from 'react'
 import { cookies } from 'next/headers'
 import { currentUser } from '@clerk/nextjs/server'
@@ -37,6 +38,7 @@ export const getUtente = cache(async () => {
     /** foto profilo (immagine su Sanity): va anche nelle schede delle leghe in cui entro dopo */
     fotoAsset?: string
     profiloCompleto?: boolean
+    consensi?: Consensi
   }
   return {
     id: user.id,
@@ -50,8 +52,9 @@ export const getUtente = cache(async () => {
     piede: profilo.piede,
     dataNascita: profilo.dataNascita,
     fotoAsset: profilo.fotoAsset,
-    // "Completa il tuo profilo" al primo accesso: per chi si registra da oggi e per chi non ha ancora nome e cognome.
-    daCompletare: !profilo.profiloCompleto && (user.createdAt > Date.parse('2026-10-28T00:00:00Z') || !user.firstName?.trim() || !user.lastName?.trim()),
+    consensi: profilo.consensi ?? {},
+    // "Completa il tuo profilo" (una volta): chi non ha ancora accettato i Termini (anche aggiornati) o non ha nome e cognome.
+    daCompletare: profilo.consensi?.termini?.versione !== VERSIONE_TERMINI || !user.firstName?.trim() || !user.lastName?.trim(),
   }
 })
 

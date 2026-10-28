@@ -153,6 +153,9 @@ export async function ProfiloGiocatore({ id }: { id: string }) {
             <Link href="/privacy" className="flex items-center justify-between px-4 py-3 hover:bg-zinc-50 dark:hover:bg-zinc-800">
               🔒 {t('Privacy policy')} <span className="text-zinc-400">›</span>
             </Link>
+            <Link href="/termini" className="flex items-center justify-between px-4 py-3 hover:bg-zinc-50 dark:hover:bg-zinc-800">
+              📄 {t('Termini d’uso')} <span className="text-zinc-400">›</span>
+            </Link>
             <Link href="/supporto" className="flex items-center justify-between px-4 py-3 hover:bg-zinc-50 dark:hover:bg-zinc-800">
               💬 {t('Supporto')} <span className="text-zinc-400">›</span>
             </Link>

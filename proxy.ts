@@ -29,7 +29,7 @@ const PAGINA_SPOSTATI = `<!doctype html><html lang="it"><head><meta charset="utf
 <body><main><img src="/icon-512.png" alt=""><h1>Aggiorna The Cap</h1><p>Abbiamo un nuovo indirizzo. Se usi l’app, aggiornala dall’App Store o da Google Play. Dal browser, continua qui:</p><p lang="en"><small>We have moved. Please update the app from the store, or continue in your browser:</small></p><a href="https://www.thecapfc.app/">www.thecapfc.app</a></main></body></html>`
 
 export const config = {
-  // Privacy, Supporto ed Elimina account restano fuori da Clerk: gli store le controllano
+  // Privacy, Termini, Supporto ed Elimina account restano fuori da Clerk: gli store le controllano
   // con richieste automatiche, che non devono passare dai reindirizzamenti di accesso.
-  matcher: ['/((?!_next|privacy|supporto|elimina-account|.*\\..*).*)', '/(api|trpc)(.*)'],
+  matcher: ['/((?!_next|privacy|termini|supporto|elimina-account|.*\\..*).*)', '/(api|trpc)(.*)'],
 }

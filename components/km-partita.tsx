@@ -5,7 +5,7 @@ import { Capacitor } from '@capacitor/core'
 import { useEffect, useState, useTransition } from 'react'
 import { collegaStrava, kmDaStrava, salvaKm, togliKm } from '@/app/actions'
 import type { Distanza } from '@/lib/matches'
-import { Salute, escludiPartita, impostaKmAutomatici, nomeSalute, saluteDisponibile } from '@/lib/salute'
+import { Salute, chiediConsensoKm, escludiPartita, impostaKmAutomatici, nomeSalute, saluteDisponibile } from '@/lib/salute'
 import { useT } from './lingua'
 
 const DOPO_STRAVA = 'km-dopo-strava'
@@ -68,7 +68,8 @@ export function KmPartita({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- solo all'apertura della pagina
   }, [])
 
-  const daSalute = () =>
+  const daSalute = () => {
+    if (!chiediConsensoKm(t('Per i km delle partite, The Cap legge da {app} solo la distanza camminata e corsa registrata durante le tue partite. È un dato legato alla salute: lo usiamo solo per mostrare i tuoi km ai membri della lega e puoi disattivarlo quando vuoi in Il mio account. Acconsenti?', { app: nome }))) return
     startTransition(async () => {
       try {
         const { metri } = await Salute.distanza({ inizio, fine })
@@ -87,6 +88,7 @@ export function KmPartita({
         setMessaggio({ testo: (e as { message?: string })?.message || t('Non riesco a leggere {app}.', { app: nome }), errore: true })
       }
     })
+  }
 
   if (!miei && !salute && !stravaAttivo) return null
 

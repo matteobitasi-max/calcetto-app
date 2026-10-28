@@ -4,6 +4,7 @@ import { salvaAccount } from '@/app/actions'
 import { getMemberships, getUtente } from '@/lib/player'
 import { ActionForm } from '@/components/action-form'
 import { CampiProfilo } from '@/components/campi-profilo'
+import { CampiConsensi } from '@/components/campi-consensi'
 import { SubmitButton } from '@/components/submit-button'
 import { Card, Loading, buttonClass } from '@/components/ui'
 import { getT } from '@/lib/lingua'
@@ -32,6 +33,9 @@ async function Completa({ searchParams }: { searchParams: Promise<Record<string,
         <input type="hidden" name="dopo" value={vai} />
         <Card className="space-y-4">
           <CampiProfilo utente={utente} scheda={leghe[0]} cognomeObbligatorio />
+        </Card>
+        <Card>
+          <CampiConsensi consensi={utente.consensi} conTermini />
         </Card>
         <SubmitButton className={`${buttonClass('primary')} w-full justify-center`} pendingText={t('Salvo…')}>
           {t('Continua')}

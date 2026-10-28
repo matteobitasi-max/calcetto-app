@@ -73,6 +73,7 @@ async function ConLingua({ children }: { children: React.ReactNode }) {
           // Niente scritta "Development mode" nella schermata di accesso (chiavi Clerk di sviluppo).
           unsafe_disableDevelopmentModeWarnings: true,
           privacyPageUrl: "/privacy",
+          termsPageUrl: "/termini",
           helpPageUrl: "/supporto",
         },
       }}

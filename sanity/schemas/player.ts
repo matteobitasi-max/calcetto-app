@@ -52,6 +52,7 @@ export const player = defineType({
       validation: (r) => r.regex(/^\+\d{8,15}$/, { name: 'numero internazionale', invert: false }),
     }),
     defineField({ name: 'dataNascita', title: 'Data di nascita', description: 'Facoltativa, dal profilo personale', type: 'date' }),
+    defineField({ name: 'consensoImmagini', title: 'Consenso a foto e video', description: 'Scelto dal giocatore in “Il mio account”', type: 'boolean', readOnly: true }),
     defineField({ name: 'clerkUserId', title: 'Clerk user ID', type: 'string', fieldset: 'accesso', readOnly: true }),
     defineField({
       name: 'isAdmin',

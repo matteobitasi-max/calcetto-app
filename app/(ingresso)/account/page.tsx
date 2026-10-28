@@ -5,6 +5,7 @@ import { SignOutButton } from '@clerk/nextjs'
 import { salvaAccount } from '@/app/actions'
 import { getMemberships, getUtente } from '@/lib/player'
 import { CampiProfilo } from '@/components/campi-profilo'
+import { CampiConsensi } from '@/components/campi-consensi'
 import { ActionForm } from '@/components/action-form'
 import { EliminaAccount } from '@/components/elimina-account'
 import { PillSalva } from '@/components/pill-salva'
@@ -44,6 +45,15 @@ async function Account() {
             <input value={utente.emails[0] ?? '—'} readOnly disabled className={`${inputClass} text-zinc-500`} />
           </Field>
         </Card>
+        <Card className="space-y-2">
+          <h2 className="font-semibold">🛡️ {t('Consensi')}</h2>
+          <CampiConsensi consensi={utente.consensi} />
+          {utente.consensi.termini && (
+            <p className="text-xs text-zinc-500">
+              {t('Termini d’uso e Informativa privacy accettati il {data}.', { data: t.giorno(utente.consensi.termini.il) })}
+            </p>
+          )}
+        </Card>
         <PillSalva />
       </ActionForm>
 
@@ -59,6 +69,9 @@ async function Account() {
       <Card className="divide-y divide-zinc-100 p-0! text-sm dark:divide-zinc-800">
         <Link href="/privacy" className="flex items-center justify-between px-4 py-3 hover:bg-zinc-50 dark:hover:bg-zinc-800">
           🔒 {t('Privacy policy')} <span className="text-zinc-400">›</span>
+        </Link>
+        <Link href="/termini" className="flex items-center justify-between px-4 py-3 hover:bg-zinc-50 dark:hover:bg-zinc-800">
+          📄 {t('Termini d’uso')} <span className="text-zinc-400">›</span>
         </Link>
         <Link href="/supporto" className="flex items-center justify-between px-4 py-3 hover:bg-zinc-50 dark:hover:bg-zinc-800">
           💬 {t('Supporto e contatti')} <span className="text-zinc-400">›</span>

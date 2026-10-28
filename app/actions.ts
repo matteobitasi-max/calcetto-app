@@ -17,6 +17,7 @@ import { daysBetween, romeLocalToISO } from '@/lib/dates'
 import { inviaAGiocatori, inviaATutti, rimuoviIscrizione, salvaIscrizione, salvaTokenNativo, type PushSub } from '@/lib/push'
 import { assicuraRicorrenze, getSeries, occurrenceId, rimuoviFutureVuote, type Series } from '@/lib/series'
 import { getTorneo, iscrizioniAperte, puoCreareTornei } from '@/lib/tornei'
+import { VERSIONE_TERMINI, type Consensi } from '@/lib/consensi'
 import { LETTERE_GIRONI, SQUADRE_PREDEFINITE, classifica, nomePredefinito, giornate, incrociGironi } from '@/lib/girone'
 import { daCreare, primoTurnoTeste, primoTurnoValido, tabellone } from '@/lib/tabellone'
 import { nomeSquadra } from '@/lib/teams'
@@ -919,6 +920,16 @@ export async function aggiungimiAllaLega(legaId: string) {
   redirect('/')
 }
 
+// Km da Apple Salute / Health Connect: il consenso (o la revoca) si registra con la data.
+export async function registraConsensoKm(si: boolean) {
+  const utente = await getUtente()
+  if (!utente) return
+  const { clerkClient } = await import('@clerk/nextjs/server')
+  await (await clerkClient()).users.updateUserMetadata(utente.id, {
+    privateMetadata: { consensi: { ...utente.consensi, km: { si, il: new Date().toISOString() } } },
+  })
+}
+
 // La lingua dell'app su questo dispositivo (e per le notifiche dei miei dispositivi). `vai`: dove tornare dopo.
 export async function scegliLingua(lingua: string, vai?: string) {
   if (!isLingua(lingua)) throw new Error('Lingua non valida')
@@ -1301,6 +1312,18 @@ export async function salvaAccount(_prev: FormState, formData: FormData): Promis
   const dataNascita = str(formData, 'dataNascita')
   if (!nome) return { error: await tr('Il nome è obbligatorio.') }
   if (!cognome && str(formData, 'dopo')) return { error: await tr('Scrivi anche il cognome.') }
+  // Consensi: i Termini si accettano al primo accesso (obbligatori), foto e video si scelgono anche in "Il mio account".
+  const ora = new Date().toISOString()
+  const accettaTermini = formData.get('accettoTermini') === 'on'
+  if (str(formData, 'dopo') && !accettaTermini && utente.consensi.termini?.versione !== VERSIONE_TERMINI) {
+    return { error: await tr('Per continuare accetta i Termini d’uso e l’Informativa privacy.') }
+  }
+  const sceltaImmagini = formData.has('sceltaImmagini') ? formData.get('consensoImmagini') === 'on' : undefined
+  const consensi: Consensi = {
+    ...utente.consensi,
+    ...(accettaTermini && { termini: { versione: VERSIONE_TERMINI, il: ora } }),
+    ...(sceltaImmagini !== undefined && sceltaImmagini !== utente.consensi.immagini?.si && { immagini: { si: sceltaImmagini, il: ora } }),
+  }
   if (dataNascita) {
     const anni = /^\d{4}-\d{2}-\d{2}$/.test(dataNascita) ? eta(dataNascita) : NaN
     if (!(anni >= 5 && anni <= 100)) return { error: await tr('La data di nascita non sembra valida.') }
@@ -1321,6 +1344,7 @@ export async function salvaAccount(_prev: FormState, formData: FormData): Promis
       dataNascita: dataNascita || null,
       ...(upload && { fotoAsset: upload.foto.asset._ref }),
       profiloCompleto: true,
+      consensi,
     },
   })
 
@@ -1331,7 +1355,12 @@ export async function salvaAccount(_prev: FormState, formData: FormData): Promis
     for (const id of schede) {
       tx.patch(id, (p) =>
         p
-          .set({ nome, ...(upload && { foto: upload.foto }), ...Object.fromEntries(Object.entries(valori).filter(([, v]) => v)) })
+          .set({
+            nome,
+            ...(upload && { foto: upload.foto }),
+            ...(consensi.immagini && { consensoImmagini: consensi.immagini.si }),
+            ...Object.fromEntries(Object.entries(valori).filter(([, v]) => v)),
+          })
           .unset(Object.entries(valori).filter(([, v]) => !v).map(([k]) => k)),
       )
     }
