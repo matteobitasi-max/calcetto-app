@@ -10,7 +10,6 @@ import { Medaglia } from '@/components/medaglia'
 import { SaluteAccount } from '@/components/salute-account'
 import { getT } from '@/lib/lingua'
 import type { T } from '@/lib/i18n'
-import { ScegliLingua } from '@/components/scegli-lingua'
 import { immagineUrl } from '@/lib/image'
 import { caricaFoto, spostaGiocatore } from '@/app/actions'
 import { SpostaGiocatore } from '@/components/sposta-giocatore'
@@ -148,10 +147,6 @@ export async function ProfiloGiocatore({ id }: { id: string }) {
           {/* Solo nell'app: Apple Health (iPhone) / Health Connect (Android) per i km */}
           <Card className="p-0! empty:hidden">
             <SaluteAccount />
-          </Card>
-          <Card className="space-y-3">
-            <h2 className="font-semibold">🌍 {t('Lingua')}</h2>
-            <ScegliLingua />
           </Card>
           <Card className="divide-y divide-zinc-100 p-0! text-sm dark:divide-zinc-800">
             <Link href="/account" className="flex items-center justify-between px-4 py-3 hover:bg-zinc-50 dark:hover:bg-zinc-800">
