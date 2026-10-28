@@ -19,4 +19,9 @@ export const notifiche: Record<string, string> = {
   "È entrato nella tua squadra del torneo {torneo}.": "They joined your team in the {torneo} tournament.",
   "convocazioni chiudono tra {n} minuti": "call-ups close in {n} minutes",
   "Partita di {data} · {luogo}. Ci sei?": "Match on {data} · {luogo}. Are you in?",
+  "Notifica di prova": "Test notification",
+  "Le notifiche di The Cap arrivano su questo dispositivo. ⚽": "The Cap notifications reach this device. ⚽",
+  "Nessun dispositivo con le notifiche attive: attivale qui sopra, poi riprova.": "No device with notifications on: turn them on above, then try again.",
+  "Inviata a {n} dispositivi su {tot}: dovrebbe arrivare tra pochi secondi.": "Sent to {n} of {tot} devices: it should arrive in a few seconds.",
+  "Mandami una notifica di prova": "Send me a test notification",
 }

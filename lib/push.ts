@@ -102,6 +102,12 @@ export async function inviaATutti(legaId: string, payload: Messaggio, categoria?
   return invia(subs, payload)
 }
 
+// A tutti i dispositivi di un account (es. la notifica di prova).
+export async function inviaAUtente(clerkUserId: string, payload: Messaggio) {
+  const subs = await sanity.fetch<Iscrizione[]>(`*[_type == "pushSubscription" && clerkUserId == $id]${subFields}`, { id: clerkUserId })
+  return invia(subs, payload)
+}
+
 // Solo ad alcuni giocatori (per ID della loro scheda).
 export async function inviaAGiocatori(playerIds: string[], payload: Messaggio, categoria?: CategoriaNotifica) {
   if (playerIds.length === 0) return { inviate: 0, totali: 0 }

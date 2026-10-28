@@ -14,6 +14,7 @@ import { ScegliLingua } from '@/components/scegli-lingua'
 import { immagineUrl } from '@/lib/image'
 import { caricaFoto, spostaGiocatore } from '@/app/actions'
 import { SpostaGiocatore } from '@/components/sposta-giocatore'
+import { NotificaProva } from '@/components/notifica-prova'
 import { AvatarUpload } from '@/components/avatar-upload'
 import { NotificheToggle } from '@/components/notifiche-toggle'
 import { PreferenzeNotifiche } from '@/components/preferenze-notifiche'
@@ -142,6 +143,7 @@ export async function ProfiloGiocatore({ id }: { id: string }) {
               <p className="text-xs text-zinc-500">{t('Cosa vuoi ricevere da {lega}:', { lega: me.lega.nome })}</p>
               <PreferenzeNotifiche iniziali={player.notifiche} />
             </div>
+            <NotificaProva />
           </Card>
           {/* Solo nell'app: Apple Health (iPhone) / Health Connect (Android) per i km */}
           <Card className="p-0! empty:hidden">
