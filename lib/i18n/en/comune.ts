@@ -274,4 +274,7 @@ export const comune: Record<string, string> = {
     "That's not a YouTube playlist link: copy it from Share on the playlist page.",
   'Non riesco a leggere la playlist: deve essere Pubblica o Non in elenco, non Privata.':
     "I can't read the playlist: it must be Public or Unlisted, not Private.",
+  Riprendi: 'Resume',
+  Pausa: 'Pause',
+  'scorri per il prossimo': 'swipe for the next one',
 }
