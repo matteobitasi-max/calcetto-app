@@ -56,7 +56,7 @@ export async function inviaFcm(token: string, p: FcmPayload): Promise<FcmEsito> 
   return (await inviaFcmConDettagli(token, p)).esito
 }
 
-// Come inviaFcm, con il motivo dell'errore (per la notifica di prova e per i log di Vercel).
+// Come inviaFcm, con il motivo dell'errore (che finisce anche nei log di Vercel).
 export async function inviaFcmConDettagli(token: string, p: FcmPayload): Promise<{ esito: FcmEsito; motivo?: string }> {
   const sa = getAccount()
   if (!sa) return { esito: 'errore', motivo: 'FIREBASE_SERVICE_ACCOUNT mancante' }
