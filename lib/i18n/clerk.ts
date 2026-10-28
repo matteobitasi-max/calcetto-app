@@ -6,7 +6,7 @@ import type { Lingua } from '.'
 const TESTI = {
   it: {
     base: itIT,
-    titolo: 'Entra in The Cap',
+    titolo: 'Benvenuto su The Cap',
     sotto: 'Con Google, Apple o la tua email. Prima volta? Tocca «Registrati».',
     nuovo: 'Crea il tuo account The Cap',
     nuovoSotto: 'Con Google o Apple è un attimo. Con l’email ti mandiamo un codice per confermare.',
@@ -14,7 +14,7 @@ const TESTI = {
   },
   en: {
     base: enUS,
-    titolo: 'Sign in to The Cap',
+    titolo: 'Welcome to The Cap',
     sotto: 'With Google, Apple or your email. First time? Tap “Sign up”.',
     nuovo: 'Create your The Cap account',
     nuovoSotto: 'With Google or Apple it takes a second. With email we send you a code to confirm.',
