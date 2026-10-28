@@ -50,3 +50,4 @@ GoogleService-Info.plist
 *.keystore
 android/keystore.properties
 *firebase-adminsdk*.json
+scripts/migra-clerk-mappa.json
