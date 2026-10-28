@@ -29,6 +29,8 @@ const vecchioIndirizzo = (req: NextRequest) =>
   req.headers.get('accept')?.includes('text/html')
 
 export default function proxy(req: NextRequest, ev: NextFetchEvent) {
+  // i link d'invito già mandati col vecchio indirizzo si aprono nel browser: lì si va sul sito nuovo
+  if (vecchioIndirizzo(req) && /^\/invito/.test(req.nextUrl.pathname)) return NextResponse.redirect(`https://www.thecapfc.app${req.nextUrl.pathname}`)
   if (vecchioIndirizzo(req)) return new NextResponse(PAGINA_SPOSTATI, { headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' } })
   return conClerk(req, ev)
 }
