@@ -13,6 +13,7 @@ export type Torneo = {
   numGironi?: number
   maxGiocatori?: number
   iscrizioniChiuse?: boolean
+  codiceInvito?: string
   /** Inizio della prima partita: da lì i capitani non cambiano più le squadre. */
   primaPartita?: string
   qualificate?: number
@@ -27,7 +28,7 @@ export type Torneo = {
   giocate: number
 }
 
-const torneoFields = `_id, "legaId": lega._ref, nome, "formato": coalesce(formato, "girone"), "andataRitorno": coalesce(andataRitorno, false), calendario, primoTurno, numGironi, qualificate, maxGiocatori, iscrizioniChiuse,
+const torneoFields = `_id, "legaId": lega._ref, nome, "formato": coalesce(formato, "girone"), "andataRitorno": coalesce(andataRitorno, false), calendario, primoTurno, numGironi, qualificate, maxGiocatori, iscrizioniChiuse, codiceInvito,
   "primaPartita": *[_type == "match" && torneo._ref == ^._id] | order(data asc)[0].data,
   "puntiVittoria": coalesce(puntiVittoria, 3), "puntiPareggio": coalesce(puntiPareggio, 1), _createdAt,
   "squadre": coalesce(squadre[]{_key, nome, colore, logo, girone, "capitanoId": capitano._ref, codiceInvito, "giocatori": coalesce(giocatori[]->{_id, nome, cognome, soprannome, foto}, [])}, []),

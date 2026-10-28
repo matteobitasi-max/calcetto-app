@@ -1,7 +1,6 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { Suspense, type ReactNode } from 'react'
-import { chiudiIscrizioni, eliminaTorneo } from '@/app/actions'
 import { displayName, membroDi } from '@/lib/player'
 import { getPartiteTorneo, type Match } from '@/lib/matches'
 import { getTorneo, iscrizioniAperte } from '@/lib/tornei'
@@ -10,8 +9,7 @@ import { nomeTurno, tabellone, type Incrocio } from '@/lib/tabellone'
 import { getT } from '@/lib/lingua'
 import type { T } from '@/lib/i18n'
 import { avatarUrl } from '@/lib/image'
-import { SubmitButton } from '@/components/submit-button'
-import { ButtonLink, Card, Loading, StatoBadge } from '@/components/ui'
+import { Card, Loading, StatoBadge } from '@/components/ui'
 
 export default function TorneoPage({ params }: PageProps<'/tornei/[id]'>) {
   return (
@@ -156,22 +154,51 @@ async function Torneo({ params }: { params: Promise<{ id: string }> }) {
 
   return (
     <div className="space-y-4 pb-8">
-      <div>
-        <Link href="/tornei" className="text-sm text-green-700 hover:underline dark:text-green-400">
-          ← {t('Tornei')}
-        </Link>
-        <h1 className="mt-1 text-xl font-bold">🏆 {torneo.nome}</h1>
-        <p className="text-sm text-zinc-500">
-          🏟️ {me.lega.nome} · {formato} · {t('{n}/{tot} partite giocate', { n: giocate, tot: partite.length })}
-        </p>
+      <Link href="/tornei" className="text-sm text-green-700 hover:underline dark:text-green-400">
+        ← {t('Tornei')}
+      </Link>
+
+      {/* Intestazione: nome, lega, formato, iscrizioni e avanzamento; la matita apre le impostazioni */}
+      <Card className="relative space-y-4 overflow-hidden border-amber-300! bg-gradient-to-br from-amber-50 via-white to-white dark:border-amber-700/60! dark:from-amber-950/50 dark:via-zinc-900 dark:to-zinc-900">
         {me.isAdmin && (
-          <div className="mt-2">
-            <ButtonLink href={`/tornei/${torneo._id}/squadre`} variant="secondary">
-              ✏️ {t('Squadre e giocatori')}
-            </ButtonLink>
-          </div>
+          <Link
+            href={`/tornei/${torneo._id}/impostazioni`}
+            aria-label={t('Impostazioni torneo')}
+            className="absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-full text-lg hover:bg-amber-100 dark:hover:bg-zinc-800"
+          >
+            ✏️
+          </Link>
         )}
-      </div>
+        <div className="flex items-center gap-3 pr-10">
+          <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-amber-100 text-3xl shadow-inner dark:bg-amber-900/50">🏆</span>
+          <div className="min-w-0">
+            <h1 className="truncate text-2xl font-bold leading-tight">{torneo.nome}</h1>
+            <p className="truncate text-sm text-zinc-500">🏟️ {me.lega.nome}</p>
+          </div>
+        </div>
+        <div className="flex flex-wrap gap-1.5 text-xs font-medium">
+          <span className="rounded-full bg-zinc-100 px-2.5 py-1 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">{formato}</span>
+          <span className="rounded-full bg-zinc-100 px-2.5 py-1 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">
+            {t.n(torneo.squadre.length, '{n} squadra', '{n} squadre')}
+          </span>
+          <span
+            className={`rounded-full px-2.5 py-1 ${aperte ? 'bg-green-100 text-green-800 dark:bg-green-950 dark:text-green-300' : 'bg-zinc-100 text-zinc-500 dark:bg-zinc-800'}`}
+          >
+            {aperte ? `🔓 ${t('Iscrizioni aperte')}` : `🔒 ${t('Iscrizioni chiuse')}`}
+          </span>
+        </div>
+        <div className="space-y-1">
+          <div className="flex justify-between text-xs text-zinc-500">
+            <span>{t('Partite giocate')}</span>
+            <span className="font-semibold tabular-nums text-zinc-700 dark:text-zinc-300">
+              {giocate}/{partite.length}
+            </span>
+          </div>
+          <div className="h-2 overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-800">
+            <div className="h-full rounded-full bg-amber-400" style={{ width: `${partite.length ? (giocate / partite.length) * 100 : 0}%` }} />
+          </div>
+        </div>
+      </Card>
 
       {campione && (
         <Card className="border-2 border-amber-400 text-center">
@@ -183,12 +210,7 @@ async function Torneo({ params }: { params: Promise<{ id: string }> }) {
       )}
 
       <section className="space-y-2">
-        <div className="flex items-center justify-between gap-2">
-          {titolo(t('Squadre'))}
-          <span className={`text-xs font-semibold ${aperte ? 'text-green-700 dark:text-green-500' : 'text-zinc-500'}`}>
-            {aperte ? t('Iscrizioni aperte') : t('Iscrizioni chiuse')}
-          </span>
-        </div>
+        {titolo(t('Squadre'))}
         <Card className="divide-y divide-zinc-100 p-0 dark:divide-zinc-800">
           {torneo.squadre.map((s) => {
             const mia = s.giocatori.some((g) => g._id === me._id)
@@ -226,13 +248,6 @@ async function Torneo({ params }: { params: Promise<{ id: string }> }) {
             )
           })}
         </Card>
-        {me.isAdmin && (
-          <form action={chiudiIscrizioni.bind(null, torneo._id, !torneo.iscrizioniChiuse)} className="text-right">
-            <SubmitButton className="text-xs font-medium text-zinc-500 hover:underline" pendingText="…">
-              {torneo.iscrizioniChiuse ? `🔓 ${t('Riapri le iscrizioni')}` : `🔒 ${t('Chiudi le iscrizioni')}`}
-            </SubmitButton>
-          </form>
-        )}
       </section>
 
       {conTabellone && (
@@ -313,17 +328,6 @@ async function Torneo({ params }: { params: Promise<{ id: string }> }) {
         </section>
       ))}
 
-      {me.isAdmin && (
-        <form action={eliminaTorneo.bind(null, torneo._id)} className="text-center">
-          <SubmitButton
-            className="text-sm text-red-600 hover:underline"
-            pendingText={t('Elimino…')}
-            confirm={t('Eliminare “{nome}” con tutte le sue partite, anche quelle già giocate?', { nome: torneo.nome })}
-          >
-            {t('Elimina il torneo')}
-          </SubmitButton>
-        </form>
-      )}
     </div>
   )
 }

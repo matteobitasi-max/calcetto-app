@@ -16,7 +16,7 @@ import { riscriviPartita, type MatchDaUnire } from '@/lib/unisci'
 import { daysBetween, romeLocalToISO } from '@/lib/dates'
 import { inviaAGiocatori, inviaATutti, rimuoviIscrizione, salvaIscrizione, salvaTokenNativo, type PushSub } from '@/lib/push'
 import { assicuraRicorrenze, getSeries, occurrenceId, rimuoviFutureVuote, type Series } from '@/lib/series'
-import { iscrizioniAperte, puoCreareTornei } from '@/lib/tornei'
+import { getTorneo, iscrizioniAperte, puoCreareTornei } from '@/lib/tornei'
 import { LETTERE_GIRONI, SQUADRE_PREDEFINITE, classifica, nomePredefinito, giornate, incrociGironi } from '@/lib/girone'
 import { daCreare, primoTurnoTeste, primoTurnoValido, tabellone } from '@/lib/tabellone'
 import { nomeSquadra } from '@/lib/teams'
@@ -774,7 +774,7 @@ const ALFABETO = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
 async function nuovoCodice() {
   for (;;) {
     const codice = Array.from({ length: 6 }, () => ALFABETO[randomInt(ALFABETO.length)]).join('')
-    const esiste = await sanity.fetch<number>(`count(*[_type == "league" && codiceInvito == $codice])`, { codice })
+    const esiste = await sanity.fetch<number>(`count(*[_type in ["league", "tournament"] && codiceInvito == $codice])`, { codice })
     if (!esiste) return codice
   }
 }
@@ -849,8 +849,14 @@ export async function uniscitiConInvito(codice: string) {
 
 export async function uniscitiConCodice(_prev: FormState, formData: FormData): Promise<FormState> {
   const codice = str(formData, 'codice').toUpperCase().replace(/[^A-Z0-9]/g, '')
-  const esiste = await sanity.fetch<number>(`count(*[_type == "league" && codiceInvito == $codice])`, { codice })
-  if (!esiste) return { error: await tr('Codice non valido: controlla di averlo scritto bene.') }
+  // il codice di una lega, di un torneo (si sceglie la squadra) o di una squadra di un torneo
+  const tipo = await sanity.fetch<string | null>(
+    `coalesce(*[_type in ["league", "tournament"] && codiceInvito == $codice][0]._type, select(count(*[_type == "tournament" && $codice in squadre[].codiceInvito]) > 0 => "squadra"))`,
+    { codice },
+  )
+  if (tipo === 'tournament') redirect(`/invito-torneo/${codice}`)
+  if (tipo === 'squadra') redirect(`/invito-squadra/${codice}`)
+  if (tipo !== 'league') return { error: await tr('Codice non valido: controlla di averlo scritto bene.') }
   await uniscitiConInvito(codice)
 }
 
@@ -1690,6 +1696,7 @@ export async function creaTorneo(_prev: FormState, formData: FormData): Promise<
     ...(primoTurno && { primoTurno }),
     ...(formato === 'gironi' && { numGironi, qualificate }),
     ...(maxGiocatori && { maxGiocatori }),
+    codiceInvito: await nuovoCodice(),
     ...(utente && { creatoDa: utente.id }),
   })
 
@@ -1818,13 +1825,24 @@ const torneoSquadreFields = `_id, _rev, nome, "legaId": lega._ref, maxGiocatori,
 // Entrare in una squadra con il link del capitano: chi non è nella lega ci entra, poi passa in quella squadra
 // (lasciando quella in cui era nello stesso torneo).
 export async function entraInSquadra(codice: string) {
-  const utente = await getUtente()
-  if (!utente) redirect('/sign-in')
   const torneo = await sanity.fetch<TorneoSquadre | null>(
     `*[_type == "tournament" && $codice in squadre[].codiceInvito][0]{${torneoSquadreFields}}`,
     { codice: codice.toUpperCase() },
   )
-  const squadra = torneo?.squadre.find((sq) => sq.codiceInvito === codice.toUpperCase())
+  await entra(torneo, torneo?.squadre.find((sq) => sq.codiceInvito === codice.toUpperCase()))
+}
+
+// Con il link del torneo si sceglie la squadra.
+export async function entraNelTorneo(codice: string, chiave: string) {
+  const torneo = await sanity.fetch<TorneoSquadre | null>(`*[_type == "tournament" && codiceInvito == $codice][0]{${torneoSquadreFields}}`, {
+    codice: codice.toUpperCase(),
+  })
+  await entra(torneo, torneo?.squadre.find((sq) => sq._key === chiave))
+}
+
+async function entra(torneo: TorneoSquadre | null, squadra: SquadraDoc | undefined) {
+  const utente = await getUtente()
+  if (!utente) redirect('/sign-in')
   if (!torneo || !squadra) throw new Error('Invito non valido')
   if (!iscrizioniAperte(torneo)) throw new Error('Le iscrizioni a questo torneo sono chiuse')
 
@@ -1933,6 +1951,55 @@ export async function creaLinkSquadra(torneoId: string, chiave: string) {
   const capitano = squadra.capitano ?? (squadra.giocatori[0] && { _type: 'reference' as const, _ref: squadra.giocatori[0]._ref })
   const squadre = torneo.squadre.map((sq) => (sq._key === chiave ? { ...sq, codiceInvito, ...(capitano && { capitano }) } : sq))
   await sanity.patch(torneo._id).ifRevisionId(torneo._rev).set({ squadre }).commit()
+  refresh()
+}
+
+// Impostazioni del torneo che si possono cambiare dopo averlo creato (formato, squadre e calendario no):
+// nome, campo e durata (anche per le partite non ancora giocate), punti e giocatori per squadra.
+export async function salvaTorneo(torneoId: string, _prev: FormState, formData: FormData): Promise<FormState> {
+  const admin = await requireForDoc(torneoId, 'organizzatore')
+  if (!(await puoCreareTornei(admin.lega._id))) return { error: await tr('I tornei sono una funzione Pro.') }
+  const torneo = await getTorneo(torneoId)
+  if (!torneo) return { error: await tr('Torneo non trovato.') }
+
+  const nome = str(formData, 'nome')
+  if (nome.length < 2 || nome.length > 60) return { error: await tr('Il nome del torneo deve avere tra 2 e 60 caratteri.') }
+  const luogo = str(formData, 'luogo')
+  if (!luogo) return { error: await tr('Scrivi dove si gioca.') }
+  const durataMinuti = num(formData, 'durataMinuti') ?? 40
+  if (!Number.isInteger(durataMinuti) || durataMinuti < 10 || durataMinuti > 300) return { error: await tr('Durata non valida (10-300 minuti).') }
+  const puntiVittoria = num(formData, 'puntiVittoria') ?? 3
+  const puntiPareggio = num(formData, 'puntiPareggio') ?? 1
+  const punti = (n: number) => Number.isInteger(n) && n >= 0 && n <= 10
+  if (!punti(puntiVittoria) || !punti(puntiPareggio) || puntiPareggio > puntiVittoria) return { error: await tr('Punti non validi: da 0 a 10, e il pareggio non più della vittoria.') }
+  const maxGiocatori = maxDalModulo(formData)
+  if (typeof maxGiocatori === 'string') return { error: await tr(maxGiocatori) }
+  const troppi = maxGiocatori && torneo.squadre.find((sq) => sq.giocatori.length > maxGiocatori)
+  if (troppi) return { error: await tr('{squadra} ha più di {n} giocatori.', { squadra: troppi.nome, n: maxGiocatori }) }
+
+  const patch = sanity.patch(torneoId).set({
+    nome,
+    puntiVittoria,
+    puntiPareggio,
+    ...(torneo.calendario && { calendario: { ...torneo.calendario, luogo, durataMinuti } }),
+    ...(maxGiocatori && { maxGiocatori }),
+  })
+  if (!maxGiocatori) patch.unset(['maxGiocatori'])
+  const tx = sanity.transaction().patch(patch)
+  const daGiocare = await sanity.fetch<string[]>(
+    `*[_type == "match" && torneo._ref == $id && !(stato in ["giocata", "annullata"]) && data > now()]._id`,
+    { id: torneoId },
+  )
+  for (const id of daGiocare) tx.patch(id, (p) => p.set({ luogo, durataMinuti }))
+  await tx.commit()
+  refresh()
+  return {}
+}
+
+// Link e codice d'invito del torneo: si creano la prima volta, poi si possono cambiare (i vecchi smettono di funzionare).
+export async function invitoTorneo(torneoId: string) {
+  await requireForDoc(torneoId, 'organizzatore')
+  await sanity.patch(torneoId).set({ codiceInvito: await nuovoCodice() }).commit()
   refresh()
 }
 

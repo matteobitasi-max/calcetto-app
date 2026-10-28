@@ -84,6 +84,7 @@ export const tournament = defineType({
       description: 'I capitani non possono più invitare né cambiare la squadra (si chiudono comunque alla prima partita)',
       type: 'boolean',
     }),
+    defineField({ name: 'codiceInvito', title: 'Codice invito del torneo', description: 'Chi lo usa sceglie in quale squadra entrare', type: 'string', readOnly: true }),
     defineField({ name: 'creatoDa', title: 'Creato da (Clerk user ID)', type: 'string', readOnly: true }),
   ],
   preview: { select: { title: 'nome', subtitle: 'lega.nome' } },
