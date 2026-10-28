@@ -7,18 +7,9 @@ import { addMinuti, daysBetween } from '@/lib/dates'
 import { descriviRicorrenza } from '@/lib/ricorrenza'
 import { useT } from '@/components/lingua'
 import type { T } from '@/lib/i18n'
+import { DURATE_FINESTRA } from '@/lib/limiti'
 
 const Label = ({ children }: { children: React.ReactNode }) => <span className="block text-sm font-medium">{children}</span>
-
-export const DURATE_FINESTRA = [
-  [60, '1 ora'],
-  [120, '2 ore'],
-  [180, '3 ore'],
-  [360, '6 ore'],
-  [720, '12 ore'],
-  [1440, '1 giorno'],
-  [2880, '2 giorni'],
-] as const
 
 const etichettaDurata = (min: number, t: T) => {
   const nota = DURATE_FINESTRA.find(([m]) => m === min)?.[1]

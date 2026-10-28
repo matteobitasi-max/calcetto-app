@@ -11,3 +11,15 @@ export function formatoDaIscritti(iscritti: number) {
   const giocano = Math.min(MAX_ISCRITTI, iscritti - (iscritti % 2))
   return { giocano, perSquadra: giocano / 2, inAttesa: Math.max(0, iscritti - giocano) }
 }
+
+// Quanto restano aperte le convocazioni (minuti, etichetta). Sta qui e non nel modulo del browser
+// (quando-fields) perché lo usa anche la pagina della serie, che è sul server.
+export const DURATE_FINESTRA = [
+  [60, '1 ora'],
+  [120, '2 ore'],
+  [180, '3 ore'],
+  [360, '6 ore'],
+  [720, '12 ore'],
+  [1440, '1 giorno'],
+  [2880, '2 giorni'],
+] as const
