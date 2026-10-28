@@ -65,6 +65,7 @@ export function ScuotiFoto({ urls }: { urls: string[] }) {
       picchi = [...picchi.filter((t) => ora - t < ANDROID.finestra), ora]
       if (picchi.length >= ANDROID.strattoni) {
         picchi = []
+        navigator.vibrate?.(150)
         mostra()
       }
     }
