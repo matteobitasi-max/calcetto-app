@@ -1260,6 +1260,7 @@ export async function salvaAccount(_prev: FormState, formData: FormData): Promis
   const piede = (PIEDI as readonly string[]).includes(str(formData, 'piede')) ? str(formData, 'piede') : ''
   const dataNascita = str(formData, 'dataNascita')
   if (!nome) return { error: await tr('Il nome è obbligatorio.') }
+  if (!cognome && str(formData, 'dopo')) return { error: await tr('Scrivi anche il cognome.') }
   if (dataNascita) {
     const anni = /^\d{4}-\d{2}-\d{2}$/.test(dataNascita) ? eta(dataNascita) : NaN
     if (!(anni >= 5 && anni <= 100)) return { error: await tr('La data di nascita non sembra valida.') }
@@ -1301,15 +1302,6 @@ export async function salvaAccount(_prev: FormState, formData: FormData): Promis
   if (dopo) redirect(dopo.startsWith('/') && !dopo.startsWith('//') ? dopo : '/')
   refresh()
   return {}
-}
-
-// "Completa il tuo profilo" → "Salta per ora": non la si rivede (i dati si mettono poi in "Il mio account").
-export async function saltaProfilo(dopo: string) {
-  const utente = await getUtente()
-  if (!utente) redirect('/sign-in')
-  const { clerkClient } = await import('@clerk/nextjs/server')
-  await (await clerkClient()).users.updateUserMetadata(utente.id, { privateMetadata: { profiloCompleto: true } })
-  redirect(dopo.startsWith('/') && !dopo.startsWith('//') ? dopo : '/')
 }
 
 // Un giocatore a caso della rosa (prima chi usa già l'app), per prendere il posto dell'organizzatore.

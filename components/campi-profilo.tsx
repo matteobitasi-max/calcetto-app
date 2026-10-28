@@ -9,7 +9,7 @@ type Utente = NonNullable<Awaited<ReturnType<typeof getUtente>>>
 
 // I dati del mio profilo (pagina "Il mio account" e "Completa il tuo profilo"): finiscono in tutte le mie
 // schede giocatore. Se non li ho ancora scelti, si parte da quelli della mia scheda (es. messi dall'organizzatore).
-export async function CampiProfilo({ utente, scheda }: { utente: Utente; scheda?: Membro }) {
+export async function CampiProfilo({ utente, scheda, cognomeObbligatorio = false }: { utente: Utente; scheda?: Membro; cognomeObbligatorio?: boolean }) {
   const t = await getT()
   const telefono = utente.telefono ?? scheda?.telefono ?? ''
   const ruolo = utente.ruolo ?? scheda?.ruolo ?? ''
@@ -25,7 +25,7 @@ export async function CampiProfilo({ utente, scheda }: { utente: Utente; scheda?
           <input name="nome" required maxLength={40} defaultValue={utente.nome ?? ''} autoComplete="given-name" className={inputClass} />
         </Field>
         <Field label={t('Cognome')}>
-          <input name="cognome" maxLength={40} defaultValue={utente.cognome ?? ''} autoComplete="family-name" className={inputClass} />
+          <input name="cognome" required={cognomeObbligatorio} maxLength={40} defaultValue={utente.cognome ?? ''} autoComplete="family-name" className={inputClass} />
         </Field>
       </div>
       <Field label={t('Telefono (facoltativo)')}>

@@ -50,8 +50,8 @@ export const getUtente = cache(async () => {
     piede: profilo.piede,
     dataNascita: profilo.dataNascita,
     fotoAsset: profilo.fotoAsset,
-    // Chi si è registrato da quando c'è la pagina "Completa il tuo profilo" la vede una volta, al primo accesso.
-    daCompletare: !profilo.profiloCompleto && user.createdAt > Date.parse('2026-10-28T18:00:00Z'),
+    // "Completa il tuo profilo" al primo accesso: per chi si registra da oggi e per chi non ha ancora nome e cognome.
+    daCompletare: !profilo.profiloCompleto && (user.createdAt > Date.parse('2026-10-28T00:00:00Z') || !user.firstName?.trim() || !user.lastName?.trim()),
   }
 })
 

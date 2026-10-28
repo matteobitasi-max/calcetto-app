@@ -4,7 +4,7 @@ import { IntervisteLega } from '@/components/interviste-lega'
 import { CodiceInvito, InvitoLink } from '@/components/invito-link'
 import { baseUrl } from '@/lib/url'
 import { redirect } from 'next/navigation'
-import { getCurrentPlayer, getMemberships, type Player } from '@/lib/player'
+import { getCurrentPlayer, getMemberships, getUtente, type Player } from '@/lib/player'
 import { finestra, formatoInCorso, getPastMatches, getPlayers, getUpcomingMatches, ordinati, presenti, type Match } from '@/lib/matches'
 import { getT } from '@/lib/lingua'
 import type { T } from '@/lib/i18n'
@@ -30,7 +30,9 @@ export default function Home() {
 const breve = { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' } as const
 
 async function Partite() {
-  const [player, mie, t] = await Promise.all([getCurrentPlayer(), getMemberships(), getT()])
+  const [player, mie, utente, t] = await Promise.all([getCurrentPlayer(), getMemberships(), getUtente(), getT()])
+  // primo accesso (anche chi entra già in una lega, es. aggiunto con la sua email): prima il profilo
+  if (utente?.daCompletare) redirect('/completa-profilo?dopo=/')
   // Nessuna lega: si sceglie se crearne una o entrare con un invito.
   if (!player) redirect('/benvenuto')
 

@@ -66,4 +66,6 @@ export const ingresso: Record<string, string> = {
   "Continua": "Continue",
   "Salta per ora": "Skip for now",
   "Registrati": "Sign up",
+  "Nome e cognome sono obbligatori: così i compagni ti riconoscono. Il resto aiuta a fare squadre equilibrate e puoi cambiarlo quando vuoi in “Il mio account”.": "First and last name are required so teammates recognise you. The rest helps make balanced teams and you can change it anytime in “My account”.",
+  "Scrivi anche il cognome.": "Please add your last name too.",
 }

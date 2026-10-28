@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation'
 import { Suspense } from 'react'
-import { saltaProfilo, salvaAccount } from '@/app/actions'
+import { salvaAccount } from '@/app/actions'
 import { getMemberships, getUtente } from '@/lib/player'
 import { ActionForm } from '@/components/action-form'
 import { CampiProfilo } from '@/components/campi-profilo'
@@ -26,22 +26,17 @@ async function Completa({ searchParams }: { searchParams: Promise<Record<string,
     <div className="space-y-4">
       <div className="text-center">
         <h1 className="text-2xl font-bold">{t('Completa il tuo profilo')}</h1>
-        <p className="mt-1 text-sm text-zinc-500">{t('Così gli organizzatori ti conoscono e fanno squadre equilibrate. Puoi cambiarli quando vuoi in “Il mio account”.')}</p>
+        <p className="mt-1 text-sm text-zinc-500">{t('Nome e cognome sono obbligatori: così i compagni ti riconoscono. Il resto aiuta a fare squadre equilibrate e puoi cambiarlo quando vuoi in “Il mio account”.')}</p>
       </div>
       <ActionForm action={salvaAccount} className="space-y-4">
         <input type="hidden" name="dopo" value={vai} />
         <Card className="space-y-4">
-          <CampiProfilo utente={utente} scheda={leghe[0]} />
+          <CampiProfilo utente={utente} scheda={leghe[0]} cognomeObbligatorio />
         </Card>
         <SubmitButton className={`${buttonClass('primary')} w-full justify-center`} pendingText={t('Salvo…')}>
           {t('Continua')}
         </SubmitButton>
       </ActionForm>
-      <form action={saltaProfilo.bind(null, vai)} className="text-center">
-        <SubmitButton className="text-sm text-zinc-500 hover:underline" pendingText="…">
-          {t('Salta per ora')}
-        </SubmitButton>
-      </form>
     </div>
   )
 }
