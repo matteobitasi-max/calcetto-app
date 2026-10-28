@@ -17,12 +17,15 @@ export function NotificaProva() {
         onClick={() =>
           startTransition(async () => {
             const r = await notificaDiProva()
+            if ('error' in r) return setEsito(r.error)
+            if (r.dispositivi.length === 0) return setEsito(t('Nessun dispositivo con le notifiche attive: attivale qui sopra, poi riprova.'))
+            const ok = r.dispositivi.filter((d) => d.esito === 'inviata').length
             setEsito(
-              'error' in r
-                ? r.error
-                : r.totali === 0
-                  ? t('Nessun dispositivo con le notifiche attive: attivale qui sopra, poi riprova.')
-                  : t('Inviata a {n} dispositivi su {tot}: dovrebbe arrivare tra pochi secondi.', { n: r.inviate, tot: r.totali }),
+              [
+                t('Inviata a {n} dispositivi su {tot}: dovrebbe arrivare tra pochi secondi.', { n: ok, tot: r.dispositivi.length }),
+                // il motivo tecnico, se un dispositivo non l'ha accettata (da mandare all'assistenza)
+                ...r.dispositivi.filter((d) => d.esito !== 'inviata').map((d) => `⚠️ ${d.tipo}: ${d.esito}${d.motivo ? ` – ${d.motivo}` : ''}`),
+              ].join('\n'),
             )
           })
         }
@@ -30,7 +33,7 @@ export function NotificaProva() {
       >
         {pending ? '…' : `📨 ${t('Mandami una notifica di prova')}`}
       </button>
-      {esito && <p className="text-xs text-zinc-500">{esito}</p>}
+      {esito && <p className="whitespace-pre-line break-words text-xs text-zinc-500">{esito}</p>}
     </div>
   )
 }

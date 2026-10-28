@@ -14,7 +14,7 @@ import { cercaCitta } from '@/lib/meteo'
 import { MAX_GIOCATORI, MAX_ISCRITTI, formatoDaIscritti } from '@/lib/limiti'
 import { riscriviPartita, type MatchDaUnire } from '@/lib/unisci'
 import { daysBetween, romeLocalToISO } from '@/lib/dates'
-import { inviaAGiocatori, inviaATutti, inviaAUtente, rimuoviIscrizione, salvaIscrizione, salvaTokenNativo, type PushSub } from '@/lib/push'
+import { inviaAGiocatori, inviaATutti, provaDispositivi, rimuoviIscrizione, salvaIscrizione, salvaTokenNativo, type PushSub } from '@/lib/push'
 import { assicuraRicorrenze, getSeries, occurrenceId, rimuoviFutureVuote, type Series } from '@/lib/series'
 import { getTorneo, iscrizioniAperte, puoCreareTornei } from '@/lib/tornei'
 import { LETTERE_GIRONI, SQUADRE_PREDEFINITE, classifica, nomePredefinito, giornate, incrociGironi } from '@/lib/girone'
@@ -886,15 +886,17 @@ export async function aggiungimiAllaLega(legaId: string) {
 }
 
 // Notifica di prova ai miei dispositivi: per controllare che le notifiche arrivino.
-export async function notificaDiProva(): Promise<{ inviate: number; totali: number } | { error: string }> {
+export async function notificaDiProva(): Promise<{ dispositivi: { tipo: string; esito: string; motivo?: string }[] } | { error: string }> {
   const utente = await getUtente()
   if (!utente) return { error: await tr('Accesso richiesto.') }
-  return inviaAUtente(utente.id, (t) => ({
+  const t = await getT()
+  const dispositivi = await provaDispositivi(utente.id, {
     title: `🔔 ${t('Notifica di prova')}`,
     body: t('Le notifiche di The Cap arrivano su questo dispositivo. ⚽'),
     url: '/profilo',
     tag: 'prova',
-  }))
+  })
+  return { dispositivi }
 }
 
 // La lingua dell'app su questo dispositivo (e per le notifiche dei miei dispositivi). `vai`: dove tornare dopo.

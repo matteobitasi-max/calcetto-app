@@ -2,7 +2,7 @@ import 'server-only'
 import { createHash } from 'node:crypto'
 import webpush from 'web-push'
 import { sanity } from './sanity'
-import { inviaFcm } from './fcm'
+import { inviaFcm, inviaFcmConDettagli } from './fcm'
 import type { CategoriaNotifica } from './roster'
 import { creaT, isLingua, type Lingua, type T } from './i18n'
 
@@ -102,10 +102,24 @@ export async function inviaATutti(legaId: string, payload: Messaggio, categoria?
   return invia(subs, payload)
 }
 
-// A tutti i dispositivi di un account (es. la notifica di prova).
-export async function inviaAUtente(clerkUserId: string, payload: Messaggio) {
+// Notifica di prova a tutti i dispositivi di un account, con l'esito di ognuno (non cancella niente).
+export async function provaDispositivi(clerkUserId: string, payload: PushPayload) {
   const subs = await sanity.fetch<Iscrizione[]>(`*[_type == "pushSubscription" && clerkUserId == $id]${subFields}`, { id: clerkUserId })
-  return invia(subs, payload)
+  return Promise.all(
+    subs.map(async (s) => {
+      if (s.tipo === 'ios' || s.tipo === 'android') {
+        if (!s.token) return { tipo: s.tipo, esito: 'senza token' }
+        const r = await inviaFcmConDettagli(s.token, payload).catch((e: Error) => ({ esito: 'errore', motivo: e.message }))
+        return { tipo: s.tipo, esito: r.esito, motivo: r.motivo }
+      }
+      try {
+        await webpush.sendNotification({ endpoint: s.endpoint!, keys: s.keys! }, JSON.stringify(payload), { TTL: 60 * 60 })
+        return { tipo: 'web', esito: 'inviata' }
+      } catch (err) {
+        return { tipo: 'web', esito: 'errore', motivo: String((err as { statusCode?: number })?.statusCode ?? err) }
+      }
+    }),
+  )
 }
 
 // Solo ad alcuni giocatori (per ID della loro scheda).

@@ -43,7 +43,7 @@ async function tokenDiAccesso(sa: ServiceAccount) {
       assertion: `${header}.${claims}.${b64url(firma)}`,
     }),
   })
-  if (!res.ok) throw new Error(`Firebase: autenticazione non riuscita (${res.status})`)
+  if (!res.ok) throw new Error(`Firebase: autenticazione non riuscita (${res.status}) ${(await res.text().catch(() => '')).slice(0, 200)}`)
   const json = (await res.json()) as { access_token: string; expires_in: number }
   accesso = { token: json.access_token, scade: Date.now() + json.expires_in * 1000 }
   return accesso.token
@@ -53,8 +53,13 @@ export type FcmPayload = { title: string; body: string; url: string; tag?: strin
 export type FcmEsito = 'inviata' | 'token_scaduto' | 'errore'
 
 export async function inviaFcm(token: string, p: FcmPayload): Promise<FcmEsito> {
+  return (await inviaFcmConDettagli(token, p)).esito
+}
+
+// Come inviaFcm, con il motivo dell'errore (per la notifica di prova e per i log di Vercel).
+export async function inviaFcmConDettagli(token: string, p: FcmPayload): Promise<{ esito: FcmEsito; motivo?: string }> {
   const sa = getAccount()
-  if (!sa) return 'errore'
+  if (!sa) return { esito: 'errore', motivo: 'FIREBASE_SERVICE_ACCOUNT mancante' }
   const res = await fetch(`https://fcm.googleapis.com/v1/projects/${sa.project_id}/messages:send`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${await tokenDiAccesso(sa)}`, 'Content-Type': 'application/json' },
@@ -68,9 +73,11 @@ export async function inviaFcm(token: string, p: FcmPayload): Promise<FcmEsito> 
       },
     }),
   })
-  if (res.ok) return 'inviata'
+  if (res.ok) return { esito: 'inviata' }
   // App disinstallata o notifiche revocate: il token non vale più.
   const errore = (await res.json().catch(() => null)) as { error?: { status?: string; details?: { errorCode?: string }[] } } | null
   const codice = errore?.error?.details?.find((d) => d.errorCode)?.errorCode ?? errore?.error?.status
-  return res.status === 404 || codice === 'UNREGISTERED' || codice === 'NOT_FOUND' ? 'token_scaduto' : 'errore'
+  const motivo = `${res.status} ${codice ?? ''} ${JSON.stringify(errore?.error ?? {}).slice(0, 300)}`
+  console.error('FCM:', motivo)
+  return { esito: res.status === 404 || codice === 'UNREGISTERED' || codice === 'NOT_FOUND' ? 'token_scaduto' : 'errore', motivo }
 }
