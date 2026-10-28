@@ -10,12 +10,13 @@ import { KmPartita } from '@/components/km-partita'
 import { MeteoPartita } from '@/components/meteo-partita'
 import { getT } from '@/lib/lingua'
 import type { T } from '@/lib/i18n'
-import { aggiungiDaAttesa, allungaFinestra, apriConvocazioni, cambiaSquadra, cambiaStato, convocaGiocatore, scegliLega, rimettiInAttesa, togliDallaPartita, togliDallaSquadra } from '@/app/actions'
+import { scambiaConAttesa, aggiungiDaAttesa, allungaFinestra, apriConvocazioni, cambiaSquadra, cambiaStato, convocaGiocatore, scegliLega, rimettiInAttesa, togliDallaPartita, togliDallaSquadra } from '@/app/actions'
 import { Countdown } from '@/components/countdown'
 import { ApriConvocazioni } from '@/components/apri-convocazioni'
 import { baseUrl } from '@/lib/url'
 import { SubmitButton } from '@/components/submit-button'
 import { SwipeRiga } from '@/components/swipe-riga'
+import { ScambiaAttesa } from '@/components/scambia-attesa'
 import { ButtonLink, Card, Loading, PlayerRow, StatoBadge, buttonClass } from '@/components/ui'
 import { FinestraInfo } from '../finestra-info'
 import { RispostaButtons } from '../risposta-buttons'
@@ -207,6 +208,8 @@ function Gruppo({
     (c) => c.giocatore?._id,
   )
   if (items.length === 0) return null
+  // per lo scambio dalla lista d'attesa: chi è in lista
+  const inLista = risposta === 'riserva' ? ordinati(match, 'presente').map((c) => ({ key: c._key, nome: displayName(c.giocatore) })) : []
   return (
     <div className="mb-4">
       <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-zinc-500">
@@ -224,6 +227,9 @@ function Gruppo({
                 <>
                   {c.aggiunto && risposta === 'presente' && (
                     <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-xs text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">{t('aggiunto')}</span>
+                  )}
+                  {gestisci && risposta === 'riserva' && inLista.length > 0 && (
+                    <ScambiaAttesa nome={displayName(c.giocatore)} inLista={inLista} scambia={scambiaConAttesa.bind(null, match._id, c._key)} />
                   )}
                   {gestisci && risposta === 'riserva' && (
                     <form action={aggiungiDaAttesa.bind(null, match._id, c._key)}>

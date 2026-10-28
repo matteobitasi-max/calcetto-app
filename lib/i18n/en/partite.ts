@@ -243,4 +243,7 @@ export const partite: Record<string, string> = {
   "Escludi": "Remove",
   "Escludere {nome} dalla partita? Passa tra i “non ci sono”.": "Remove {nome} from the match? They move to “not coming”.",
   "Si convoca chi vuole, fino a {max}: oltre si va in lista d’attesa. Quando chiudi le convocazioni il numero diventa pari: 11 iscritti → 5 contro 5 e l’ultimo in lista d’attesa.": "Anyone can join, up to {max}: after that they go on the waiting list. When you close call-ups the number becomes even: 11 players → 5 vs 5 and the last one waits.",
+  "Scambialo con uno in lista": "Swap with someone in the list",
+  "Scambia {nome} con…": "Swap {nome} with…",
+  "Chi scegli va in lista d’attesa al suo posto; i posti restano gli stessi.": "Whoever you pick goes on the waiting list in their place; the number of places stays the same.",
 }

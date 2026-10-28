@@ -106,6 +106,43 @@ export async function rimettiInAttesa(matchId: string, key: string) {
   await modificaLista(matchId, key, 'presente', false, -1)
 }
 
+// L'organizzatore scambia uno in lista d'attesa (`entra`) con uno in lista (`esce`): si scambiano il posto
+// in coda (l'ora della risposta), così i posti restano quelli e chi esce va in attesa al posto dell'altro.
+// Se le squadre sono già fatte, chi entra prende il posto di chi esce nella sua squadra.
+export async function scambiaConAttesa(matchId: string, entra: string, esce: string) {
+  await requireForDoc(matchId, 'organizzatore')
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const doc = await sanity.fetch<SquadreRaw | null>(
+      `*[_type == "match" && _id == $id][0]{_rev, stato, torneo, postiDisponibili, convocazioni, squadraA, squadraB}`,
+      { id: matchId },
+    )
+    if (!doc) throw new Error('Partita non trovata')
+    if (doc.stato !== 'aperta' && doc.stato !== 'chiusa') throw new Error('La partita è già giocata o annullata')
+    const lista = doc.convocazioni ?? []
+    const a = lista.find((c) => c._key === entra && c.risposta === 'riserva')
+    const b = lista.find((c) => c._key === esce && c.risposta === 'presente')
+    if (!a || !b) return refresh() // nel frattempo è cambiato qualcosa: si mostra la lista aggiornata
+    const convocazioni = assegnaPosti(
+      lista.map((c) =>
+        c === a ? { ...c, risposta: 'presente' as Risposta, rispostoIl: b.rispostoIl, aggiunto: b.aggiunto } : c === b ? { ...c, risposta: 'riserva' as Risposta, rispostoIl: a.rispostoIl, aggiunto: false } : c,
+      ),
+      doc.postiDisponibili,
+    )
+    const sostituisci = (sq?: { _key: string; _ref: string }[]) => (sq ?? []).map((r) => (r._ref === b.giocatore._ref ? { ...r, _ref: a.giocatore._ref } : r))
+    try {
+      await sanity
+        .patch(matchId)
+        .ifRevisionId(doc._rev)
+        .set({ convocazioni, squadraA: sostituisci(doc.squadraA), squadraB: sostituisci(doc.squadraB) })
+        .commit()
+      refresh()
+      return
+    } catch (err) {
+      if (attempt === 2) throw err
+    }
+  }
+}
+
 // L'organizzatore convoca un giocatore della rosa che non si è convocato: risponde "ci sono" al suo posto
 // (si mette in coda come gli altri: se la lista è piena va in lista d'attesa).
 export async function convocaGiocatore(matchId: string, giocatoreId: string) {
