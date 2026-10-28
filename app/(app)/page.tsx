@@ -40,7 +40,8 @@ async function Partite() {
   await assicuraRicorrenze({ legaId })
   const [upcoming, past, rosa] = await Promise.all([getUpcomingMatches(legaId), getPastMatches(legaId, 100), getPlayers(legaId)])
   // lega appena creata (o ancora senza amici): l'invito in cima
-  const daSolo = player.isAdmin && !!player.lega.codiceInvito && rosa.filter((p) => p.attivo !== false).length <= 1
+  const linkInvito = player.isAdmin && player.lega.codiceInvito ? `${await baseUrl()}/invito/${player.lega.codiceInvito}` : null
+  const daSolo = rosa.filter((p) => p.attivo !== false).length <= 1
 
   const [prossima, ...altreInProgramma] = upcoming
   const ultima = past.find((m) => m.stato === 'giocata' && m.risultato?.golA != null)
@@ -50,14 +51,27 @@ async function Partite() {
     <div className="space-y-6 pb-16">
       <NotificheToggle variant="banner" />
 
-      {daSolo && (
-        <Card className="space-y-3 border-2 border-green-600">
-          <h2 className="font-semibold">📨 {t('Invita i tuoi amici')}</h2>
-          <p className="text-sm text-zinc-500">{t('“{lega}” è pronta! Chi apre il link entra subito nella lega.', { lega: player.lega.nome })}</p>
-          <InvitoLink url={`${await baseUrl()}/invito/${player.lega.codiceInvito}`} nomeLega={player.lega.nome} />
-          <CodiceInvito codice={player.lega.codiceInvito!} />
-        </Card>
-      )}
+      {/* L'invito per gli organizzatori: aperto finché sono da solo nella lega, poi a tendina (sempre a portata) */}
+      {linkInvito &&
+        (daSolo ? (
+          <Card className="space-y-3 border-2 border-green-600">
+            <h2 className="font-semibold">📨 {t('Invita i tuoi amici')}</h2>
+            <p className="text-sm text-zinc-500">{t('“{lega}” è pronta! Chi apre il link entra subito nella lega.', { lega: player.lega.nome })}</p>
+            <InvitoLink url={linkInvito} nomeLega={player.lega.nome} />
+            <CodiceInvito codice={player.lega.codiceInvito!} />
+          </Card>
+        ) : (
+          <details className="group rounded-xl border border-zinc-200 bg-white dark:border-zinc-700 dark:bg-zinc-900">
+            <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-3 font-semibold [&::-webkit-details-marker]:hidden">
+              📨 {t('Invita amici nella lega')}
+              <span className="text-zinc-400 transition group-open:rotate-90">›</span>
+            </summary>
+            <div className="space-y-3 border-t border-zinc-100 p-4 dark:border-zinc-800">
+              <InvitoLink url={linkInvito} nomeLega={player.lega.nome} />
+              <CodiceInvito codice={player.lega.codiceInvito!} />
+            </div>
+          </details>
+        ))}
 
       {/* Anche nelle leghe in cui gioco soltanto, se ne organizzo almeno una: la lega si sceglie dopo */}
       {(player.isAdmin || mie.some((m) => m.isAdmin)) && <PillNuovaPartita />}

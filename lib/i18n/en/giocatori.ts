@@ -59,4 +59,5 @@ export const giocatori: Record<string, string> = {
   "Aggiungi anche lì": "Add there too",
   "Esce da questa lega (le partite giocate restano qui)": "Leaves this league (played matches stay here)",
   "Resta in tutte e due le leghe": "Stays in both leagues",
+  "Invita amici nella lega": "Invite friends to the league",
 }
