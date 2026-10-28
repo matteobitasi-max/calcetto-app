@@ -74,19 +74,24 @@ for (const u of vecchi) {
     console.log(`+  ${email} da creare`)
     continue
   }
-  const nuovo = await clerk(PRODUZIONE, '/users', {
-    method: 'POST',
-    body: JSON.stringify({
-      email_address: [email],
-      first_name: u.first_name ?? undefined,
-      last_name: u.last_name ?? undefined,
-      external_id: u.id,
-      public_metadata: u.public_metadata,
-      private_metadata: u.private_metadata,
-      unsafe_metadata: u.unsafe_metadata,
-      skip_password_requirement: true,
-      created_at: new Date(u.created_at).toISOString(),
-    }),
+  const dati = {
+    email_address: [email],
+    first_name: u.first_name ?? undefined,
+    last_name: u.last_name ?? undefined,
+    external_id: u.id,
+    public_metadata: u.public_metadata,
+    private_metadata: u.private_metadata,
+    unsafe_metadata: u.unsafe_metadata,
+    skip_password_requirement: true,
+    created_at: new Date(u.created_at).toISOString(),
+  }
+  const crea = (d) => clerk(PRODUZIONE, '/users', { method: 'POST', body: JSON.stringify(d) })
+  // Se in produzione nome e cognome sono obbligatori e l'account non li ha (es. accesso con Apple), un nome
+  // provvisorio: al primo accesso "Completa il tuo profilo" li chiede (i Termini vanno comunque accettati).
+  const nuovo = await crea(dati).catch((e) => {
+    if (!/first_name|last_name/i.test(String(e.message))) throw e
+    console.log(`   (${email}: nome provvisorio)`)
+    return crea({ ...dati, first_name: u.first_name || email.split('@')[0].slice(0, 20), last_name: u.last_name || '-' })
   })
   mappa[u.id] = nuovo.id
   console.log(`+  ${email} creato (${nuovo.id})`)
