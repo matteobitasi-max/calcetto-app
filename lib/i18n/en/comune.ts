@@ -221,7 +221,7 @@ export const comune: Record<string, string> = {
   "Apri l’app": "Open the app",
   "Non hai ancora l’app? Chiedi il link per scaricarla all’organizzatore della tua lega. Poi aprila e premi “Accedi”.": "Don’t have the app yet? Ask your league organiser for the download link. Then open it and tap “Sign in”.",
   "Scrivi alla squadra": "Message the squad",
-  "Es. Stasera portate le pettorine scure 💪": "E.g. Bring the dark bibs tonight 💪",
+  "Es. Ricordate le pettorine 💪": "E.g. Remember the bibs 💪",
   "Anche su WhatsApp": "Also on WhatsApp",
   "Invia a tutti": "Send to everyone",
   "Inviata su {n} dispositivo.": "Sent to {n} device.",

@@ -35,7 +35,7 @@ export function ScriviSquadra() {
           maxLength={300}
           value={testo}
           onChange={(e) => setTesto(e.target.value)}
-          placeholder={t('Es. Stasera portate le pettorine scure 💪')}
+          placeholder={t('Es. Ricordate le pettorine 💪')}
           className={inputClass}
         />
         <div className="flex items-center justify-between gap-2">
