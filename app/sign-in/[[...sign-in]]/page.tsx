@@ -2,6 +2,7 @@ import Image from 'next/image'
 import { Suspense } from 'react'
 import { AccessoNativo } from '@/components/accesso-nativo'
 import { getT } from '@/lib/lingua'
+import { ScegliLingua } from '@/components/scegli-lingua'
 
 export default async function SignInPage() {
   const t = await getT()
@@ -11,6 +12,9 @@ export default async function SignInPage() {
         <Image src="/icon-512.png" alt="" width={120} height={120} className="rounded-[22%] shadow-lg" priority />
         <h1 className="text-3xl font-bold">The Cap</h1>
         <p className="text-zinc-500">{t('Crea la tua Squadra')}</p>
+      </div>
+      <div className="w-full max-w-sm">
+        <ScegliLingua />
       </div>
       <Suspense>
         <AccessoNativo />

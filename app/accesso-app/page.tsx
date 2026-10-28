@@ -4,6 +4,7 @@ import { SignIn } from '@clerk/nextjs'
 import { auth, clerkClient } from '@clerk/nextjs/server'
 import { TornaNellApp } from './torna-nell-app'
 import { getT } from '@/lib/lingua'
+import { ScegliLingua } from '@/components/scegli-lingua'
 
 // Accesso per le app iPhone/Android. Google (e Apple) non permettono l'accesso dentro l'app,
 // quindi l'app apre questa pagina in una finestra del browser (components/accesso-nativo.tsx).
@@ -17,6 +18,9 @@ export default async function AccessoAppPage() {
         <Image src="/icon-512.png" alt="" width={96} height={96} className="rounded-[22%] shadow-lg" priority />
         <h1 className="text-3xl font-bold">The Cap</h1>
         <p className="text-zinc-500">{t('Crea la tua Squadra')}</p>
+      </div>
+      <div className="w-full max-w-sm">
+        <ScegliLingua />
       </div>
       <Suspense>
         <Accesso />
