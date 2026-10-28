@@ -25,9 +25,6 @@ export function StrisciaInterviste({ video }: { video: VideoIntervista[] }) {
             <span className={`relative block overflow-hidden rounded-xl bg-zinc-900 shadow ${v.verticale ? 'aspect-[9/16]' : 'aspect-video'}`}>
               {/* eslint-disable-next-line @next/next/no-img-element -- copertina dal CDN di YouTube */}
               <img src={copertina(v)} alt="" loading="lazy" className="h-full w-full object-cover" />
-              <span className="absolute inset-0 flex items-center justify-center">
-                <span className="flex h-11 w-11 items-center justify-center rounded-full bg-black/55 pl-1 text-xl text-white">▶</span>
-              </span>
             </span>
             <span className="mt-1 line-clamp-2 block text-sm font-medium leading-tight">{v.titolo}</span>
             {v.sotto && <span className="block truncate text-xs text-zinc-500">{v.sotto}</span>}
