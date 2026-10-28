@@ -144,8 +144,8 @@ async function MatchDetail({ params }: { params: Promise<{ id: string }> }) {
             📋 {t('Numero in base alle convocazioni:')} <TestoFormato f={formato} t={t} />
           </p>
         )}
-        <Gruppo titolo={t('In lista')} match={match} risposta="presente" numerati gestisci={gestisci} me={player} mioId={player._id} t={t} />
-        <Gruppo titolo={t('Lista d’attesa')} match={match} risposta="riserva" numerati gestisci={gestisci} mioId={player._id} t={t} />
+        <Gruppo titolo={t('In lista')} match={match} risposta="presente" numerati gestisci={gestisci} escludi={convoca} me={player} mioId={player._id} t={t} />
+        <Gruppo titolo={t('Lista d’attesa')} match={match} risposta="riserva" numerati gestisci={gestisci} escludi={convoca} mioId={player._id} t={t} />
         <Gruppo titolo={t('Non ci sono')} match={match} risposta="assente" convoca={convoca} mioId={player._id} t={t} />
         {mancanti.length > 0 && (
           <div>
@@ -180,6 +180,7 @@ function Gruppo({
   numerati,
   gestisci,
   convoca,
+  escludi,
   me,
   mioId,
   t,
@@ -193,6 +194,8 @@ function Gruppo({
   gestisci?: boolean
   /** L'organizzatore convoca con uno swipe a destra (chi non c'è). */
   convoca?: boolean
+  /** L'organizzatore esclude con uno swipe a sinistra (chi è in lista o in attesa): passa tra i "non ci sono". */
+  escludi?: boolean
   /** Per mostrare accanto ai nomi in lista chi ha pagato la quota (e l'icona per pagare). */
   me?: Membro
   /** Il mio nome va in cima e in grassetto (il numero resta la mia posizione in lista). */
@@ -246,6 +249,16 @@ function Gruppo({
               <div className="min-w-0 flex-1">
                 {convoca ? (
                   <SwipeRiga destra={{ azione: convocaGiocatore.bind(null, match._id, c.giocatore._id), label: t('Convoca') }}>{riga}</SwipeRiga>
+                ) : escludi ? (
+                  <SwipeRiga
+                    sinistra={{
+                      azione: togliDallaPartita.bind(null, match._id, c.giocatore._id),
+                      label: t('Escludi'),
+                      confirm: t('Escludere {nome} dalla partita? Passa tra i “non ci sono”.', { nome: displayName(c.giocatore) }),
+                    }}
+                  >
+                    {riga}
+                  </SwipeRiga>
                 ) : (
                   riga
                 )}
