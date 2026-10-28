@@ -75,7 +75,7 @@ export const ingresso: Record<string, string> = {
   "e ho letto l’": "and have read the ",
   "Informativa privacy": "Privacy policy",
   "obbligatorio": "required",
-  "Acconsento alla pubblicazione, nelle leghe di cui faccio parte, di foto e video in cui compaio (ad esempio le interviste).": "I consent to photos and videos in which I appear (for example interviews) being published in the leagues I belong to.",
+  "Acconsento alla pubblicazione, da parte del creatore della lega, di foto e video in cui compaio (ad esempio le interviste).": "I consent to the league creator publishing photos and videos in which I appear (for example interviews).",
   "facoltativo, puoi cambiarlo quando vuoi": "optional, you can change it anytime",
   "Per i km delle partite, The Cap legge da {app} solo la distanza camminata e corsa registrata durante le tue partite. È un dato legato alla salute: lo usiamo solo per mostrare i tuoi km ai membri della lega e puoi disattivarlo quando vuoi in Il mio account. Acconsenti?": "For match distance, The Cap reads from {app} only the walking and running distance recorded during your matches. This is health-related data: we use it only to show your km to league members, and you can turn it off anytime in My account. Do you consent?",
 }

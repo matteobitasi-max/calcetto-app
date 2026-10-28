@@ -28,7 +28,7 @@ export async function CampiConsensi({ consensi, conTermini = false }: { consensi
       <label className="flex items-start gap-3">
         <input type="checkbox" name="consensoImmagini" defaultChecked={consensi.immagini?.si ?? false} className="mt-0.5 h-5 w-5 shrink-0 accent-green-600" />
         <span>
-          {t('Acconsento alla pubblicazione, nelle leghe di cui faccio parte, di foto e video in cui compaio (ad esempio le interviste).')}{' '}
+          {t('Acconsento alla pubblicazione, da parte del creatore della lega, di foto e video in cui compaio (ad esempio le interviste).')}{' '}
           <span className="text-zinc-500">({t('facoltativo, puoi cambiarlo quando vuoi')})</span>
         </span>
       </label>
