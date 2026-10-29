@@ -6,7 +6,7 @@ import { currentUser } from '@clerk/nextjs/server'
 import { redirect } from 'next/navigation'
 import { sanity } from './sanity'
 import { canEnterResults, playerFields, type Lega, type Player } from './roster'
-import { CONTATTO_EMAIL } from './contatti'
+import { EMAIL_TITOLARE } from './contatti'
 
 export * from './roster'
 
@@ -59,7 +59,7 @@ export const getUtente = cache(async () => {
 })
 
 // Il titolare dell'app (accesso con la sua email verificata): solo lui imposta la foto sorpresa.
-export const isTitolare = async () => !!(await getUtente())?.emails.includes(CONTATTO_EMAIL)
+export const isTitolare = async () => !!(await getUtente())?.emails.includes(EMAIL_TITOLARE)
 
 // Tutte le leghe di cui faccio parte. Al primo accesso collega anche le schede
 // che un organizzatore ha creato con la mia email o il mio telefono (in qualsiasi lega).
