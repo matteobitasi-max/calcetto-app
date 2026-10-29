@@ -12,7 +12,33 @@ const EULA_APPLE = 'https://www.apple.com/legal/internet-services/itunes/dev/std
 
 const niente = () => () => {}
 
-export type MioPro = { scadenza?: string; store?: string; rinnovo?: boolean } | null
+export type MioPro = { scadenza?: string; store?: string; rinnovo?: boolean; dal?: string; prodotto?: string } | null
+
+// Dove si disdice l'abbonamento, se non lo si fa dall'app (pagina Pro aperta dal sito o da un altro telefono).
+const GESTIONE: Record<string, string> = {
+  app_store: 'https://apps.apple.com/account/subscriptions',
+  mac_app_store: 'https://apps.apple.com/account/subscriptions',
+  play_store: 'https://play.google.com/store/account/subscriptions?package=com.matteobitasi.thecap',
+}
+
+// I due piani, per chi non è abbonato e non può comprare da qui (sito, o app senza acquisti attivi).
+// Il prezzo vero lo mostra lo store al momento dell'acquisto.
+export function PianiPro() {
+  const t = useT()
+  return (
+    <div className="grid grid-cols-2 gap-2 text-center">
+      <div className="rounded-xl border-2 border-green-600 bg-green-50 p-3 dark:bg-green-950">
+        <p className="font-bold">{t('Annuale')}</p>
+        <p className="text-xs text-zinc-600 dark:text-zinc-300">{t('Il più conveniente')}</p>
+      </div>
+      <div className="rounded-xl border-2 border-zinc-200 p-3 dark:border-zinc-700">
+        <p className="font-bold">{t('Mensile')}</p>
+        <p className="text-xs text-zinc-600 dark:text-zinc-300">{t('Disdici quando vuoi')}</p>
+      </div>
+      <p className="col-span-2 text-xs text-zinc-500">{t('Primo mese gratis. Prezzi nell’App Store e in Google Play.')}</p>
+    </div>
+  )
+}
 
 // RevenueCat si configura una volta per avvio dell'app, con l'utente di Clerk (così l'abbonamento
 // segue la persona su tutti i suoi telefoni e il server sa di chi è).
@@ -103,22 +129,53 @@ export function AttivaPro({ utente, chiavi, mio }: { utente: string; chiavi: { a
     }
   }
 
-  // Già abbonato
+  // Già abbonato: piano, date e come disdire
   if (mio) {
+    const piano = mio.prodotto?.includes('annual') ? t('Annuale') : mio.prodotto?.includes('mensil') ? t('Mensile') : null
+    const store = mio.store === 'play_store' ? 'Google Play' : mio.store?.includes('app_store') ? 'App Store' : null
+    const disdici = mio.store ? GESTIONE[mio.store] : undefined
     return (
-      <div className="space-y-2 text-sm">
+      <div className="space-y-3 text-sm">
         <p className="font-medium text-green-900 dark:text-green-200">✅ {t('Hai The Cap Pro.')}</p>
-        {mio.scadenza && (
-          <p className="text-zinc-600 dark:text-zinc-300">
-            {mio.rinnovo === false
-              ? t('Scade il {data}: non si rinnoverà.', { data: t.giorno(mio.scadenza) })
-              : t('Si rinnova il {data}.', { data: t.giorno(mio.scadenza) })}
-          </p>
-        )}
-        {pronta && mio.store && (
-          <button type="button" onClick={gestisci} className="font-semibold text-green-700 hover:underline dark:text-green-400">
-            {t('Gestisci o disdici l’abbonamento')} ›
-          </button>
+        <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-zinc-600 dark:text-zinc-300">
+          {piano && (
+            <>
+              <dt>{t('Piano')}</dt>
+              <dd className="font-medium text-zinc-900 dark:text-zinc-100">
+                {piano}
+                {store && ` · ${store}`}
+              </dd>
+            </>
+          )}
+          {mio.dal && (
+            <>
+              <dt>{t('Attivo dal')}</dt>
+              <dd>{t.giorno(mio.dal)}</dd>
+            </>
+          )}
+          {mio.scadenza && (
+            <>
+              <dt>{mio.rinnovo === false ? t('Termina il') : t('Si rinnova il')}</dt>
+              <dd className={mio.rinnovo === false ? 'font-medium text-amber-700 dark:text-amber-400' : ''}>{t.giorno(mio.scadenza)}</dd>
+            </>
+          )}
+        </dl>
+        {mio.rinnovo === false && <p className="text-xs text-zinc-500">{t('Hai disdetto: Pro resta attivo fino a quella data, poi non si rinnova.')}</p>}
+        {!mio.store && <p className="text-xs text-zinc-500">{t('Abbonamento assegnato dal titolare dell’app.')}</p>}
+        {mio.store &&
+          (pronta ? (
+            <button type="button" onClick={gestisci} className={`${buttonClass('secondary')} w-full justify-center`}>
+              {mio.rinnovo === false ? t('Riattiva o gestisci l’abbonamento') : t('Disdici o gestisci l’abbonamento')}
+            </button>
+          ) : (
+            disdici && (
+              <a href={disdici} target="_blank" rel="noreferrer" className={`${buttonClass('secondary')} w-full justify-center`}>
+                {mio.rinnovo === false ? t('Riattiva o gestisci l’abbonamento') : t('Disdici o gestisci l’abbonamento')}
+              </a>
+            )
+          ))}
+        {mio.store && mio.rinnovo !== false && (
+          <p className="text-xs text-zinc-500">{t('La disdetta si fa dallo store: Pro resta attivo fino alla fine del periodo già pagato.')}</p>
         )}
         {errore && <p className="text-red-600">{errore}</p>}
       </div>
@@ -127,12 +184,23 @@ export function AttivaPro({ utente, chiavi, mio }: { utente: string; chiavi: { a
 
   if (!nelBrowser) return null
   if (!Capacitor.isNativePlatform()) {
-    return <p className="text-sm">{t('Puoi attivare Pro dall’app The Cap sul tuo iPhone o telefono Android, nella pagina The Cap Pro.')}</p>
+    return (
+      <div className="space-y-3">
+        <PianiPro />
+        <p className="text-sm">{t('Puoi attivare Pro dall’app The Cap sul tuo iPhone o telefono Android, nella pagina The Cap Pro.')}</p>
+      </div>
+    )
   }
   if (!pronta) {
     // app aggiornata, ma gli acquisti su questo store non sono ancora configurati
-    if (Capacitor.isPluginAvailable('Purchases')) return <p className="text-sm text-zinc-500">{t('Pro non è ancora disponibile. Riprova più tardi.')}</p>
-    return <p className="text-sm">{t('Aggiorna l’app The Cap dallo store per attivare Pro.')}</p>
+    return (
+      <div className="space-y-3">
+        <PianiPro />
+        <p className="text-sm text-zinc-500">
+          {Capacitor.isPluginAvailable('Purchases') ? t('Pro non è ancora disponibile. Riprova più tardi.') : t('Aggiorna l’app The Cap dallo store per attivare Pro.')}
+        </p>
+      </div>
+    )
   }
 
   const mensile = pacchetti?.find((p) => p.packageType === PACKAGE_TYPE.MONTHLY)

@@ -64,8 +64,8 @@ export async function sincronizzaAbbonamento(utente: string, email?: string) {
 
 // Il mio abbonamento Pro (da store o creato a mano), se attivo.
 export function mioAbbonamento(utente: string) {
-  return sanity.fetch<{ scadenza?: string; store?: string; rinnovo?: boolean } | null>(
-    `*[_type == "abbonamento" && clerkUserId == $utente && attivo != false && (!defined(scadenza) || scadenza > now())] | order(scadenza desc)[0]{scadenza, store, rinnovo}`,
+  return sanity.fetch<{ scadenza?: string; store?: string; rinnovo?: boolean; dal?: string; prodotto?: string } | null>(
+    `*[_type == "abbonamento" && clerkUserId == $utente && attivo != false && (!defined(scadenza) || scadenza > now())] | order(scadenza desc)[0]{scadenza, store, rinnovo, dal, prodotto}`,
     { utente },
   )
 }
