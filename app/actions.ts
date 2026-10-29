@@ -2185,6 +2185,149 @@ export async function invitoTorneo(torneoId: string) {
   refresh()
 }
 
+// ---------- Importazione da Excel ----------
+
+export type RigaImport = { nome?: string; cognome?: string; email?: string; telefono?: string; soprannome?: string; ruolo?: string; squadra?: string }
+export type EsitoImport = {
+  error?: string
+  creati?: number
+  riattivati?: number
+  giaPresenti?: number
+  inSquadra?: number
+  righe?: { riga: number; esito: 'creato' | 'riattivato' | 'presente' | 'errore'; nome: string; nota?: string }[]
+}
+
+// L'organizzatore carica un elenco di giocatori (da Excel o CSV) in una sua lega, e se vuole li mette in una
+// squadra di un torneo (la stessa per tutti, oppure quella scritta nella colonna "Squadra"). Chi è già in rosa
+// (stessa email, o stesso nome e cognome) non viene duplicato; quando un giocatore si registra con la stessa
+// email, la sua scheda si collega da sola al suo account.
+export async function importaGiocatori(legaId: string, torneoId: string | null, squadraKey: string | null, righe: RigaImport[]): Promise<EsitoImport> {
+  await requireIn(legaId, 'organizzatore')
+  if (!Array.isArray(righe) || righe.length === 0) return { error: await tr('Il file non contiene giocatori.') }
+  if (righe.length > 300) return { error: await tr('Al massimo 300 giocatori per volta.') }
+  const testo = (x: unknown, max: number) => (typeof x === 'string' ? x.trim().slice(0, max) : '')
+  const pulite = righe.map((r) => ({
+    nome: testo(r.nome, 40),
+    cognome: testo(r.cognome, 40),
+    email: testo(r.email, 120).toLowerCase(),
+    telefono: testo(r.telefono, 30),
+    soprannome: testo(r.soprannome, 30),
+    ruolo: (RUOLI as readonly string[]).includes(testo(r.ruolo, 20).toLowerCase()) ? testo(r.ruolo, 20).toLowerCase() : '',
+    squadra: testo(r.squadra, 60),
+  }))
+
+  const rosa = await sanity.fetch<{ _id: string; nome: string; cognome?: string; email?: string; attivo?: boolean }[]>(
+    `*[_type == "player" && lega._ref == $legaId]{_id, nome, cognome, email, attivo}`,
+    { legaId },
+  )
+  const chiaveNome = (n: string, c: string) => `${n} ${c}`.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ').trim()
+  const perEmail = new Map(rosa.filter((p) => p.email).map((p) => [p.email!.toLowerCase(), p]))
+  const perNome = new Map(rosa.map((p) => [chiaveNome(p.nome, p.cognome ?? ''), p]))
+
+  let torneo: TorneoSquadre | null = null
+  if (torneoId) {
+    if (!(await puoCreareTornei(legaId))) return { error: await tr('I tornei sono una funzione Pro.') }
+    torneo = await sanity.fetch<TorneoSquadre | null>(`*[_type == "tournament" && _id == $id && lega._ref == $legaId][0]{${torneoSquadreFields}}`, { id: torneoId, legaId })
+    if (!torneo) return { error: await tr('Torneo non trovato.') }
+  }
+
+  const tx = sanity.transaction()
+  const esiti: NonNullable<EsitoImport['righe']> = []
+  const daMettere: { id: string; squadra: string | null; riga: number }[] = []
+  const visti = new Set<string>()
+  for (const [i, r] of pulite.entries()) {
+    const riga = i + 2 // la riga 1 del file è l'intestazione
+    const etichetta = [r.nome, r.cognome].filter(Boolean).join(' ') || r.email
+    if (r.email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(r.email)) {
+      esiti.push({ riga, esito: 'errore', nome: etichetta, nota: await tr('Email non valida') })
+      continue
+    }
+    const nome = r.nome || (r.email ? r.email.split('@')[0] : '')
+    if (!nome) {
+      esiti.push({ riga, esito: 'errore', nome: '—', nota: await tr('Manca il nome o l’email') })
+      continue
+    }
+    const esistente = (r.email && perEmail.get(r.email)) || perNome.get(chiaveNome(nome, r.cognome))
+    let id: string
+    if (esistente) {
+      id = esistente._id
+      if (visti.has(id)) continue
+      if (esistente.attivo === false) {
+        tx.patch(id, (p) => p.set({ attivo: true }).unset(['rimossoIl']))
+        esiti.push({ riga, esito: 'riattivato', nome: etichetta })
+      } else {
+        esiti.push({ riga, esito: 'presente', nome: etichetta })
+      }
+    } else {
+      id = `player-${randomUUID()}`
+      tx.create({
+        _id: id,
+        _type: 'player',
+        lega: { _type: 'reference', _ref: legaId },
+        nome,
+        ...(r.cognome && { cognome: r.cognome }),
+        ...(r.soprannome && { soprannome: r.soprannome }),
+        ...(r.email && { email: r.email }),
+        ...(r.telefono && { telefono: normalizzaTelefono(r.telefono) }),
+        ...(r.ruolo && { ruolo: r.ruolo }),
+        isAdmin: false,
+        attivo: true,
+        caratteristiche: Object.fromEntries(Object.keys(SKILLS).map((k) => [k, 5])),
+      })
+      const nuovo = { _id: id, nome, cognome: r.cognome, email: r.email, attivo: true }
+      if (r.email) perEmail.set(r.email, nuovo)
+      perNome.set(chiaveNome(nome, r.cognome), nuovo)
+      esiti.push({ riga, esito: 'creato', nome: etichetta })
+    }
+    visti.add(id)
+    if (torneo) daMettere.push({ id, squadra: r.squadra || null, riga })
+  }
+
+  // Squadre del torneo: quella della colonna "Squadra" (per nome) o quella scelta; chi era in un'altra squadra cambia.
+  let inSquadra = 0
+  if (torneo && daMettere.length) {
+    const perNomeSquadra = new Map(torneo.squadre.map((sq) => [sq.nome.trim().toLowerCase(), sq._key]))
+    let squadre = torneo.squadre
+    for (const m of daMettere) {
+      const chiave = (m.squadra && perNomeSquadra.get(m.squadra.toLowerCase())) || squadraKey
+      if (!chiave) continue
+      const dest = squadre.find((sq) => sq._key === chiave)
+      const esito = esiti.find((e) => e.riga === m.riga)
+      if (!dest) continue
+      if (dest.giocatori.some((g) => g._ref === m.id)) continue
+      if (squadre.some((sq) => sq._key !== chiave && sq.capitano?._ref === m.id)) {
+        if (esito) esito.nota = await tr('Capitano di un’altra squadra: non spostato')
+        continue
+      }
+      if (torneo.maxGiocatori && dest.giocatori.length >= torneo.maxGiocatori) {
+        if (esito) esito.nota = await tr('{squadra} è al completo', { squadra: dest.nome })
+        continue
+      }
+      squadre = squadre.map((sq) => ({
+        ...sq,
+        giocatori:
+          sq._key === chiave ? [...sq.giocatori, { _key: m.id, _type: 'reference' as const, _ref: m.id }] : sq.giocatori.filter((g) => g._ref !== m.id),
+      }))
+      if (esito) esito.nota = dest.nome
+      inSquadra++
+    }
+    if (inSquadra) {
+      tx.patch(torneo._id, (p) => p.ifRevisionId(torneo!._rev).set({ squadre }))
+      aggiornaPartiteDaGiocare(tx, await partiteDaGiocare(torneo._id), squadre)
+    }
+  }
+
+  await tx.commit()
+  refresh()
+  return {
+    creati: esiti.filter((e) => e.esito === 'creato').length,
+    riattivati: esiti.filter((e) => e.esito === 'riattivato').length,
+    giaPresenti: esiti.filter((e) => e.esito === 'presente').length,
+    inSquadra,
+    righe: esiti,
+  }
+}
+
 // Elimina il torneo con tutte le sue partite (anche quelle già giocate).
 export async function eliminaTorneo(torneoId: string) {
   await requireForDoc(torneoId, 'organizzatore')

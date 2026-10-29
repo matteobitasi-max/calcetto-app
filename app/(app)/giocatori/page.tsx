@@ -63,7 +63,18 @@ async function Rosa() {
 
   return (
     <>
-      <PageTitle action={me.isAdmin && <ButtonLink href="/giocatori/nuovo">+ {t('Giocatore')}</ButtonLink>}>
+      <PageTitle
+        action={
+          me.isAdmin && (
+            <span className="flex gap-2">
+              <ButtonLink href="/giocatori/importa" variant="secondary" title={t('Importa giocatori da Excel o CSV')}>
+                📥 {t('Importa')}
+              </ButtonLink>
+              <ButtonLink href="/giocatori/nuovo">+ {t('Giocatore')}</ButtonLink>
+            </span>
+          )
+        }
+      >
         {t('Rosa')} <span className="text-base font-normal text-zinc-500">({attivi.length})</span>
       </PageTitle>
       {me.isAdmin && analisi && analisi.proposte.length > 0 && (
