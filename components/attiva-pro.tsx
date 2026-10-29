@@ -77,7 +77,12 @@ export function AttivaPro({ utente, chiavi, mio }: { utente: string; chiavi: { a
         const lista = [...(o.current?.availablePackages ?? [])].sort((a, b) => (a.packageType === PACKAGE_TYPE.ANNUAL ? -1 : b.packageType === PACKAGE_TYPE.ANNUAL ? 1 : 0))
         setPacchetti(lista)
       })
-      .catch(() => vivo && setErrore(t('Non riesco a caricare i prezzi. Controlla la connessione e riprova.')))
+      .catch((e: { code?: string | number; message?: string }) => {
+        if (!vivo) return
+        // il motivo tecnico (da RevenueCat / dallo store), in piccolo: serve a capire cosa manca nella configurazione
+        const motivo = [e?.code, e?.message].filter(Boolean).join(' · ').slice(0, 200)
+        setErrore(`${t('Non riesco a caricare i prezzi. Controlla la connessione e riprova.')}${motivo ? `\n(${motivo})` : ''}`)
+      })
     return () => {
       vivo = false
     }
@@ -209,7 +214,7 @@ export function AttivaPro({ utente, chiavi, mio }: { utente: string; chiavi: { a
   return (
     <div className="space-y-3">
       {!pacchetti && !errore && <p className="animate-pulse text-sm text-zinc-500">{t('Caricamento…')}</p>}
-      {pacchetti?.length === 0 && <p className="text-sm text-zinc-500">{t('Pro non è ancora disponibile. Riprova più tardi.')}</p>}
+      {pacchetti?.length === 0 && <p className="text-sm text-zinc-500">{t('Pro non è ancora disponibile. Riprova più tardi.')} (offering vuota)</p>}
       {pacchetti?.map((p) => {
         const annuale = p.packageType === PACKAGE_TYPE.ANNUAL
         const prova = p.product.introPrice?.price === 0 ? p.product.introPrice : null
@@ -242,7 +247,7 @@ export function AttivaPro({ utente, chiavi, mio }: { utente: string; chiavi: { a
           </button>
         )
       })}
-      {errore && <p className="text-sm text-red-600">{errore}</p>}
+      {errore && <p className="whitespace-pre-line break-words text-sm text-red-600">{errore}</p>}
       {messaggio && <p className="text-sm text-zinc-500">{messaggio}</p>}
       <button type="button" disabled={occupato} onClick={ripristina} className="w-full text-center text-sm font-medium text-green-700 hover:underline disabled:opacity-50 dark:text-green-400">
         {t('Ripristina acquisti')}
