@@ -27,16 +27,23 @@
     <script>
       // l'indirizzo del sito, lo stesso di capacitor.config.ts
       var SITO = 'https://www.thecapfc.app/'
-      // in inglese se il telefono non è in italiano (qui non si vede la lingua scelta nell'app)
-      var inglese = !/^it\b/i.test(navigator.language || 'it')
-      if (inglese) {
-        document.documentElement.lang = 'en'
-        document.getElementById('titolo').textContent = 'No connection'
-        document.getElementById('testo').textContent = 'The Cap needs the internet. Check Wi‑Fi or mobile data and try again.'
-        document.getElementById('pulsante').textContent = 'Try again'
+      // nella lingua del telefono (qui non si vede quella scelta nell’app): italiano, inglese, spagnolo, tedesco, francese
+      var TESTI = {
+        en: ['No connection', 'The Cap needs the internet. Check Wi‑Fi or mobile data and try again.', 'Try again', 'Retrying…'],
+        es: ['Sin conexión', 'The Cap necesita internet. Revisa el Wi‑Fi o los datos móviles e inténtalo de nuevo.', 'Reintentar', 'Reintentando…'],
+        de: ['Keine Verbindung', 'The Cap braucht Internet. Prüfe WLAN oder mobile Daten und versuch es erneut.', 'Erneut versuchen', 'Versuche erneut…'],
+        fr: ['Pas de connexion', 'The Cap a besoin d’internet. Vérifie le Wi‑Fi ou les données mobiles et réessaie.', 'Réessayer', 'Nouvel essai…'],
+      }
+      var lingua = (navigator.language || 'it').slice(0, 2).toLowerCase()
+      var testi = TESTI[lingua] || (lingua === 'it' ? null : TESTI.en)
+      if (testi) {
+        document.documentElement.lang = lingua in TESTI ? lingua : 'en'
+        document.getElementById('titolo').textContent = testi[0]
+        document.getElementById('testo').textContent = testi[1]
+        document.getElementById('pulsante').textContent = testi[2]
       }
       function riprova() {
-        document.getElementById('stato').textContent = inglese ? 'Retrying…' : 'Riprovo…'
+        document.getElementById('stato').textContent = testi ? testi[3] : 'Riprovo…'
         location.replace(SITO)
       }
       // appena torna la connessione si riprova da solo, e comunque ogni 10 secondi
