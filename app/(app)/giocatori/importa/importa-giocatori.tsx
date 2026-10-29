@@ -96,6 +96,7 @@ export function ImportaGiocatori({ leghe }: { leghe: LegaImport[] }) {
   const [legaId, setLegaId] = useState(leghe[0].id)
   const [torneoId, setTorneoId] = useState('')
   const [squadraKey, setSquadraKey] = useState('')
+  const [invita, setInvita] = useState(true)
   const [righe, setRighe] = useState<RigaImport[]>([])
   const [file, setFile] = useState('')
   const [errore, setErrore] = useState<string | null>(null)
@@ -146,7 +147,7 @@ export function ImportaGiocatori({ leghe }: { leghe: LegaImport[] }) {
 
   const importa = () =>
     startTransition(async () => {
-      const r = await importaGiocatori(legaId, torneoId || null, squadraKey || null, righe)
+      const r = await importaGiocatori(legaId, torneoId || null, squadraKey || null, righe, invita)
       if (r.error) setErrore(r.error)
       else {
         setEsito(r)
@@ -268,6 +269,15 @@ export function ImportaGiocatori({ leghe }: { leghe: LegaImport[] }) {
               </tbody>
             </table>
           </div>
+          <label className="flex items-start gap-3 px-4 text-sm">
+            <input type="checkbox" checked={invita} onChange={(e) => setInvita(e.target.checked)} className="mt-0.5 h-5 w-5 shrink-0 accent-green-600" />
+            <span>
+              ✉️ {t('Manda l’invito per email')}
+              <span className="block text-xs text-zinc-500">
+                {t('A chi ha l’email nel file e non ha ancora un account arriva un’email con il link per registrarsi ed entrare nella lega.')}
+              </span>
+            </span>
+          </label>
           <p className="px-4 pb-4 text-xs text-zinc-500">
             {t('Chi è già in rosa (stessa email, o stesso nome e cognome) non viene duplicato. Quando un giocatore si registra con la stessa email, la sua scheda si collega da sola.')}
           </p>
@@ -284,6 +294,7 @@ export function ImportaGiocatori({ leghe }: { leghe: LegaImport[] }) {
               presenti: esito.giaPresenti ?? 0,
             })}
             {!!esito.inSquadra && ` · ${t('{n} messi in squadra', { n: esito.inSquadra })}`}
+            {!!esito.invitati && ` · ✉️ ${t('{n} inviti mandati', { n: esito.invitati })}`}
           </p>
           <ul className="max-h-64 space-y-1 overflow-y-auto text-xs text-zinc-600 dark:text-zinc-300">
             {esito.righe

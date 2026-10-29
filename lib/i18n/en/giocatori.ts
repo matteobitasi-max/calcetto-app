@@ -92,4 +92,9 @@ export const giocatori: Record<string, string> = {
   "Manca il nome o l’email": "Name or email missing",
   "Capitano di un’altra squadra: non spostato": "Captain of another team: not moved",
   "{squadra} è al completo": "{squadra} is full",
+  "Manda l’invito per email": "Send the invite by email",
+  "A chi ha l’email nel file e non ha ancora un account arriva un’email con il link per registrarsi ed entrare nella lega.": "Anyone with an email in the file and no account yet receives an email with the link to sign up and join the league.",
+  "{n} inviti mandati": "{n} invites sent",
+  "invito mandato": "invite sent",
+  "ha già un account o un invito": "already has an account or an invite",
 }

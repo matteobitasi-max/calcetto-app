@@ -9,7 +9,7 @@ import { BADGE, CATEGORIE_NOTIFICHE, COOKIE_LEGA, eta, normalizzaTelefono, PIEDI
 import { assegnaPosti, finestra, getMatch, getPartiteTorneo, orarioPartita, presenti, risultatoDa, type FonteKm, type Match, type Risposta, type Stato } from '@/lib/matches'
 import { idPlaylist, intervisteDellaPlaylist } from '@/lib/interviste'
 import { kmStrava, scollega, stravaConfigurato, urlCollegamento } from '@/lib/strava'
-import { baseUrl } from '@/lib/url'
+import { SITO, baseUrl } from '@/lib/url'
 import { cercaCitta } from '@/lib/meteo'
 import { MAX_GIOCATORI, MAX_ISCRITTI, formatoDaIscritti } from '@/lib/limiti'
 import { riscriviPartita, type MatchDaUnire } from '@/lib/unisci'
@@ -2194,6 +2194,8 @@ export type EsitoImport = {
   riattivati?: number
   giaPresenti?: number
   inSquadra?: number
+  /** Inviti mandati per email (a chi non ha ancora un account). */
+  invitati?: number
   righe?: { riga: number; esito: 'creato' | 'riattivato' | 'presente' | 'errore'; nome: string; nota?: string }[]
 }
 
@@ -2201,7 +2203,13 @@ export type EsitoImport = {
 // squadra di un torneo (la stessa per tutti, oppure quella scritta nella colonna "Squadra"). Chi è già in rosa
 // (stessa email, o stesso nome e cognome) non viene duplicato; quando un giocatore si registra con la stessa
 // email, la sua scheda si collega da sola al suo account.
-export async function importaGiocatori(legaId: string, torneoId: string | null, squadraKey: string | null, righe: RigaImport[]): Promise<EsitoImport> {
+export async function importaGiocatori(
+  legaId: string,
+  torneoId: string | null,
+  squadraKey: string | null,
+  righe: RigaImport[],
+  invita = false,
+): Promise<EsitoImport> {
   await requireIn(legaId, 'organizzatore')
   if (!Array.isArray(righe) || righe.length === 0) return { error: await tr('Il file non contiene giocatori.') }
   if (righe.length > 300) return { error: await tr('Al massimo 300 giocatori per volta.') }
@@ -2318,8 +2326,32 @@ export async function importaGiocatori(legaId: string, torneoId: string | null, 
   }
 
   await tx.commit()
+
+  // Invito per email (Clerk, dal dominio dell'app) a chi non ha ancora un account: si registra e arriva al link
+  // d'invito della lega. Chi ha già un account con quella email ritrova la scheda da solo al prossimo accesso.
+  let invitati = 0
+  if (invita) {
+    const codice = await sanity.fetch<string | null>(`*[_id == $legaId][0].codiceInvito`, { legaId })
+    const { clerkClient } = await import('@clerk/nextjs/server')
+    const clerk = await clerkClient()
+    const daInvitare = esiti.filter((e) => e.esito !== 'errore' && e.esito !== 'presente')
+    for (const e of daInvitare) {
+      const email = pulite[e.riga - 2]?.email
+      if (!email) continue
+      try {
+        await clerk.invitations.createInvitation({ emailAddress: email, redirectUrl: codice ? `${SITO}/invito/${codice}` : SITO, expiresInDays: 30 })
+        invitati++
+        e.nota = [e.nota, await tr('invito mandato')].filter(Boolean).join(' · ')
+      } catch {
+        // email già registrata o già invitata: niente doppioni
+        e.nota = [e.nota, await tr('ha già un account o un invito')].filter(Boolean).join(' · ')
+      }
+    }
+  }
+
   refresh()
   return {
+    invitati,
     creati: esiti.filter((e) => e.esito === 'creato').length,
     riattivati: esiti.filter((e) => e.esito === 'riattivato').length,
     giaPresenti: esiti.filter((e) => e.esito === 'presente').length,
