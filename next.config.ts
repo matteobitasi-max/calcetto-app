@@ -8,11 +8,6 @@ const nextConfig: NextConfig = {
   // niente "indovinare" il tipo dei file, indirizzo di provenienza ridotto, sensori solo per noi.
   async headers() {
     return [
-      // il modello per importare i giocatori si scarica (anche dal telefono), non si apre come testo
-      {
-        source: '/thecap-modello-giocatori.csv',
-        headers: [{ key: 'Content-Disposition', value: 'attachment; filename="thecap-modello-giocatori.csv"' }],
-      },
       {
         source: '/:path*',
         headers: [

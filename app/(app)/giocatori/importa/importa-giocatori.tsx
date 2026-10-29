@@ -13,11 +13,11 @@ import { RUOLI } from '@/lib/roster'
 export type LegaImport = {
   id: string
   nome: string
+  /** Link firmato al modello Excel della lega (con i menu dei tornei e delle squadre). */
+  modello: string
   rosa: { nome: string; cognome?: string; email?: string }[]
   tornei: { id: string; nome: string; squadre: { key: string; nome: string; giocatori: number }[]; max?: number }[]
 }
-
-const MODELLO = '/thecap-modello-giocatori.csv'
 
 const normalizza = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/\s+/g, ' ').trim()
 
@@ -29,6 +29,7 @@ const COLONNE: Record<string, keyof RigaImport | 'nomeCompleto'> = {
   telefono: 'telefono', tel: 'telefono', cellulare: 'telefono', phone: 'telefono', mobile: 'telefono',
   soprannome: 'soprannome', nickname: 'soprannome',
   ruolo: 'ruolo', role: 'ruolo',
+  torneo: 'torneo', tournament: 'torneo',
   squadra: 'squadra', team: 'squadra',
   'nome e cognome': 'nomeCompleto', giocatore: 'nomeCompleto', 'nome cognome': 'nomeCompleto', 'full name': 'nomeCompleto',
 }
@@ -223,24 +224,23 @@ export function ImportaGiocatori({ leghe }: { leghe: LegaImport[] }) {
               <b>{t('Obbligatorio')}</b>: {t('almeno uno tra')} <b>{t('Nome')}</b> {t('ed')} <b>Email</b> {t('(senza nome si usa la prima parte dell’email).')}
             </p>
             <p>
-              <b>{t('Facoltativi')}</b>: {t('Cognome, Telefono, Soprannome')} · <b>{t('Ruolo')}</b> ({RUOLI.join(', ')}) · <b>{t('Squadra')}</b>{' '}
-              {t('(il nome esatto di una squadra del torneo scelto).')}
+              <b>{t('Facoltativi')}</b>: {t('Cognome, Telefono, Soprannome')} · <b>{t('Ruolo')}</b> ({RUOLI.join(', ')}) · <b>{t('Torneo')}</b> {t('e')}{' '}
+              <b>{t('Squadra')}</b> {t('(nel modello Excel li scegli dal menu a tendina; se il torneo è vuoto vale quello scelto qui sopra).')}
             </p>
             <p>{t('La prima riga è l’intestazione: le colonne possono essere in qualsiasi ordine.')}</p>
           </div>
           <p className="text-xs text-zinc-500">{' '}
             <a
-              href={MODELLO}
-              download="thecap-modello-giocatori.csv"
+              href={lega.modello}
               onClick={(e) => {
                 // nell'app il download lo fa il browser di sistema (Safari / Chrome), che salva il file
                 if (!Capacitor.isNativePlatform()) return
                 e.preventDefault()
-                Browser.open({ url: `${window.location.origin}${MODELLO}` }).catch(() => undefined)
+                Browser.open({ url: `${window.location.origin}${lega.modello}` }).catch(() => undefined)
               }}
               className="font-medium text-green-700 underline dark:text-green-400"
             >
-              {t('Scarica il modello')}
+              {t('Scarica il modello Excel di {lega}', { lega: lega.nome })}
             </a>
           </p>
         </div>
@@ -261,7 +261,7 @@ export function ImportaGiocatori({ leghe }: { leghe: LegaImport[] }) {
             <table className="w-full text-sm">
               <thead className="text-left text-xs text-zinc-500">
                 <tr className="border-b border-zinc-200 dark:border-zinc-800">
-                  {[t('Nome'), t('Cognome'), 'Email', t('Telefono'), t('Ruolo'), t('Squadra'), ''].map((h, i) => (
+                  {[t('Nome'), t('Cognome'), 'Email', t('Telefono'), t('Ruolo'), t('Torneo'), t('Squadra'), ''].map((h, i) => (
                     <th key={i} className="px-3 py-2 font-medium">
                       {h}
                     </th>
@@ -276,7 +276,8 @@ export function ImportaGiocatori({ leghe }: { leghe: LegaImport[] }) {
                     <td className="px-3 py-1.5 text-zinc-500">{r.email}</td>
                     <td className="px-3 py-1.5 text-zinc-500">{r.telefono}</td>
                     <td className="px-3 py-1.5 text-zinc-500">{r.ruolo}</td>
-                    <td className="px-3 py-1.5 text-zinc-500">{r.squadra || (torneo?.squadre.find((sq) => sq.key === squadraKey)?.nome ?? '')}</td>
+                    <td className="px-3 py-1.5 text-zinc-500">{r.torneo || (r.squadra || squadraKey ? (torneo?.nome ?? '') : '')}</td>
+                    <td className="px-3 py-1.5 text-zinc-500">{r.squadra || (!r.torneo ? (torneo?.squadre.find((sq) => sq.key === squadraKey)?.nome ?? '') : '')}</td>
                     <td className="px-3 py-1.5 text-right">
                       <span className={`whitespace-nowrap rounded-full px-2 py-0.5 text-xs ${coloreStato[r.stato]}`}>{etichetta[r.stato]}</span>
                     </td>

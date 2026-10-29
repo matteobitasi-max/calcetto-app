@@ -105,4 +105,9 @@ export const giocatori: Record<string, string> = {
   "Cognome, Telefono, Soprannome": "Last name, Phone, Nickname",
   "(il nome esatto di una squadra del torneo scelto).": "(the exact name of a team in the chosen tournament).",
   "La prima riga è l’intestazione: le colonne possono essere in qualsiasi ordine.": "The first row is the header: columns can be in any order.",
+  "e": "and",
+  "(nel modello Excel li scegli dal menu a tendina; se il torneo è vuoto vale quello scelto qui sopra).": "(in the Excel template you pick them from a drop-down; if the tournament is empty, the one chosen above applies).",
+  "Scarica il modello Excel di {lega}": "Download the Excel template for {lega}",
+  "Torneo “{torneo}” non trovato": "Tournament “{torneo}” not found",
+  "Squadra “{squadra}” non trovata in {torneo}": "Team “{squadra}” not found in {torneo}",
 }

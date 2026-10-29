@@ -2187,7 +2187,7 @@ export async function invitoTorneo(torneoId: string) {
 
 // ---------- Importazione da Excel ----------
 
-export type RigaImport = { nome?: string; cognome?: string; email?: string; telefono?: string; soprannome?: string; ruolo?: string; squadra?: string }
+export type RigaImport = { nome?: string; cognome?: string; email?: string; telefono?: string; soprannome?: string; ruolo?: string; torneo?: string; squadra?: string }
 export type EsitoImport = {
   error?: string
   creati?: number
@@ -2221,6 +2221,7 @@ export async function importaGiocatori(
     telefono: testo(r.telefono, 30),
     soprannome: testo(r.soprannome, 30),
     ruolo: (RUOLI as readonly string[]).includes(testo(r.ruolo, 20).toLowerCase()) ? testo(r.ruolo, 20).toLowerCase() : '',
+    torneo: testo(r.torneo, 60),
     squadra: testo(r.squadra, 60),
   }))
 
@@ -2232,16 +2233,16 @@ export async function importaGiocatori(
   const perEmail = new Map(rosa.filter((p) => p.email).map((p) => [p.email!.toLowerCase(), p]))
   const perNome = new Map(rosa.map((p) => [chiaveNome(p.nome, p.cognome ?? ''), p]))
 
-  let torneo: TorneoSquadre | null = null
-  if (torneoId) {
-    if (!(await puoCreareTornei(legaId))) return { error: await tr('I tornei sono una funzione Pro.') }
-    torneo = await sanity.fetch<TorneoSquadre | null>(`*[_type == "tournament" && _id == $id && lega._ref == $legaId][0]{${torneoSquadreFields}}`, { id: torneoId, legaId })
-    if (!torneo) return { error: await tr('Torneo non trovato.') }
-  }
+  // tornei: quello scelto nella pagina e/o quelli scritti nella colonna "Torneo" (per nome, nella lega)
+  const usaTornei = !!torneoId || pulite.some((r) => r.torneo)
+  const tornei = usaTornei ? await sanity.fetch<TorneoSquadre[]>(`*[_type == "tournament" && lega._ref == $legaId]{${torneoSquadreFields}}`, { legaId }) : []
+  if (usaTornei && !(await puoCreareTornei(legaId))) return { error: await tr('I tornei sono una funzione Pro.') }
+  if (torneoId && !tornei.some((x) => x._id === torneoId)) return { error: await tr('Torneo non trovato.') }
+  const torneoPerNome = new Map(tornei.map((x) => [x.nome.trim().toLowerCase(), x]))
 
   const tx = sanity.transaction()
   const esiti: NonNullable<EsitoImport['righe']> = []
-  const daMettere: { id: string; squadra: string | null; riga: number }[] = []
+  const daMettere: { id: string; torneo: string | null; squadra: string | null; riga: number }[] = []
   const visti = new Set<string>()
   for (const [i, r] of pulite.entries()) {
     const riga = i + 2 // la riga 1 del file è l'intestazione
@@ -2288,41 +2289,49 @@ export async function importaGiocatori(
       esiti.push({ riga, esito: 'creato', nome: etichetta })
     }
     visti.add(id)
-    if (torneo) daMettere.push({ id, squadra: r.squadra || null, riga })
+    if (usaTornei) daMettere.push({ id, torneo: r.torneo || null, squadra: r.squadra || null, riga })
   }
 
-  // Squadre del torneo: quella della colonna "Squadra" (per nome) o quella scelta; chi era in un'altra squadra cambia.
+  // Squadre: il torneo della riga (colonna "Torneo") o quello scelto; la squadra della riga (per nome) o quella scelta.
+  // Chi era in un'altra squadra dello stesso torneo cambia squadra.
   let inSquadra = 0
-  if (torneo && daMettere.length) {
-    const perNomeSquadra = new Map(torneo.squadre.map((sq) => [sq.nome.trim().toLowerCase(), sq._key]))
-    let squadre = torneo.squadre
-    for (const m of daMettere) {
-      const chiave = (m.squadra && perNomeSquadra.get(m.squadra.toLowerCase())) || squadraKey
-      if (!chiave) continue
-      const dest = squadre.find((sq) => sq._key === chiave)
-      const esito = esiti.find((e) => e.riga === m.riga)
-      if (!dest) continue
-      if (dest.giocatori.some((g) => g._ref === m.id)) continue
-      if (squadre.some((sq) => sq._key !== chiave && sq.capitano?._ref === m.id)) {
-        if (esito) esito.nota = await tr('Capitano di un’altra squadra: non spostato')
-        continue
-      }
-      if (torneo.maxGiocatori && dest.giocatori.length >= torneo.maxGiocatori) {
-        if (esito) esito.nota = await tr('{squadra} è al completo', { squadra: dest.nome })
-        continue
-      }
-      squadre = squadre.map((sq) => ({
-        ...sq,
-        giocatori:
-          sq._key === chiave ? [...sq.giocatori, { _key: m.id, _type: 'reference' as const, _ref: m.id }] : sq.giocatori.filter((g) => g._ref !== m.id),
-      }))
-      if (esito) esito.nota = dest.nome
-      inSquadra++
+  const squadreDi = new Map<string, SquadraDoc[]>()
+  for (const m of daMettere) {
+    const esito = esiti.find((e) => e.riga === m.riga)
+    const torneo = m.torneo ? torneoPerNome.get(m.torneo.toLowerCase()) : tornei.find((x) => x._id === torneoId)
+    if (!torneo) {
+      if (m.torneo && esito) esito.nota = await tr('Torneo “{torneo}” non trovato', { torneo: m.torneo })
+      continue
     }
-    if (inSquadra) {
-      tx.patch(torneo._id, (p) => p.ifRevisionId(torneo!._rev).set({ squadre }))
-      aggiornaPartiteDaGiocare(tx, await partiteDaGiocare(torneo._id), squadre)
+    let squadre = squadreDi.get(torneo._id) ?? torneo.squadre
+    const chiave =
+      (m.squadra && squadre.find((sq) => sq.nome.trim().toLowerCase() === m.squadra!.toLowerCase())?._key) || (torneo._id === torneoId ? squadraKey : null)
+    if (!chiave) {
+      if (m.squadra && esito) esito.nota = await tr('Squadra “{squadra}” non trovata in {torneo}', { squadra: m.squadra, torneo: torneo.nome })
+      continue
     }
+    const dest = squadre.find((sq) => sq._key === chiave)!
+    if (dest.giocatori.some((g) => g._ref === m.id)) continue
+    if (squadre.some((sq) => sq._key !== chiave && sq.capitano?._ref === m.id)) {
+      if (esito) esito.nota = await tr('Capitano di un’altra squadra: non spostato')
+      continue
+    }
+    if (torneo.maxGiocatori && dest.giocatori.length >= torneo.maxGiocatori) {
+      if (esito) esito.nota = await tr('{squadra} è al completo', { squadra: dest.nome })
+      continue
+    }
+    squadre = squadre.map((sq) => ({
+      ...sq,
+      giocatori: sq._key === chiave ? [...sq.giocatori, { _key: m.id, _type: 'reference' as const, _ref: m.id }] : sq.giocatori.filter((g) => g._ref !== m.id),
+    }))
+    squadreDi.set(torneo._id, squadre)
+    if (esito) esito.nota = `${torneo.nome} · ${dest.nome}`
+    inSquadra++
+  }
+  for (const [id, squadre] of squadreDi) {
+    const torneo = tornei.find((x) => x._id === id)!
+    tx.patch(id, (p) => p.ifRevisionId(torneo._rev).set({ squadre }))
+    aggiornaPartiteDaGiocare(tx, await partiteDaGiocare(id), squadre)
   }
 
   await tx.commit()

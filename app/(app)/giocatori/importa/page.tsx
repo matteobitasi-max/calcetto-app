@@ -3,6 +3,7 @@ import { Suspense } from 'react'
 import { getMemberships } from '@/lib/player'
 import { getTornei, puoCreareTornei } from '@/lib/tornei'
 import { sanity } from '@/lib/sanity'
+import { percorsoModello } from '@/lib/modello'
 import { Card, Loading, PageTitle } from '@/components/ui'
 import { getT } from '@/lib/lingua'
 import { ImportaGiocatori, type LegaImport } from './importa-giocatori'
@@ -37,6 +38,7 @@ async function Importa() {
       return {
         id: lega._id,
         nome: lega.nome,
+        modello: percorsoModello(lega._id),
         rosa,
         // tornei non ancora finiti, con le loro squadre (solo se la lega può usare i tornei)
         tornei: pro
