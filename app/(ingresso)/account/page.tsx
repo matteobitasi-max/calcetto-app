@@ -73,6 +73,9 @@ async function Account() {
         <Link href="/termini" className="flex items-center justify-between px-4 py-3 hover:bg-zinc-50 dark:hover:bg-zinc-800">
           📄 {t('Termini d’uso')} <span className="text-zinc-400">›</span>
         </Link>
+        <Link href="/guida" className="flex items-center justify-between px-4 py-3 hover:bg-zinc-50 dark:hover:bg-zinc-800">
+          📖 {t('Come funziona')} <span className="text-zinc-400">›</span>
+        </Link>
         <Link href="/supporto" className="flex items-center justify-between px-4 py-3 hover:bg-zinc-50 dark:hover:bg-zinc-800">
           💬 {t('Supporto e contatti')} <span className="text-zinc-400">›</span>
         </Link>

@@ -31,5 +31,5 @@ const PAGINA_SPOSTATI = `<!doctype html><html lang="it"><head><meta charset="utf
 export const config = {
   // Privacy, Termini, Supporto ed Elimina account restano fuori da Clerk: gli store le controllano
   // con richieste automatiche, che non devono passare dai reindirizzamenti di accesso.
-  matcher: ['/((?!_next|privacy|termini|supporto|elimina-account|.*\\..*).*)', '/(api|trpc)(.*)'],
+  matcher: ['/((?!_next|privacy|termini|guida|supporto|elimina-account|.*\\..*).*)', '/(api|trpc)(.*)'],
 }
