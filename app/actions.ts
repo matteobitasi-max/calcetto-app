@@ -428,7 +428,7 @@ type SquadreRaw = {
   squadraB?: { _key: string; _ref: string }[]
 }
 
-async function ritoccaSquadre(matchId: string, cambia: (doc: SquadreRaw) => Record<string, unknown> | null) {
+async function ritoccaSquadre(matchId: string, cambia: (doc: SquadreRaw) => Record<string, unknown> | null, anche: Stato[] = []) {
   await requireForDoc(matchId, 'organizzatore')
   for (let attempt = 0; attempt < 3; attempt++) {
     const doc = await sanity.fetch<SquadreRaw | null>(
@@ -436,7 +436,7 @@ async function ritoccaSquadre(matchId: string, cambia: (doc: SquadreRaw) => Reco
       { id: matchId },
     )
     if (!doc) throw new Error('Partita non trovata')
-    if (doc.stato !== 'chiusa') throw new Error('Le squadre di questa partita non si possono modificare')
+    if (doc.stato !== 'chiusa' && !anche.includes(doc.stato)) throw new Error('Le squadre di questa partita non si possono modificare')
     const set = cambia(doc)
     if (!set) return
     try {
@@ -470,7 +470,8 @@ export async function togliDallaPartita(matchId: string, giocatoreId: string) {
     )
     const senza = (s?: { _key: string; _ref: string }[]) => (s ?? []).filter((r) => r._ref !== giocatoreId)
     return { convocazioni: assegnaPosti(list, doc.postiDisponibili), squadraA: senza(doc.squadraA), squadraB: senza(doc.squadraB) }
-  })
+    // anche a convocazioni aperte ("Escludi" dalla lista o dalla lista d'attesa)
+  }, ['aperta'])
 }
 
 // Pro: l'organizzatore approva (o scarta) la proposta di nuovi voti per un giocatore. La proposta si ricalcola qui,
