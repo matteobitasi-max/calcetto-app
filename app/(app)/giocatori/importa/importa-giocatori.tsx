@@ -137,14 +137,6 @@ export function ImportaGiocatori({ leghe }: { leghe: LegaImport[] }) {
     }
   }
 
-  const modello = () => {
-    const csv = 'Nome;Cognome;Email;Telefono;Soprannome;Ruolo;Squadra\nMario;Rossi;mario.rossi@email.it;3331234567;Bomber;attaccante;\n'
-    const a = document.createElement('a')
-    a.href = URL.createObjectURL(new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' }))
-    a.download = 'thecap-giocatori.csv'
-    a.click()
-  }
-
   const importa = () =>
     startTransition(async () => {
       const r = await importaGiocatori(legaId, torneoId || null, squadraKey || null, righe, invita)
@@ -223,9 +215,9 @@ export function ImportaGiocatori({ leghe }: { leghe: LegaImport[] }) {
           </label>
           <p className="text-xs text-zinc-500">
             {t('Colonne: Nome, Cognome, Email (basta una delle tre); facoltative Telefono, Soprannome, Ruolo e Squadra. La prima riga è l’intestazione.')}{' '}
-            <button type="button" onClick={modello} className="font-medium text-green-700 underline dark:text-green-400">
+            <a href="/thecap-modello-giocatori.csv" download="thecap-modello-giocatori.csv" className="font-medium text-green-700 underline dark:text-green-400">
               {t('Scarica il modello')}
-            </button>
+            </a>
           </p>
         </div>
         {errore && <p className="rounded-lg bg-red-50 p-3 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">{errore}</p>}
