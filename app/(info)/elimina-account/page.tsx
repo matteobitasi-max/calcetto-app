@@ -8,7 +8,8 @@ export const metadata: Metadata = { title: 'Elimina account · TheCap' }
 // Pagina pubblica per la richiesta di eliminazione dell'account (richiesta da Google Play).
 export default async function EliminaAccountPage() {
   const t = await getT()
-  if (t.lingua === 'en') return <InEnglish />
+  // in inglese anche per spagnolo, tedesco e francese (testi da far tradurre a parte)
+  if (t.lingua !== 'it') return <InEnglish />
   return (
     <>
       <h1>Eliminare il tuo account TheCap</h1>

@@ -7,7 +7,8 @@ export const metadata: Metadata = { title: 'Supporto · TheCap' }
 
 export default async function SupportoPage() {
   const t = await getT()
-  if (t.lingua === 'en') return <InEnglish />
+  // in inglese anche per spagnolo, tedesco e francese (testi da far tradurre a parte)
+  if (t.lingua !== 'it') return <InEnglish />
   return (
     <>
       <h1>Supporto</h1>

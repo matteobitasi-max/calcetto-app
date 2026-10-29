@@ -32,6 +32,10 @@ const COLONNE: Record<string, keyof RigaImport | 'nomeCompleto'> = {
   torneo: 'torneo', tournament: 'torneo',
   squadra: 'squadra', team: 'squadra',
   'nome e cognome': 'nomeCompleto', giocatore: 'nomeCompleto', 'nome cognome': 'nomeCompleto', 'full name': 'nomeCompleto',
+  // spagnolo, tedesco, francese
+  nombre: 'nome', apellido: 'cognome', apellidos: 'cognome', correo: 'email', 'correo electronico': 'email', apodo: 'soprannome', posicion: 'ruolo', equipo: 'squadra',
+  vorname: 'nome', nachname: 'cognome', telefon: 'telefono', handy: 'telefono', spitzname: 'soprannome', position: 'ruolo', mannschaft: 'squadra', turnier: 'torneo',
+  prenom: 'nome', nom: 'cognome', courriel: 'email', telephone: 'telefono', surnom: 'soprannome', poste: 'ruolo', equipe: 'squadra', tournoi: 'torneo',
 }
 
 // CSV con ";" o "," e virgolette.

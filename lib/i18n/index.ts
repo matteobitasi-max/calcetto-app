@@ -1,12 +1,19 @@
 // Lingue dell'app. Il testo nel codice è in italiano e fa da chiave: `t('Partite')`.
-// Per l'inglese si cerca nel dizionario; se una frase non c'è resta in italiano.
+// Per le altre lingue si cerca nel loro dizionario; se una frase non c'è si usa l'inglese, e se manca anche
+// quello resta in italiano.
 // Le parti variabili si scrivono tra graffe: `t('Ciao {nome}', { nome })`.
 // Se la stessa parola ha significati diversi, dopo `|` si aggiunge il contesto (in italiano non si vede): `t('P|perse')`.
 import { en } from './en'
+import { es } from './es'
+import { de } from './de'
+import { fr } from './fr'
 
 export const LINGUE = {
   it: { nome: 'Italiano', bandiera: '🇮🇹', locale: 'it-IT' },
   en: { nome: 'English', bandiera: '🇬🇧', locale: 'en-GB' },
+  es: { nome: 'Español', bandiera: '🇪🇸', locale: 'es-ES' },
+  de: { nome: 'Deutsch', bandiera: '🇩🇪', locale: 'de-DE' },
+  fr: { nome: 'Français', bandiera: '🇫🇷', locale: 'fr-FR' },
 } as const
 
 export type Lingua = keyof typeof LINGUE
@@ -36,7 +43,7 @@ export type T = {
 export const inizialiGiorni = (locale: string) =>
   Array.from({ length: 7 }, (_, i) => new Intl.DateTimeFormat(locale, { weekday: 'narrow', timeZone: 'UTC' }).format(Date.UTC(2024, 0, 1 + i)))
 
-const DIZIONARI: Record<Lingua, Record<string, string> | null> = { it: null, en }
+const DIZIONARI: Record<Lingua, Record<string, string> | null> = { it: null, en, es, de, fr }
 
 const riempi = (testo: string, vars?: Vars) =>
   vars ? testo.replace(/\{(\w+)\}/g, (tutto, k: string) => (k in vars ? String(vars[k]) : tutto)) : testo
@@ -44,7 +51,8 @@ const riempi = (testo: string, vars?: Vars) =>
 export function creaT(lingua: Lingua): T {
   const diz = DIZIONARI[lingua]
   const locale = LINGUE[lingua].locale
-  const t = ((testo: string, vars?: Vars) => riempi(diz?.[testo] ?? testo.split('|')[0], vars)) as T
+  const riserva = lingua === 'it' ? null : en
+  const t = ((testo: string, vars?: Vars) => riempi(diz?.[testo] ?? riserva?.[testo] ?? testo.split('|')[0], vars)) as T
   t.n = (n, uno, tanti, vars) => t(n === 1 ? uno : tanti, { n, ...vars })
   t.lingua = lingua
   t.locale = locale

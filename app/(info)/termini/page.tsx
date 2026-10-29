@@ -9,7 +9,8 @@ export const metadata: Metadata = { title: 'Termini d’uso · TheCap' }
 // (lib/consensi.ts): al prossimo accesso tutti li accettano di nuovo.
 export default async function TerminiPage() {
   const t = await getT()
-  if (t.lingua === 'en') return <InEnglish />
+  // in inglese anche per spagnolo, tedesco e francese (testi da far tradurre a parte)
+  if (t.lingua !== 'it') return <InEnglish />
   return (
     <>
       <h1>Termini d&apos;uso</h1>

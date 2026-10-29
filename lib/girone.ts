@@ -77,7 +77,8 @@ export const SQUADRE_PREDEFINITE = [
 ]
 
 // Nome proposto per la squadra n. `i`, nella lingua dell'app.
-export const nomePredefinito = (i: number, lingua: string) => (lingua === 'en' ? SQUADRE_PREDEFINITE[i]?.en : SQUADRE_PREDEFINITE[i]?.nome) ?? ''
+const SQUADRA: Record<string, string> = { it: 'Squadra', en: 'Team', es: 'Equipo', de: 'Team', fr: 'Équipe' }
+export const nomePredefinito = (i: number, lingua: string) => (SQUADRE_PREDEFINITE[i] ? `${SQUADRA[lingua] ?? 'Squadra'} ${i + 1}` : '')
 
 // ---------- Gironi + tabellone ----------
 
