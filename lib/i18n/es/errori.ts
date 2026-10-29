@@ -76,4 +76,5 @@ export const errori: Record<string, string> = {
   "Il collegamento è scaduto: riprova da TheCap.": "La conexión ha caducado: inténtalo de nuevo desde TheCap.",
   "Strava collegato": "Strava conectado",
   "Strava non collegato: serve il permesso di leggere le attività.": "Strava no conectado: hace falta permiso para leer las actividades.",
+  "La scheda è stata modificata nel frattempo: ricarica la pagina e rifai la modifica.": "La ficha se ha modificado mientras tanto: recarga la página y vuelve a hacer el cambio.",
 }

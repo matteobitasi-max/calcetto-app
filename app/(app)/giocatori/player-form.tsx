@@ -21,6 +21,8 @@ export async function PlayerForm({
   const t = await getT()
   return (
     <ActionForm action={action} className="space-y-4">
+      {/* la versione della scheda da cui parte la modifica: se nel frattempo è cambiata, non si sovrascrive */}
+      {player?._rev && <input type="hidden" name="rev" value={player._rev} />}
       <Card className="space-y-4">
         <PhotoInput currentUrl={avatarUrl(player?.foto, 160)} />
         <Field label={t('Badge (si vede accanto al nome)')}>

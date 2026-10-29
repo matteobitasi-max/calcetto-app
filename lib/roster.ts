@@ -49,6 +49,8 @@ export type Lega = { _id: string; nome: string; logo?: SanityImage; codiceInvito
 
 export type Player = {
   _id: string
+  /** Revisione del documento: per non sovrascrivere modifiche fatte nel frattempo. */
+  _rev?: string
   legaId?: string
   nome: string
   cognome?: string
@@ -79,7 +81,7 @@ export type Player = {
   caratteristicheBase?: Partial<Record<Skill, number>>
 }
 
-export const playerFields = `_id, "legaId": lega._ref, nome, cognome, soprannome, email, telefono, dataNascita, foto, ruolo, piede, badge, notifiche, isAdmin, puoInserireRisultati, attivo, revisioneIl, "rimosso": defined(rimossoIl), "collegato": defined(clerkUserId), caratteristiche, caratteristicheBase,
+export const playerFields = `_id, _rev, "legaId": lega._ref, nome, cognome, soprannome, email, telefono, dataNascita, foto, ruolo, piede, badge, notifiche, isAdmin, puoInserireRisultati, attivo, revisioneIl, "rimosso": defined(rimossoIl), "collegato": defined(clerkUserId), caratteristiche, caratteristicheBase,
   "pro": defined(clerkUserId) && count(*[_type == "abbonamento" && clerkUserId == ^.clerkUserId && attivo != false && (!defined(scadenza) || scadenza > now())]) > 0`
 
 

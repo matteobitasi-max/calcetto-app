@@ -695,6 +695,12 @@ export async function salvaGiocatore(playerId: string | null, _prev: FormState, 
   const telefono = normalizzaTelefono(str(formData, 'telefono'))
   if (!nome) return { error: await tr('Il nome è obbligatorio.') }
   if (!email && !telefono) return { error: await tr('Serve l\u2019email o il numero di telefono, per collegarlo quando fa l\u2019accesso.') }
+  // pagina di modifica rimasta indietro (es. tornando indietro): non sovrascrive quello che è cambiato nel frattempo
+  const rev = str(formData, 'rev')
+  if (playerId && rev) {
+    const attuale = await sanity.fetch<string | null>(`*[_id == $id][0]._rev`, { id: playerId })
+    if (attuale && attuale !== rev) return { error: await tr('La scheda è stata modificata nel frattempo: ricarica la pagina e rifai la modifica.') }
+  }
   if (telefono && !/^\+\d{8,15}$/.test(telefono)) return { error: await tr('Numero di telefono non valido (es. 333 1234567 o +39 333 1234567).') }
 
   const duplicate = await sanity.fetch<string | null>(
