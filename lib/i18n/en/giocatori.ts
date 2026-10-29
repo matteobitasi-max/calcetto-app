@@ -97,4 +97,12 @@ export const giocatori: Record<string, string> = {
   "{n} inviti mandati": "{n} invites sent",
   "invito mandato": "invite sent",
   "ha già un account o un invito": "already has an account or an invite",
+  "Obbligatorio": "Required",
+  "almeno uno tra": "at least one of",
+  "ed": "and",
+  "(senza nome si usa la prima parte dell’email).": "(without a name, the first part of the email is used).",
+  "Facoltativi": "Optional",
+  "Cognome, Telefono, Soprannome": "Last name, Phone, Nickname",
+  "(il nome esatto di una squadra del torneo scelto).": "(the exact name of a team in the chosen tournament).",
+  "La prima riga è l’intestazione: le colonne possono essere in qualsiasi ordine.": "The first row is the header: columns can be in any order.",
 }

@@ -8,6 +8,7 @@ import { importaGiocatori, type EsitoImport, type RigaImport } from '@/app/actio
 import { Card, Field } from '@/components/ui-base'
 import { buttonClass, inputClass } from '@/components/ui-classes'
 import { useT } from '@/components/lingua'
+import { RUOLI } from '@/lib/roster'
 
 export type LegaImport = {
   id: string
@@ -71,7 +72,7 @@ function inGiocatori(tabella: unknown[][]): RigaImport[] {
   const celle = tabella.map((r) => r.map((c) => (c == null ? '' : c instanceof Date ? c.toISOString().slice(0, 10) : String(c).trim())))
   const piene = celle.filter((r) => r.some(Boolean))
   if (!piene.length) return []
-  const intestazione = piene[0].map((h) => COLONNE[normalizza(h)])
+  const intestazione = piene[0].map((h) => COLONNE[normalizza(h.replace(/\*|\(.*?\)/g, ''))])
   const conIntestazione = intestazione.some(Boolean)
   // senza intestazione riconosciuta: nome, cognome, email
   const campi = conIntestazione ? intestazione : (['nome', 'cognome', 'email'] as const)
@@ -217,8 +218,17 @@ export function ImportaGiocatori({ leghe }: { leghe: LegaImport[] }) {
             📄 {file || t('Scegli il file Excel o CSV')}
             <input type="file" accept=".xlsx,.csv,.txt" className="hidden" onChange={(e) => e.target.files?.[0] && carica(e.target.files[0])} />
           </label>
-          <p className="text-xs text-zinc-500">
-            {t('Colonne: Nome, Cognome, Email (basta una delle tre); facoltative Telefono, Soprannome, Ruolo e Squadra. La prima riga è l’intestazione.')}{' '}
+          <div className="space-y-1 rounded-lg bg-zinc-50 p-3 text-xs text-zinc-600 dark:bg-zinc-800/50 dark:text-zinc-300">
+            <p>
+              <b>{t('Obbligatorio')}</b>: {t('almeno uno tra')} <b>{t('Nome')}</b> {t('ed')} <b>Email</b> {t('(senza nome si usa la prima parte dell’email).')}
+            </p>
+            <p>
+              <b>{t('Facoltativi')}</b>: {t('Cognome, Telefono, Soprannome')} · <b>{t('Ruolo')}</b> ({RUOLI.join(', ')}) · <b>{t('Squadra')}</b>{' '}
+              {t('(il nome esatto di una squadra del torneo scelto).')}
+            </p>
+            <p>{t('La prima riga è l’intestazione: le colonne possono essere in qualsiasi ordine.')}</p>
+          </div>
+          <p className="text-xs text-zinc-500">{' '}
             <a
               href={MODELLO}
               download="thecap-modello-giocatori.csv"
