@@ -1,6 +1,8 @@
 'use client'
 
 import { useState, useTransition } from 'react'
+import { Browser } from '@capacitor/browser'
+import { Capacitor } from '@capacitor/core'
 import { readSheet } from 'read-excel-file/browser'
 import { importaGiocatori, type EsitoImport, type RigaImport } from '@/app/actions'
 import { Card, Field } from '@/components/ui-base'
@@ -13,6 +15,8 @@ export type LegaImport = {
   rosa: { nome: string; cognome?: string; email?: string }[]
   tornei: { id: string; nome: string; squadre: { key: string; nome: string; giocatori: number }[]; max?: number }[]
 }
+
+const MODELLO = '/thecap-modello-giocatori.csv'
 
 const normalizza = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/\s+/g, ' ').trim()
 
@@ -215,7 +219,17 @@ export function ImportaGiocatori({ leghe }: { leghe: LegaImport[] }) {
           </label>
           <p className="text-xs text-zinc-500">
             {t('Colonne: Nome, Cognome, Email (basta una delle tre); facoltative Telefono, Soprannome, Ruolo e Squadra. La prima riga è l’intestazione.')}{' '}
-            <a href="/thecap-modello-giocatori.csv" download="thecap-modello-giocatori.csv" className="font-medium text-green-700 underline dark:text-green-400">
+            <a
+              href={MODELLO}
+              download="thecap-modello-giocatori.csv"
+              onClick={(e) => {
+                // nell'app il download lo fa il browser di sistema (Safari / Chrome), che salva il file
+                if (!Capacitor.isNativePlatform()) return
+                e.preventDefault()
+                Browser.open({ url: `${window.location.origin}${MODELLO}` }).catch(() => undefined)
+              }}
+              className="font-medium text-green-700 underline dark:text-green-400"
+            >
               {t('Scarica il modello')}
             </a>
           </p>
