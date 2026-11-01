@@ -84,21 +84,6 @@ async function Partite() {
         <Card className="text-center text-sm text-zinc-500">{t('Nessuna partita in programma.')}</Card>
       )}
 
-      {altreInProgramma.length > 0 && (
-        <Tendina titolo={t('Altre partite in programma ({n})', { n: altreInProgramma.length })}>
-          {altreInProgramma.map((m) => (
-            <RigaPartita key={m._id} match={m} t={t}>
-              <span className="tabular-nums text-zinc-500">
-                {presenti(m).length}/{m.postiDisponibili}
-              </span>
-            </RigaPartita>
-          ))}
-          <Link href="/calendario" className="block px-4 py-3 text-center text-sm text-green-700 hover:underline dark:text-green-400">
-            {t('Apri il calendario →')}
-          </Link>
-        </Tendina>
-      )}
-
       {/* In basso: l'ultima partita giocata e, a tendina, tutte le altre concluse */}
       {ultima && (
         <section className="space-y-2">
@@ -121,6 +106,22 @@ async function Partite() {
       <Suspense>
         <IntervisteLega legaId={legaId} playlist={player.lega.playlistInterviste} />
       </Suspense>
+
+      {/* le altre partite in programma, a tendina, sotto le interviste */}
+      {altreInProgramma.length > 0 && (
+        <Tendina titolo={t('Altre partite in programma ({n})', { n: altreInProgramma.length })}>
+          {altreInProgramma.map((m) => (
+            <RigaPartita key={m._id} match={m} t={t}>
+              <span className="tabular-nums text-zinc-500">
+                {presenti(m).length}/{m.postiDisponibili}
+              </span>
+            </RigaPartita>
+          ))}
+          <Link href="/calendario" className="block px-4 py-3 text-center text-sm text-green-700 hover:underline dark:text-green-400">
+            {t('Apri il calendario →')}
+          </Link>
+        </Tendina>
+      )}
 
       {concluse.length > 0 && (
         <Tendina titolo={t('Partite concluse ({n})', { n: concluse.length })}>
