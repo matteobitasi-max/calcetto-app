@@ -274,6 +274,7 @@ export async function salvaPartita(matchId: string | null, _prev: FormState, for
       durataFinestraMinuti: durataFinestra,
     })
     await assicuraRicorrenze({ serie: { ...(serie as unknown as Series), legaId: admin.lega._id } })
+    refresh()
     redirect(`/partite/${occurrenceId(serie._id, giorno)}`)
   }
 
@@ -316,6 +317,7 @@ export async function salvaPartita(matchId: string | null, _prev: FormState, for
     })
     id = doc._id
   }
+  refresh()
   redirect(`/partite/${id}`)
 }
 
@@ -551,6 +553,7 @@ export async function salvaRisultato(matchId: string, _prev: FormState, formData
   // Tabellone: con il vincitore si crea (se si può) la partita del turno dopo.
   if (match.torneo && match.torneo.formato !== 'girone') await aggiornaTabellone(match.torneo._id)
   await avvisaProposte(match).catch(() => undefined)
+  refresh()
   redirect(`/partite/${matchId}`)
 }
 
@@ -636,6 +639,7 @@ export async function salvaSerie(seriesId: string, _prev: FormState, formData: F
 
   await rimuoviFutureVuote(seriesId)
   if (current.attiva !== false) await assicuraRicorrenze({ serie: { ...current, ...fields, ...optional } })
+  refresh()
   redirect('/partite/ricorrenti')
 }
 
@@ -748,6 +752,7 @@ export async function salvaGiocatore(playerId: string | null, _prev: FormState, 
   } else {
     id = (await sanity.create({ _type: 'player', lega: { _type: 'reference', _ref: admin.lega._id }, ...fields }))._id
   }
+  refresh()
   redirect(`/giocatori/${id}`)
 }
 
@@ -930,6 +935,7 @@ async function entraConInvito(codice: string, utente: Utente) {
     else await nuovaScheda(lega._id, utente, false)
   }
   await attivaLega(lega._id)
+  refresh()
   redirect('/')
 }
 
@@ -961,6 +967,7 @@ export async function aggiungimiAllaLega(legaId: string) {
     else await nuovaScheda(legaId, utente, true)
   }
   await attivaLega(legaId)
+  refresh()
   redirect('/')
 }
 
@@ -1335,6 +1342,7 @@ export async function unisciSchede(tieniId: string, togliId: string) {
   if (Object.keys(completa).length) tx.patch(tieniId, (p) => p.set(completa))
   tx.delete(togliId)
   await tx.commit()
+  refresh()
   redirect(`/giocatori/${tieniId}`)
 }
 
@@ -1934,6 +1942,7 @@ export async function creaTorneo(_prev: FormState, formData: FormData): Promise<
       })).catch(() => undefined),
     ),
   )
+  refresh()
   redirect(`/tornei/${torneo._id}`)
 }
 
@@ -1993,6 +2002,7 @@ export async function salvaSquadreTorneo(torneoId: string, _prev: FormState, for
   })
   aggiornaPartiteDaGiocare(tx, await partiteDaGiocare(torneoId), squadre)
   await tx.commit()
+  refresh()
   redirect(`/tornei/${torneoId}`)
 }
 
@@ -2073,6 +2083,7 @@ async function entra(torneo: TorneoSquadre | null, squadra: SquadraDoc | undefin
       })).catch(() => undefined)
     }
   }
+  refresh()
   redirect(`/tornei/${torneo._id}`)
 }
 
@@ -2125,6 +2136,7 @@ export async function salvaMiaSquadra(torneoId: string, chiave: string, _prev: F
   const tx = sanity.transaction().patch(torneo._id, (p) => p.ifRevisionId(torneo._rev).set({ squadre }))
   aggiornaPartiteDaGiocare(tx, await partiteDaGiocare(torneo._id), squadre)
   await tx.commit()
+  refresh()
   redirect(`/tornei/${torneoId}`)
 }
 
@@ -2384,6 +2396,7 @@ export async function eliminaTorneo(torneoId: string) {
   for (const id of partite) tx.delete(id)
   tx.delete(torneoId)
   await tx.commit()
+  refresh()
   redirect('/tornei')
 }
 
