@@ -10,7 +10,7 @@ import { KmPartita } from '@/components/km-partita'
 import { MeteoPartita } from '@/components/meteo-partita'
 import { getT } from '@/lib/lingua'
 import type { T } from '@/lib/i18n'
-import { scambiaConAttesa, aggiungiDaAttesa, allungaFinestra, apriConvocazioni, cambiaSquadra, cambiaStato, convocaGiocatore, scegliLega, rimettiInAttesa, togliDallaPartita, togliDallaSquadra } from '@/app/actions'
+import { scambiaConAttesa, aggiungiDaAttesa, allungaFinestra, apriConvocazioni, cambiaSquadra, cambiaStato, convocaGiocatore, scegliLega, togliDallaPartita, togliDallaSquadra } from '@/app/actions'
 import { Countdown } from '@/components/countdown'
 import { ApriConvocazioni } from '@/components/apri-convocazioni'
 import { baseUrl } from '@/lib/url'
@@ -41,7 +41,6 @@ async function MatchDetail({ params }: { params: Promise<{ id: string }> }) {
 
   const count = presenti(match).length
   const formato = formatoInCorso(match)
-  const aggiunti = presenti(match).filter((c) => c.aggiunto).length
   const gestisci = !!player.isAdmin && match.stato !== 'giocata' && match.stato !== 'annullata'
   // orario, campo, convocazioni, posti, quota e note: finché la partita non è giocata (anche a convocazioni chiuse)
   const modificabile = gestisci && !match.torneo
@@ -134,11 +133,6 @@ async function MatchDetail({ params }: { params: Promise<{ id: string }> }) {
           <span className="font-normal text-zinc-500">
             · {formato ? t('{n} iscritti', { n: formato.iscritti }) : `${count}/${match.postiDisponibili}`}
           </span>
-          {aggiunti > 0 && (
-            <span className="ml-1 text-xs font-normal text-zinc-500">
-              ({match.postiDisponibili - aggiunti} + {t.n(aggiunti, '{n} aggiunto', '{n} aggiunti')})
-            </span>
-          )}
         </h2>
         {formato && (
           <p className="mb-3 rounded-lg bg-zinc-50 p-2 text-xs text-zinc-600 dark:bg-zinc-950 dark:text-zinc-400">
@@ -223,35 +217,25 @@ function Gruppo({
               mio={c.giocatore?._id === mioId}
               // pagamento a sinistra del voto: l'icona Satispay apre Satispay
               prima={me && <PagamentoInLista match={match} me={me} playerId={c.giocatore._id} />}
-              right={
-                <>
-                  {c.aggiunto && risposta === 'presente' && (
-                    <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-xs text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">{t('aggiunto')}</span>
-                  )}
-                  {gestisci && risposta === 'riserva' && inLista.length > 0 && (
-                    <ScambiaAttesa nome={displayName(c.giocatore)} inLista={inLista} scambia={scambiaConAttesa.bind(null, match._id, c._key)} />
-                  )}
-                  {gestisci && risposta === 'riserva' && (
-                    <form action={aggiungiDaAttesa.bind(null, match._id, c._key)}>
-                      <SubmitButton className={`${buttonClass('secondary')} px-2 py-1 text-xs`} title={t('Mettilo in lista: i partecipanti salgono di uno')}>
-                        ➕ {t('Aggiungi')}
-                      </SubmitButton>
-                    </form>
-                  )}
-                  {gestisci && risposta === 'presente' && c.aggiunto && (
-                    <form action={rimettiInAttesa.bind(null, match._id, c._key)}>
-                      <SubmitButton className="rounded px-2 py-1 text-xs text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800" title={t('Rimettilo in lista d’attesa')}>
-                        ↩ {t('In attesa')}
-                      </SubmitButton>
-                    </form>
-                  )}
-                </>
-              }
+              // in lista ufficiale tutti uguali: chi è stato aggiunto dall'organizzatore non ha segni a parte
             />
           )
+          // lista d'attesa (organizzatore): "Scambia" e "Aggiungi" su una riga sotto, così il nome resta leggibile
+          const azioniAttesa = gestisci && risposta === 'riserva' && (
+            <div className="mt-1.5 flex flex-wrap justify-end gap-2">
+              {inLista.length > 0 && (
+                <ScambiaAttesa nome={displayName(c.giocatore)} inLista={inLista} scambia={scambiaConAttesa.bind(null, match._id, c._key)} />
+              )}
+              <form action={aggiungiDaAttesa.bind(null, match._id, c._key)}>
+                <SubmitButton className={`${buttonClass('secondary')} px-2 py-1 text-xs`} title={t('Mettilo in lista: i partecipanti salgono di uno')}>
+                  ➕ {t('Aggiungi')}
+                </SubmitButton>
+              </form>
+            </div>
+          )
           return (
-            <li key={c._key} className="flex items-center gap-2">
-              {numerati && <span className="w-5 text-right text-xs tabular-nums text-zinc-400">{c.posizione}</span>}
+            <li key={c._key} className="flex items-start gap-2">
+              {numerati && <span className="mt-2.5 w-5 text-right text-xs tabular-nums text-zinc-400">{c.posizione}</span>}
               <div className="min-w-0 flex-1">
                 {convoca ? (
                   <SwipeRiga destra={{ azione: convocaGiocatore.bind(null, match._id, c.giocatore._id), label: t('Convoca') }}>{riga}</SwipeRiga>
@@ -268,6 +252,7 @@ function Gruppo({
                 ) : (
                   riga
                 )}
+                {azioniAttesa}
               </div>
             </li>
           )

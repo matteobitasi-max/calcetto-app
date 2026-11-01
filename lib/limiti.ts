@@ -2,10 +2,10 @@
 // può poi aggiungere persone dalla lista d'attesa, superando questo limite.
 export const MAX_GIOCATORI = 14
 
-// "In base alle convocazioni": si convoca chi vuole fino a questo tetto (9 contro 9); oltre si va in lista d'attesa.
-export const MAX_ISCRITTI = 18
+// "In base alle convocazioni": si convoca chi vuole fino a questo tetto (8 contro 8); oltre si va in lista d'attesa.
+export const MAX_ISCRITTI = 16
 
-// Alla chiusura si gioca con un numero pari: 18 iscritti → 9 contro 9,
+// Alla chiusura si gioca con un numero pari: 16 iscritti → 8 contro 8,
 // 11 iscritti → 5 contro 5 e l'ultimo arrivato in lista d'attesa.
 export function formatoDaIscritti(iscritti: number) {
   const giocano = Math.min(MAX_ISCRITTI, iscritti - (iscritti % 2))

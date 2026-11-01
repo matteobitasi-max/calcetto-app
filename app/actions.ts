@@ -144,7 +144,7 @@ export async function scambiaConAttesa(matchId: string, entra: string, esce: str
 }
 
 // L'organizzatore convoca un giocatore della rosa che non si è convocato: risponde "ci sono" al suo posto
-// (si mette in coda come gli altri: se la lista è piena va in lista d'attesa).
+// e lo mette sempre in lista (scelto a mano, non va in lista d'attesa): se la lista è piena, i posti salgono di uno.
 export async function convocaGiocatore(matchId: string, giocatoreId: string) {
   const admin = await requireForDoc(matchId, 'organizzatore')
   const giocatore = await sanity.fetch<{ legaId: string; attivo?: boolean } | null>(`*[_type == "player" && _id == $id][0]{"legaId": lega._ref, attivo}`, {
@@ -167,11 +167,14 @@ export async function convocaGiocatore(matchId: string, giocatoreId: string) {
       giocatore: { _type: 'reference', _ref: giocatoreId },
       risposta: 'presente' as Risposta,
       rispostoIl: new Date().toISOString(),
+      aggiunto: true,
     }
+    const pieni = list.filter((c) => c.risposta === 'presente').length >= doc.postiDisponibili
+    const posti = doc.postiDisponibili + (pieni ? 1 : 0)
     if (i >= 0) list[i] = { ...list[i], ...entry }
     else list.push(entry)
     try {
-      await sanity.patch(matchId).ifRevisionId(doc._rev).set({ convocazioni: assegnaPosti(list, doc.postiDisponibili) }).commit()
+      await sanity.patch(matchId).ifRevisionId(doc._rev).set({ postiDisponibili: posti, convocazioni: assegnaPosti(list, posti) }).commit()
       refresh()
       return
     } catch (err) {
