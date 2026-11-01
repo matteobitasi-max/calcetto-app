@@ -1,5 +1,8 @@
 @import "tailwindcss";
 
+/* Tema scuro con la classe "dark" su <html> (la mette components/tema-sera.tsx: di sera o se il telefono è in modalità scura) */
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
   --background: #ffffff;
   --foreground: #171717;
@@ -15,8 +18,7 @@
 /* Versione notturna: niente nero puro (stanca la vista), ma un verde-ardesia scuro e morbido.
    Ridefinisce i grigi "zinc" di Tailwind, usati in tutta l'app, così i riquadri si staccano
    dallo sfondo e il testo (bianco caldo, non bianco puro) si legge bene a lungo. */
-@media (prefers-color-scheme: dark) {
-  :root {
+  :root.dark {
     --background: #142a1b;
     --foreground: #eef3ef;
     --color-zinc-50: #f4f7f5;
@@ -31,7 +33,7 @@
     --color-zinc-900: #2b3732;
     --color-zinc-950: #1c2621;
   }
-}
+
 
 body {
   background: var(--background);
@@ -76,12 +78,11 @@ body {
 }
 /* Di sera: campo illuminato da quattro fari, come uno stadio. Luce calda dai due angoli in alto
    (appena sotto l'intestazione) e dai due in basso, sull'erba a strisce; i fari restano fermi. */
-@media (prefers-color-scheme: dark) {
-  .campo {
+  .dark .campo {
     --erba-chiara: #183621;
     --erba-scura: #1e4129;
   }
-  .campo::before {
+  .dark .campo::before {
     background:
       radial-gradient(circle at 0% 9rem, rgba(255, 250, 225, 0.7) 0, rgba(255, 248, 214, 0.25) 1.6rem, rgba(255, 248, 214, 0) 4.5rem),
       radial-gradient(circle at 100% 9rem, rgba(255, 250, 225, 0.7) 0, rgba(255, 248, 214, 0.25) 1.6rem, rgba(255, 248, 214, 0) 4.5rem),
@@ -93,7 +94,7 @@ body {
       radial-gradient(ellipse 95% 60% at 100% calc(100% - 2rem), rgba(255, 244, 200, 0.26), rgba(255, 244, 200, 0) 70%),
       repeating-linear-gradient(to right, var(--erba-chiara) 0 48px, var(--erba-scura) 48px 96px);
   }
-}
+
 
 /* Le linee del campo, che scorrono con la pagina: bordi bianchi tutto intorno, metà campo con il cerchio
    a metà pagina, e una porta con le sue aree in cima (si vede appena aperta la pagina) e una in fondo
@@ -125,9 +126,8 @@ body {
     url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='300'%20height='100'%20viewBox='0%200%20300%20100'%3E%3Cg%20fill='none'%20stroke='white'%20stroke-width='2'%3E%3Crect%20x='115'%20y='1'%20width='70'%20height='13'/%3E%3Cpath%20d='M125%201v13M135%201v13M145%201v13M155%201v13M165%201v13M175%201v13M115%207.5h70'%20stroke-width='0.75'%20stroke-opacity='0.7'/%3E%3Crect%20x='95'%20y='14'%20width='110'%20height='24'/%3E%3Crect%20x='40'%20y='14'%20width='220'%20height='62'/%3E%3Cpath%20d='M114.3%2076A40%2040%200%200%200%20185.7%2076'/%3E%3C/g%3E%3Ccircle%20cx='150'%20cy='56'%20r='2.2'%20fill='white'/%3E%3C/svg%3E") top center / 300px 100px no-repeat,
     url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='300'%20height='100'%20viewBox='0%200%20300%20100'%3E%3Cg%20transform='matrix%281%200%200%20-1%200%20100%29'%3E%3Cg%20fill='none'%20stroke='white'%20stroke-width='2'%3E%3Crect%20x='115'%20y='1'%20width='70'%20height='13'/%3E%3Cpath%20d='M125%201v13M135%201v13M145%201v13M155%201v13M165%201v13M175%201v13M115%207.5h70'%20stroke-width='0.75'%20stroke-opacity='0.7'/%3E%3Crect%20x='95'%20y='14'%20width='110'%20height='24'/%3E%3Crect%20x='40'%20y='14'%20width='220'%20height='62'/%3E%3Cpath%20d='M114.3%2076A40%2040%200%200%200%20185.7%2076'/%3E%3C/g%3E%3Ccircle%20cx='150'%20cy='56'%20r='2.2'%20fill='white'/%3E%3C/g%3E%3C/svg%3E") bottom center / 300px 100px no-repeat;
 }
-@media (prefers-color-scheme: dark) {
-  .linee-campo::before,
-  .linee-campo::after {
+  .dark .linee-campo::before,
+.dark .linee-campo::after {
     opacity: 0.12;
   }
-}
+

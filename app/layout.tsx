@@ -10,6 +10,8 @@ import { getLingua } from "@/lib/lingua";
 import { localizzazioneClerk } from "@/lib/i18n/clerk";
 import { Suspense } from "react";
 import "./globals.css";
+import { TemaSera } from "@/components/tema-sera";
+import { SCRIPT_TEMA } from "@/lib/tema";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -43,7 +45,12 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       suppressHydrationWarning
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
+      <head>
+        {/* tema scuro di sera (o con il telefono in modalità scura), deciso prima di disegnare la pagina */}
+        <script dangerouslySetInnerHTML={{ __html: SCRIPT_TEMA }} />
+      </head>
       <body className="min-h-full flex flex-col">
+        <TemaSera />
         {/* la lingua viene dal cookie: tutta l'app è dentro, così ogni testo sa in che lingua mostrarsi */}
         <Suspense>
           <ConLingua>
