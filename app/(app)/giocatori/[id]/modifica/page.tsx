@@ -6,6 +6,7 @@ import { getPlayer } from '@/lib/matches'
 import { Loading, PageTitle } from '@/components/ui'
 import { getT } from '@/lib/lingua'
 import { PlayerForm } from '../../player-form'
+import { AggiornaAllApertura } from '@/components/aggiorna-all-apertura'
 
 export default function ModificaGiocatorePage({ params }: PageProps<'/giocatori/[id]/modifica'>) {
   return (
@@ -23,7 +24,9 @@ async function Form({ params }: { params: Promise<{ id: string }> }) {
   return (
     <>
       <PageTitle>{t('Modifica {nome}', { nome: displayName(player) })}</PageTitle>
-      <PlayerForm action={salvaGiocatore.bind(null, player._id)} player={player} submitLabel={t('Salva')} />
+      <AggiornaAllApertura />
+      {/* key: con dati più nuovi (altra revisione) il modulo riparte da quelli */}
+      <PlayerForm key={player._rev} action={salvaGiocatore.bind(null, player._id)} player={player} submitLabel={t('Salva')} />
     </>
   )
 }

@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { AggiornaAllApertura } from '@/components/aggiorna-all-apertura'
 import { notFound } from 'next/navigation'
 import { Suspense } from 'react'
 import { salvaRisultato } from '@/app/actions'
@@ -68,7 +69,8 @@ async function Editor({ params }: { params: Promise<{ id: string }> }) {
       <p className="text-sm capitalize text-zinc-500">
         {t.data(match.data)} · {match.luogo}
       </p>
-      <RisultatoEditor
+      <AggiornaAllApertura />
+      <RisultatoEditor key={match._rev}
         action={salvaRisultato.bind(null, match._id)}
         squadre={[
           { chiave: 'A', nome: match.nomeA ?? nomeSquadra('A', t), colore: 'border-t-blue-500', giocatori: match.squadraA.map(giocatore) },

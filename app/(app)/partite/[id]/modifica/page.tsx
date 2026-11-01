@@ -7,6 +7,7 @@ import { getMatch } from '@/lib/matches'
 import { Loading, PageTitle } from '@/components/ui'
 import { getT } from '@/lib/lingua'
 import { MatchForm } from '../../match-form'
+import { AggiornaAllApertura } from '@/components/aggiorna-all-apertura'
 
 export default async function ModificaPartitaPage({ params }: PageProps<'/partite/[id]/modifica'>) {
   const t = await getT()
@@ -35,7 +36,8 @@ async function Form({ params }: { params: Promise<{ id: string }> }) {
           </Link>
         </p>
       )}
-      <MatchForm action={salvaPartita.bind(null, match._id)} match={match} submitLabel={t('Salva')} />
+      <AggiornaAllApertura />
+      <MatchForm key={match._rev} action={salvaPartita.bind(null, match._id)} match={match} submitLabel={t('Salva')} />
     </div>
   )
 }

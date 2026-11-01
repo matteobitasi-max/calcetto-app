@@ -2,7 +2,7 @@
 
 import { randomInt, randomUUID } from 'node:crypto'
 import { cookies } from 'next/headers'
-import { refresh } from 'next/cache'
+import { refresh, revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { sanity } from '@/lib/sanity'
 import { BADGE, CATEGORIE_NOTIFICHE, COOKIE_LEGA, eta, normalizzaTelefono, PIEDI, RUOLI, SKILLS, displayName, requirePlayer, getUtente, getMemberships, isTitolare, membroDi, soloGiocatore, requireAdmin, requireForDoc, requireIn, type Player, type Skill } from '@/lib/player'
@@ -277,7 +277,8 @@ export async function salvaPartita(matchId: string | null, _prev: FormState, for
       durataFinestraMinuti: durataFinestra,
     })
     await assicuraRicorrenze({ serie: { ...(serie as unknown as Series), legaId: admin.lega._id } })
-    refresh()
+    // svuota la memoria delle pagine dell'app: riaprendo una pagina (es. Modifica) si vedono i dati nuovi
+    revalidatePath('/', 'layout')
     redirect(`/partite/${occurrenceId(serie._id, giorno)}`)
   }
 
@@ -320,7 +321,8 @@ export async function salvaPartita(matchId: string | null, _prev: FormState, for
     })
     id = doc._id
   }
-  refresh()
+  // svuota la memoria delle pagine dell'app: riaprendo una pagina (es. Modifica) si vedono i dati nuovi
+  revalidatePath('/', 'layout')
   redirect(`/partite/${id}`)
 }
 
@@ -556,7 +558,8 @@ export async function salvaRisultato(matchId: string, _prev: FormState, formData
   // Tabellone: con il vincitore si crea (se si può) la partita del turno dopo.
   if (match.torneo && match.torneo.formato !== 'girone') await aggiornaTabellone(match.torneo._id)
   await avvisaProposte(match).catch(() => undefined)
-  refresh()
+  // svuota la memoria delle pagine dell'app: riaprendo una pagina (es. Modifica) si vedono i dati nuovi
+  revalidatePath('/', 'layout')
   redirect(`/partite/${matchId}`)
 }
 
@@ -642,7 +645,8 @@ export async function salvaSerie(seriesId: string, _prev: FormState, formData: F
 
   await rimuoviFutureVuote(seriesId)
   if (current.attiva !== false) await assicuraRicorrenze({ serie: { ...current, ...fields, ...optional } })
-  refresh()
+  // svuota la memoria delle pagine dell'app: riaprendo una pagina (es. Modifica) si vedono i dati nuovi
+  revalidatePath('/', 'layout')
   redirect('/partite/ricorrenti')
 }
 
@@ -755,7 +759,8 @@ export async function salvaGiocatore(playerId: string | null, _prev: FormState, 
   } else {
     id = (await sanity.create({ _type: 'player', lega: { _type: 'reference', _ref: admin.lega._id }, ...fields }))._id
   }
-  refresh()
+  // svuota la memoria delle pagine dell'app: riaprendo una pagina (es. Modifica) si vedono i dati nuovi
+  revalidatePath('/', 'layout')
   redirect(`/giocatori/${id}`)
 }
 
@@ -938,7 +943,8 @@ async function entraConInvito(codice: string, utente: Utente) {
     else await nuovaScheda(lega._id, utente, false)
   }
   await attivaLega(lega._id)
-  refresh()
+  // svuota la memoria delle pagine dell'app: riaprendo una pagina (es. Modifica) si vedono i dati nuovi
+  revalidatePath('/', 'layout')
   redirect('/')
 }
 
@@ -970,7 +976,8 @@ export async function aggiungimiAllaLega(legaId: string) {
     else await nuovaScheda(legaId, utente, true)
   }
   await attivaLega(legaId)
-  refresh()
+  // svuota la memoria delle pagine dell'app: riaprendo una pagina (es. Modifica) si vedono i dati nuovi
+  revalidatePath('/', 'layout')
   redirect('/')
 }
 
@@ -1342,10 +1349,14 @@ export async function unisciSchede(tieniId: string, togliId: string) {
       .filter((k) => !(tieni as Record<string, unknown>)[k] && (togli as Record<string, unknown>)[k])
       .map((k) => [k, (togli as Record<string, unknown>)[k]]),
   )
+  // email finta (es. mario@finta.invalid) o mancante nella scheda giusta: prende quella vera del doppione
+  const emailFinta = !tieni.email || /\.(invalid|example|test)$|@(example|esempio|finta)\./i.test(tieni.email)
+  if (emailFinta && togli.email && togli.email !== tieni.email) (completa as Record<string, unknown>).email = togli.email
   if (Object.keys(completa).length) tx.patch(tieniId, (p) => p.set(completa))
   tx.delete(togliId)
   await tx.commit()
-  refresh()
+  // svuota la memoria delle pagine dell'app: riaprendo una pagina (es. Modifica) si vedono i dati nuovi
+  revalidatePath('/', 'layout')
   redirect(`/giocatori/${tieniId}`)
 }
 
@@ -1945,7 +1956,8 @@ export async function creaTorneo(_prev: FormState, formData: FormData): Promise<
       })).catch(() => undefined),
     ),
   )
-  refresh()
+  // svuota la memoria delle pagine dell'app: riaprendo una pagina (es. Modifica) si vedono i dati nuovi
+  revalidatePath('/', 'layout')
   redirect(`/tornei/${torneo._id}`)
 }
 
@@ -2005,7 +2017,8 @@ export async function salvaSquadreTorneo(torneoId: string, _prev: FormState, for
   })
   aggiornaPartiteDaGiocare(tx, await partiteDaGiocare(torneoId), squadre)
   await tx.commit()
-  refresh()
+  // svuota la memoria delle pagine dell'app: riaprendo una pagina (es. Modifica) si vedono i dati nuovi
+  revalidatePath('/', 'layout')
   redirect(`/tornei/${torneoId}`)
 }
 
@@ -2086,7 +2099,8 @@ async function entra(torneo: TorneoSquadre | null, squadra: SquadraDoc | undefin
       })).catch(() => undefined)
     }
   }
-  refresh()
+  // svuota la memoria delle pagine dell'app: riaprendo una pagina (es. Modifica) si vedono i dati nuovi
+  revalidatePath('/', 'layout')
   redirect(`/tornei/${torneo._id}`)
 }
 
@@ -2139,7 +2153,8 @@ export async function salvaMiaSquadra(torneoId: string, chiave: string, _prev: F
   const tx = sanity.transaction().patch(torneo._id, (p) => p.ifRevisionId(torneo._rev).set({ squadre }))
   aggiornaPartiteDaGiocare(tx, await partiteDaGiocare(torneo._id), squadre)
   await tx.commit()
-  refresh()
+  // svuota la memoria delle pagine dell'app: riaprendo una pagina (es. Modifica) si vedono i dati nuovi
+  revalidatePath('/', 'layout')
   redirect(`/tornei/${torneoId}`)
 }
 
@@ -2399,7 +2414,8 @@ export async function eliminaTorneo(torneoId: string) {
   for (const id of partite) tx.delete(id)
   tx.delete(torneoId)
   await tx.commit()
-  refresh()
+  // svuota la memoria delle pagine dell'app: riaprendo una pagina (es. Modifica) si vedono i dati nuovi
+  revalidatePath('/', 'layout')
   redirect('/tornei')
 }
 
