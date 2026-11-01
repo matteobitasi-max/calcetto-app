@@ -113,7 +113,9 @@ export function FormazioniEditor({
           type="button"
           onClick={() => sposta(g._id, l === x ? null : x)}
           className={`h-8 w-8 rounded-full text-sm font-bold ${
-            l === x ? `${SQUADRE[x].barra} text-white` : 'border border-zinc-300 text-zinc-500 hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-800'
+            l === x
+              ? `${SQUADRE[x].barra} text-white shadow-sm`
+              : 'border-2 border-zinc-300 bg-white text-zinc-700 shadow-sm hover:bg-zinc-100 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-700'
           }`}
           aria-label={t('Metti {nome} nella {squadra}', { nome: g.nome, squadra: nome(x) })}
         >
@@ -148,7 +150,7 @@ export function FormazioniEditor({
       </p>
 
       {liberi.length > 0 && (
-        <section className="rounded-xl border border-dashed border-zinc-300 p-4 dark:border-zinc-700">
+        <section className="rounded-xl border-2 border-dashed border-zinc-300 bg-white p-4 dark:border-zinc-600 dark:bg-zinc-900">
           <h2 className="mb-3 text-sm font-semibold">{t('Da assegnare ({n})', { n: liberi.length })}</h2>
           <ul className="space-y-2">
             {liberi.map((g) => riga(g, null))}
@@ -210,7 +212,7 @@ export function FormazioniEditor({
                 className={`rounded-full border px-3 py-1 text-sm ${
                   pettorine === x
                     ? `${x ? SQUADRE[x].barra : 'bg-zinc-600'} border-transparent text-white`
-                    : 'border-zinc-300 hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-800'
+                    : 'border-zinc-300 bg-white text-zinc-800 shadow-sm hover:bg-zinc-100 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100 dark:hover:bg-zinc-700'
                 }`}
               >
                 {x ? nome(x) : t('Nessuna')}
