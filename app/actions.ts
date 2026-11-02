@@ -1213,10 +1213,23 @@ async function scriviKm(matchId: string, playerId: string, km: number | null, fo
 }
 
 // Km letti da Apple Salute nell'app per iPhone (non si inseriscono a mano).
+// Più di così non si corre: 10 km per ogni ora di partita (anche i professionisti stanno sotto).
+// Valori più alti vengono da un'app che salva la distanza di tutto il giorno in un solo dato.
+const KM_ORA_MAX = 10
+
 export async function salvaKm(matchId: string, km: number, fonte: 'salute'): Promise<{ error?: string }> {
-  const { me } = await partitaPerKm(matchId)
+  const { me, match } = await partitaPerKm(matchId)
   if (fonte !== 'salute') return { error: await tr('I km si prendono dall\u2019app Salute del telefono.') }
-  if (!Number.isFinite(km) || km <= 0 || km > 30) return { error: await tr('Dall\u2019app Salute arriva una distanza non valida.') }
+  const massimo = (KM_ORA_MAX * (match.durataMinuti ?? 60)) / 60
+  if (!Number.isFinite(km) || km <= 0) return { error: await tr('Dall\u2019app Salute arriva una distanza non valida.') }
+  if (km > massimo) {
+    return {
+      error: await tr('{km} km in {min} minuti non sono possibili: forse un’app salva in Salute la distanza di tutto il giorno. Riprova dopo aver aggiornato The Cap.', {
+        km: Math.round(km * 10) / 10,
+        min: match.durataMinuti ?? 60,
+      }),
+    }
+  }
   await scriviKm(matchId, me._id, Math.round(km * 100) / 100, fonte)
   return {}
 }
