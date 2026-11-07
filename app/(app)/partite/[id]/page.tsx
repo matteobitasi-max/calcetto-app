@@ -6,6 +6,7 @@ import { forza, nomeSquadra, numeroSquadra } from '@/lib/teams'
 import { IntervisteLega } from '@/components/interviste-lega'
 import { finestra, formatoInCorso, getMatch, getPlayers, orarioPartita, ordinati, presenti, risultatoDa, type Match, type Risposta } from '@/lib/matches'
 import { getCollegamento, stravaConfigurato } from '@/lib/strava'
+import { CampoFormazioni } from '@/components/campo-formazioni'
 import { KmPartita } from '@/components/km-partita'
 import { MeteoPartita } from '@/components/meteo-partita'
 import { getT } from '@/lib/lingua'
@@ -281,6 +282,9 @@ function Squadre({ match, mioId, gestisci, t }: { match: Match; mioId: string; g
           {match.torneo ? t('La tua squadra: {squadra}', { squadra: nome(mia) }) : t('Sei nella {squadra}', { squadra: nome(mia) })}
           {match.pettorine === mia && ` · 🦺 ${t('porta la pettorina!')}`}
         </p>
+      )}
+      {match.squadraA.length > 0 && match.squadraB.length > 0 && (
+        <CampoFormazioni seme={match._id} squadre={{ A: match.squadraA, B: match.squadraB }} nomi={{ A: nome('A'), B: nome('B') }} pettorine={match.pettorine} mioId={mioId} />
       )}
       <div className="grid gap-4 sm:grid-cols-2">
         {teams.map(([lettera, players, color]) => {
