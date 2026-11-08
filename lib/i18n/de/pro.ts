@@ -67,4 +67,5 @@ export const pro: Record<string, string> = {
   "Riattiva o gestisci l’abbonamento": "Abo reaktivieren oder verwalten",
   "Disdici o gestisci l’abbonamento": "Abo kündigen oder verwalten",
   "La disdetta si fa dallo store: Pro resta attivo fino alla fine del periodo già pagato.": "Gekündigt wird im Store: Pro bleibt bis zum Ende des bereits bezahlten Zeitraums aktiv.",
+  "In {lega} il Pro è attivo grazie a un altro organizzatore: tutti vedono la forma e i tornei. Per creare tornei e approvare i voti serve il tuo abbonamento.": "In {lega} ist Pro dank eines anderen Organisators aktiv: Alle sehen die Form und die Turniere. Um Turniere zu erstellen und Bewertungen zu bestätigen, brauchst du ein eigenes Abo.",
 }

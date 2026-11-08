@@ -3,7 +3,7 @@ import { Suspense } from 'react'
 import { decidiProposta } from '@/app/actions'
 import { requireAdmin, SKILLS, type Skill } from '@/lib/player'
 import { getPlayers } from '@/lib/matches'
-import { formaDellaLega, legaPro } from '@/lib/pro'
+import { formaDellaLega, ioPro } from '@/lib/pro'
 import { PARTITE_PER_REVISIONE, type Proposta } from '@/lib/forma'
 import { SubmitButton } from '@/components/submit-button'
 import { Card, Loading, PageTitle, PlayerRow, buttonClass } from '@/components/ui'
@@ -28,7 +28,7 @@ export default async function PropostePage() {
 async function Proposte() {
   const [me, t] = await Promise.all([requireAdmin(), getT()])
   const numero = (n: number) => t.numero(n, { maximumFractionDigits: 2 })
-  if (!(await legaPro(me.lega._id))) {
+  if (!(await ioPro(me.lega._id))) {
     return (
       <Card className="space-y-2 text-sm">
         <p>

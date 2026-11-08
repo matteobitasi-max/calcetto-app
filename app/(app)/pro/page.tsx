@@ -4,7 +4,7 @@ import { MarchioPro } from '@/components/logo-c'
 import { getUtente, requirePlayer } from '@/lib/player'
 import { chiaviRevenueCat, mioAbbonamento, pagamentiConfigurati } from '@/lib/abbonamenti'
 import { AttivaPro } from '@/components/attiva-pro'
-import { legaPro } from '@/lib/pro'
+import { ioPro, legaPro } from '@/lib/pro'
 import { ButtonLink, Card, Loading, PageTitle } from '@/components/ui'
 import { getT } from '@/lib/lingua'
 
@@ -60,7 +60,7 @@ const FUNZIONI: { titolo: string; voci: [ReactNode, string][]; link?: [string, s
 // Cosa comprende la versione Pro, e se è attiva nella lega in cui sono.
 async function Vetrina() {
   const [me, t, utente] = await Promise.all([requirePlayer(), getT(), getUtente()])
-  const [attiva, mio] = await Promise.all([legaPro(me.lega._id), utente ? mioAbbonamento(utente.id) : null])
+  const [attiva, mio, mioPro] = await Promise.all([legaPro(me.lega._id), utente ? mioAbbonamento(utente.id) : null, me.isAdmin ? ioPro(me.lega._id) : false])
   return (
     <div className="space-y-4">
       {utente && pagamentiConfigurati() ? (
@@ -76,7 +76,12 @@ async function Vetrina() {
         </Card>
       ) : null}
       <Card className={attiva ? 'border-green-600 bg-green-50 dark:bg-green-950' : ''}>
-        {attiva ? (
+        {attiva && me.isAdmin && !mioPro ? (
+          // il Pro della lega è di un altro organizzatore: i membri vedono forma e tornei, ma le funzioni da organizzatore sono di chi paga
+          <p className="text-sm font-medium text-green-900 dark:text-green-200">
+            {t('In {lega} il Pro è attivo grazie a un altro organizzatore: tutti vedono la forma e i tornei. Per creare tornei e approvare i voti serve il tuo abbonamento.', { lega: me.lega.nome })}
+          </p>
+        ) : attiva ? (
           <p className="text-sm font-medium text-green-900 dark:text-green-200">
             ✅ {t('La versione Pro è attiva in {lega}: tutto quello che vedi qui sotto è già disponibile.', { lega: me.lega.nome })}
           </p>

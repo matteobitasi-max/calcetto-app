@@ -21,7 +21,7 @@ import { VERSIONE_TERMINI, type Consensi } from '@/lib/consensi'
 import { LETTERE_GIRONI, SQUADRE_PREDEFINITE, classifica, nomePredefinito, giornate, incrociGironi } from '@/lib/girone'
 import { daCreare, primoTurnoTeste, primoTurnoValido, tabellone } from '@/lib/tabellone'
 import { nomeSquadra } from '@/lib/teams'
-import { formaDellaLega, legaPro } from '@/lib/pro'
+import { formaDellaLega, ioPro, legaPro, organizzatoriPro } from '@/lib/pro'
 import { sincronizzaAbbonamento } from '@/lib/abbonamenti'
 import { COOKIE_LINGUA, isLingua, type T } from '@/lib/i18n'
 import { getLingua, getT } from '@/lib/lingua'
@@ -485,7 +485,7 @@ export async function togliDallaPartita(matchId: string, giocatoreId: string) {
 // così vale quella aggiornata; in tutti e due i casi la prossima guarda solo le partite giocate dopo.
 export async function decidiProposta(giocatoreId: string, approva: boolean) {
   const admin = await requireForDoc(giocatoreId, 'organizzatore')
-  if (!(await legaPro(admin.lega._id))) throw new Error('Funzione della versione Pro')
+  if (!(await ioPro(admin.lega._id))) throw new Error('Funzione della versione Pro')
   const proposta = (await formaDellaLega(admin.lega._id)).proposte.find((p) => p.giocatoreId === giocatoreId)
   if (!proposta) return refresh()
   const patch = sanity.patch(giocatoreId).set({ revisioneIl: proposta.fino })
@@ -564,15 +564,13 @@ export async function salvaRisultato(matchId: string, _prev: FormState, formData
 }
 
 // Pro: quando un giocatore di questa partita arriva a PARTITE_PER_REVISIONE partite dall'ultima revisione
-// dei suoi voti, gli organizzatori ricevono un avviso con le proposte da rivedere.
+// dei suoi voti, gli organizzatori con Pro ricevono un avviso con le proposte da rivedere.
 async function avvisaProposte(match: Match) {
   if (!(await legaPro(match.legaId))) return
   const inCampo = new Set([...match.squadraA, ...match.squadraB].map((p) => p._id))
   const { proposte } = await formaDellaLega(match.legaId)
   if (!proposte.some((p) => inCampo.has(p.giocatoreId) && p.partite % PARTITE_PER_REVISIONE === 0)) return
-  const organizzatori = await sanity.fetch<string[]>(`*[_type == "player" && lega._ref == $lega && isAdmin == true && attivo != false]._id`, {
-    lega: match.legaId,
-  })
+  const organizzatori = await organizzatoriPro(match.legaId)
   await inviaAGiocatori(organizzatori, (t) => ({
     title: `📈 ${t('Nuove proposte di voto')}`,
     body: t.n(proposte.length, '{n} giocatore da rivedere: approva o scarta i nuovi voti.', '{n} giocatori da rivedere: approva o scarta i nuovi voti.'),

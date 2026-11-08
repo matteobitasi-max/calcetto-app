@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation'
 import { Suspense, type ReactNode } from 'react'
 import { displayName, membroDi } from '@/lib/player'
 import { getPartiteTorneo, type Match } from '@/lib/matches'
-import { getTorneo, iscrizioniAperte } from '@/lib/tornei'
+import { getTorneo, iscrizioniAperte, puoCreareTornei } from '@/lib/tornei'
 import { classifica } from '@/lib/girone'
 import { nomeTurno, tabellone, type Incrocio } from '@/lib/tabellone'
 import { getT } from '@/lib/lingua'
@@ -26,7 +26,7 @@ async function Torneo({ params }: { params: Promise<{ id: string }> }) {
   const torneo = await getTorneo(id)
   const me = await membroDi(torneo?.legaId)
   if (!torneo || !me) notFound()
-  const [partite, t] = await Promise.all([getPartiteTorneo(torneo._id), getT()])
+  const [partite, t, gestisco] = await Promise.all([getPartiteTorneo(torneo._id), getT(), me.isAdmin ? puoCreareTornei(torneo.legaId) : false])
 
   const colore = new Map(torneo.squadre.map((s) => [s._key, s.colore]))
   const foto = new Map(torneo.squadre.map((s) => [s._key, avatarUrl(s.logo, 96)]))
@@ -158,9 +158,9 @@ async function Torneo({ params }: { params: Promise<{ id: string }> }) {
         ← {t('Tornei')}
       </Link>
 
-      {/* Intestazione: nome, lega, formato, iscrizioni e avanzamento; la matita apre le impostazioni */}
+      {/* Intestazione: nome, lega, formato, iscrizioni e avanzamento; la matita apre le impostazioni (organizzatori con Pro) */}
       <Card className="relative space-y-4 overflow-hidden border-amber-300! bg-gradient-to-br from-amber-50 via-white to-white dark:border-amber-700/60! dark:from-amber-950/50 dark:via-zinc-900 dark:to-zinc-900">
-        {me.isAdmin && (
+        {gestisco && (
           <Link
             href={`/tornei/${torneo._id}/impostazioni`}
             aria-label={t('Impostazioni torneo')}

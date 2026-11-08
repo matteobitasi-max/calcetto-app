@@ -7,7 +7,7 @@ import { SwipeRiga } from '@/components/swipe-riga'
 import { convocaGiocatore, rimuoviDallaLega } from '@/app/actions'
 import type { ReactNode } from 'react'
 import Link from 'next/link'
-import { formaDellaLega, legaPro } from '@/lib/pro'
+import { formaDellaLega, ioPro, legaPro } from '@/lib/pro'
 
 export default function GiocatoriPage() {
   return (
@@ -19,13 +19,14 @@ export default function GiocatoriPage() {
 
 async function Rosa() {
   const me = await requirePlayer()
-  const [players, prossime, pro] = await Promise.all([
+  const [players, prossime, pro, mioPro] = await Promise.all([
     getPlayers(me.lega._id),
     me.isAdmin ? getUpcomingMatches(me.lega._id) : [],
     legaPro(me.lega._id),
+    me.isAdmin ? ioPro(me.lega._id) : false,
   ])
   const t = await getT()
-  // Pro: forma di ognuno (freccia accanto al voto) e, per gli organizzatori, le proposte di nuovi voti
+  // Pro: forma di ognuno (freccia accanto al voto, la vedono tutti) e, per gli organizzatori con il loro Pro, le proposte di nuovi voti
   const analisi = pro ? await formaDellaLega(me.lega._id) : null
   // la prossima partita (non di un torneo) in cui l'organizzatore può convocare chi non si è ancora convocato
   const prossima = prossime.find((m) => !m.torneo)
@@ -77,7 +78,7 @@ async function Rosa() {
       >
         {t('Rosa')} <span className="text-base font-normal text-zinc-500">({attivi.length})</span>
       </PageTitle>
-      {me.isAdmin && analisi && analisi.proposte.length > 0 && (
+      {mioPro && analisi && analisi.proposte.length > 0 && (
         <Link
           href="/giocatori/proposte"
           className="mb-4 flex items-center justify-between gap-2 rounded-xl bg-green-50 p-3 text-sm font-medium text-green-900 hover:bg-green-100 dark:bg-green-950 dark:text-green-200 dark:hover:bg-green-900"
@@ -88,7 +89,7 @@ async function Rosa() {
           <span aria-hidden>›</span>
         </Link>
       )}
-      {me.isAdmin && !pro && (
+      {me.isAdmin && !mioPro && (
         <p className="mb-4 rounded-xl bg-zinc-50 p-3 text-xs text-zinc-600 dark:bg-zinc-800/50 dark:text-zinc-300">
           <span className="mr-1 rounded bg-amber-400 px-1.5 py-0.5 text-[10px] font-bold text-zinc-900">PRO</span>
           {t('Forma dei giocatori (↑↓ accanto al voto), formazioni che ne tengono conto e proposte automatiche per aggiornare i voti ogni 5 partite.')}{' '}
