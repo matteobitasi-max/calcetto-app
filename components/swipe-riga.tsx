@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useId, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useId, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import { SubmitButton } from './submit-button'
 
 // Larghezza dei pulsanti che compaiono sotto la riga.
@@ -33,6 +33,19 @@ export function SwipeRiga({ children, sinistra, destra }: { children: ReactNode;
     window.addEventListener(EVENTO, chiudi)
     return () => window.removeEventListener(EVENTO, chiudi)
   }, [id])
+
+  // Cambiando scheda Next tiene la pagina in memoria così com'è: lasciandola la riga si richiude,
+  // e anche quando l'app va in secondo piano.
+  useLayoutEffect(() => {
+    const nascosta = () => document.visibilityState === 'hidden' && setDx(0)
+    document.addEventListener('visibilitychange', nascosta)
+    return () => {
+      document.removeEventListener('visibilitychange', nascosta)
+      gesto.current = null
+      setTrascino(false)
+      setDx(0)
+    }
+  }, [])
 
   const fine = () => {
     const g = gesto.current
@@ -97,8 +110,9 @@ export function SwipeRiga({ children, sinistra, destra }: { children: ReactNode;
           if (appenaMosso.current || aperto) {
             e.preventDefault()
             e.stopPropagation()
+            // il clic che segue lo swipe (col mouse) non deve richiudere la riga appena aperta
+            if (!appenaMosso.current && !gesto.current) setDx(0)
             appenaMosso.current = false
-            if (!gesto.current) setDx(0)
           }
         }}
       >
