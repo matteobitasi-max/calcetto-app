@@ -1310,7 +1310,7 @@ export async function inviaComunicazione(_prev: AvvisoState, formData: FormData)
   if (!me.isAdmin && me.badge !== 'capitano') return { error: await tr('Solo il capitano e gli organizzatori possono scrivere alla squadra.') }
   const testo = str(formData, 'testo')
   if (testo.length < 2) return { error: await tr('Scrivi un messaggio.') }
-  if (testo.length > 300) return { error: await tr('Massimo 300 caratteri.') }
+  if (testo.length > 150) return { error: await tr('Massimo 150 caratteri.') }
   return inviaATutti(me.lega._id, { title: `📢 ${displayName(me)} · ${me.lega.nome}`, body: testo, url: '/', tag: `comunicazione-${Date.now()}` }, 'capitano')
 }
 

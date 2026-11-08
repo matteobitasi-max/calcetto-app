@@ -32,14 +32,14 @@ export function ScriviSquadra() {
         <textarea
           name="testo"
           rows={3}
-          maxLength={300}
+          maxLength={150}
           value={testo}
           onChange={(e) => setTesto(e.target.value)}
           placeholder={t('Es. Ricordate le pettorine 💪')}
           className={inputClass}
         />
         <div className="flex items-center justify-between gap-2">
-          <span className="text-xs text-zinc-400">{testo.length}/300</span>
+          <span className="text-xs text-zinc-400">{testo.length}/150</span>
           <span className="flex gap-2">
             {/* WhatsApp non permette di scrivere da soli in un gruppo: si apre con il testo pronto e si sceglie il gruppo */}
             <a

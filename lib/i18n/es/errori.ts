@@ -38,7 +38,7 @@ export const errori: Record<string, string> = {
   "Su Strava non c’è un’attività durante l’orario della partita.": "En Strava no hay ninguna actividad durante el horario del partido.",
   "Solo il capitano e gli organizzatori possono scrivere alla squadra.": "Solo el capitán y los organizadores pueden escribir al equipo.",
   "Scrivi un messaggio.": "Escribe un mensaje.",
-  "Massimo 300 caratteri.": "Máximo 300 caracteres.",
+  "Massimo 150 caratteri.": "Máximo 150 caracteres.",
   "La data di nascita non sembra valida.": "La fecha de nacimiento no parece válida.",
   "Nome e cognome: massimo 40 caratteri.": "Nombre y apellidos: máximo 40 caracteres.",
   "Il numero di telefono non sembra valido.": "El número de teléfono no parece válido.",
