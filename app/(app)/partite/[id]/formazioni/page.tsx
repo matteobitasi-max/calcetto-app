@@ -8,6 +8,7 @@ import { avatarUrl } from '@/lib/image'
 import { getT } from '@/lib/lingua'
 import { sanity } from '@/lib/sanity'
 import { formaDellaLega, ioPro } from '@/lib/pro'
+import { conConvocazioniAggiornate } from '@/lib/chiusura'
 import { Card, Loading, PageTitle } from '@/components/ui'
 import { FormazioniEditor, type GiocatoreFormazione } from './formazioni-editor'
 
@@ -25,9 +26,11 @@ export default async function FormazioniPage({ params }: PageProps<'/partite/[id
 
 async function Editor({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  const match = await getMatch(id)
-  if (!match) notFound()
-  const [, t] = await Promise.all([requireIn(match.legaId, 'organizzatore'), getT()])
+  const trovata = await getMatch(id)
+  if (!trovata) notFound()
+  const [, t] = await Promise.all([requireIn(trovata.legaId, 'organizzatore'), getT()])
+  // tempo scaduto: le convocazioni si chiudono adesso, senza passare dal pulsante
+  const match = await conConvocazioniAggiornate(trovata)
 
   const indietro = (
     <Link href={`/partite/${match._id}`} className="text-sm text-green-700 hover:underline dark:text-green-400">

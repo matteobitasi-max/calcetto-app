@@ -11,10 +11,11 @@ import { idPlaylist, intervisteDellaPlaylist } from '@/lib/interviste'
 import { kmStrava, scollega, stravaConfigurato, urlCollegamento } from '@/lib/strava'
 import { SITO, baseUrl } from '@/lib/url'
 import { cercaCitta } from '@/lib/meteo'
-import { MAX_GIOCATORI, MAX_ISCRITTI, formatoDaIscritti } from '@/lib/limiti'
+import { MAX_GIOCATORI, MAX_ISCRITTI } from '@/lib/limiti'
 import { riscriviPartita, type MatchDaUnire } from '@/lib/unisci'
 import { daysBetween, romeLocalToISO } from '@/lib/dates'
 import { inviaAGiocatori, inviaATutti, rimuoviIscrizione, salvaIscrizione, salvaTokenNativo, type PushSub } from '@/lib/push'
+import { chiudiConvocazioni, convocati } from '@/lib/chiusura'
 import { assicuraRicorrenze, getSeries, occurrenceId, rimuoviFutureVuote, type Series } from '@/lib/series'
 import { getTorneo, iscrizioniAperte, puoCreareTornei } from '@/lib/tornei'
 import { VERSIONE_TERMINI, type Consensi } from '@/lib/consensi'
@@ -331,41 +332,30 @@ const STATI: Stato[] = ['aperta', 'chiusa', 'giocata', 'annullata']
 export async function cambiaStato(matchId: string, stato: Stato) {
   await requireForDoc(matchId, 'organizzatore')
   if (!STATI.includes(stato)) throw new Error('Stato non valido')
-  const doc = await sanity.fetch<{ stato?: Stato; postiAutomatici?: boolean; postiDisponibili?: number; convocazioni?: (RawConvocazione & { aggiunto?: boolean })[] } | null>(
-    `*[_type == "match" && _id == $id][0]{stato, postiAutomatici, postiDisponibili, convocazioni}`,
+  // Chiudendo: stesse regole di quando si chiudono da sole a tempo scaduto (posti e avviso a chi è in lista).
+  if (stato === 'chiusa') {
+    await chiudiConvocazioni(matchId)
+    return refresh()
+  }
+  const doc = await sanity.fetch<{ stato?: Stato; postiAutomatici?: boolean; data?: string; chiusuraConvocazioni?: string; aperturaConvocazioni?: string; convocazioni?: (RawConvocazione & { aggiunto?: boolean })[] } | null>(
+    `*[_type == "match" && _id == $id][0]{stato, postiAutomatici, data, chiusuraConvocazioni, aperturaConvocazioni, convocazioni}`,
     { id: matchId },
   )
   const patch = sanity.patch(matchId).set({ stato })
 
-  // "In base alle convocazioni": chiudendo si gioca in numero pari (l'ultimo arrivato, se dispari,
-  // va in lista d'attesa); riaprendo si torna al massimo.
-  if (doc?.postiAutomatici && doc.convocazioni) {
-    const iscritti = doc.convocazioni.filter((c) => c.risposta !== 'assente').length
-    const posti =
-      stato === 'chiusa' && doc.stato === 'aperta' && iscritti >= 2
-        ? formatoDaIscritti(iscritti, doc.postiDisponibili).giocano
-        : stato === 'aperta' && doc.stato === 'chiusa'
-          ? MAX_ISCRITTI
-          : null
-    if (posti) patch.set({ postiDisponibili: posti, convocazioni: assegnaPosti(doc.convocazioni, posti) })
-  }
-  await patch.commit()
-  // Convocazioni chiuse: chi è in lista lo sa (e si ricorda le pettorine)
-  if (stato === 'chiusa' && doc?.stato !== 'chiusa') {
-    const match = await getMatch(matchId)
-    if (match) {
-      await inviaAGiocatori(
-        presenti(match).map((c) => c.giocatore._id),
-        (t) => ({
-          title: `🔒 ${t('Convocazioni chiuse')} – ${t('Ricordate le pettorine')}`,
-          body: `${t.data(match.data, { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })} · ${match.luogo}\n${convocati(match, t)}`,
-          url: `/partite/${matchId}`,
-          tag: matchId,
-        }),
-        'convocazioni',
-      ).catch(() => undefined)
+  if (stato === 'aperta' && doc?.stato === 'chiusa') {
+    // "In base alle convocazioni": riaprendo si torna al massimo.
+    if (doc.postiAutomatici && doc.convocazioni) patch.set({ postiDisponibili: MAX_ISCRITTI, convocazioni: assegnaPosti(doc.convocazioni, MAX_ISCRITTI) })
+    // A tempo scaduto si richiuderebbero da sole: la finestra si allunga di un'ora (non oltre l'inizio della partita).
+    if (doc.chiusuraConvocazioni && new Date(doc.chiusuraConvocazioni).getTime() <= Date.now() && doc.data) {
+      const fine = Math.min(Date.now() + 60 * 60_000, new Date(doc.data).getTime())
+      patch.set({
+        chiusuraConvocazioni: new Date(fine).toISOString(),
+        ...(doc.aperturaConvocazioni && { durataFinestraMinuti: Math.round((fine - new Date(doc.aperturaConvocazioni).getTime()) / 60_000) }),
+      })
     }
   }
+  await patch.commit()
   refresh()
 }
 
@@ -806,12 +796,6 @@ export async function allungaFinestra(matchId: string, minuti: number) {
 }
 
 export type AvvisoState = { inviate?: number; totali?: number; error?: string } | undefined
-
-// "7 convocati su 10" (o solo "7 convocati" quando il numero lo decidono le convocazioni).
-const convocati = (match: Match, t: T) => {
-  const n = presenti(match).length
-  return match.postiAutomatici ? t('{n} convocati', { n }) : t('{n} convocati su {posti}', { n, posti: match.postiDisponibili })
-}
 
 // Apre subito le convocazioni (se non lo sono già per orario) e avvisa tutti.
 export async function apriConvocazioni(matchId: string): Promise<AvvisoState> {

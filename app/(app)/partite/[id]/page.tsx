@@ -6,6 +6,8 @@ import { forza, nomeSquadra, numeroSquadra } from '@/lib/teams'
 import { finestra, formatoInCorso, getMatch, getPlayers, orarioPartita, ordinati, presenti, risultatoDa, type Match, type Risposta } from '@/lib/matches'
 import { getCollegamento, stravaConfigurato } from '@/lib/strava'
 import { CampoFormazioni } from '@/components/campo-formazioni'
+import { conConvocazioniAggiornate } from '@/lib/chiusura'
+import { VistaSquadre } from '@/components/vista-squadre'
 import { KmPartita } from '@/components/km-partita'
 import { MeteoPartita } from '@/components/meteo-partita'
 import { getT } from '@/lib/lingua'
@@ -33,10 +35,12 @@ export default function MatchPage({ params }: PageProps<'/partite/[id]'>) {
 
 async function MatchDetail({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  const match = await getMatch(id)
+  const trovata = await getMatch(id)
   // Le partite si vedono solo tra membri della lega; vale la mia scheda in quella lega.
-  const player = await membroDi(match?.legaId)
-  if (!match || !player) notFound()
+  const player = await membroDi(trovata?.legaId)
+  if (!trovata || !player) notFound()
+  // tempo scaduto: le convocazioni risultano già chiuse e si possono fare le formazioni
+  const match = await conConvocazioniAggiornate(trovata)
   const [rosa, attiva, t] = await Promise.all([getPlayers(match.legaId), getCurrentPlayer(), getT()])
 
   const count = presenti(match).length
@@ -269,6 +273,41 @@ function Squadre({ match, mioId, gestisci, t }: { match: Match; mioId: string; g
   const senzaSquadra = presenti(match)
     .map((c) => c.giocatore)
     .filter((p) => p && !inSquadra.has(p._id))
+  const elenco = (
+    <div className="grid gap-4 sm:grid-cols-2">
+      {teams.map(([lettera, players, color]) => {
+        const totale = players.reduce((s, p) => s + forza(p), 0)
+        return (
+          <Card key={lettera} className={`border-t-4 ${color}`}>
+            <h2 className="mb-3 flex items-center justify-between gap-2 font-semibold">
+              <span>
+                {nome(lettera)}
+                {match.pettorine === lettera && <span className="ml-2 rounded-full bg-zinc-100 px-2 py-0.5 text-xs font-normal dark:bg-zinc-800">🦺 {t('pettorine')}</span>}
+              </span>
+              <span className="text-sm font-normal text-zinc-500">{t('forza')} {t.numero(totale, { minimumFractionDigits: 1, maximumFractionDigits: 1 })}</span>
+            </h2>
+            <ul className="space-y-2">
+              {mioInCima(players, mioId, (p) => p._id).map((p) => (
+                <li key={p._id}>
+                  {gestisci ? (
+                    // swipe a sinistra: torna tra quelli da allocare; a destra: passa nell'altra squadra
+                    <SwipeRiga
+                      sinistra={{ azione: togliDallaSquadra.bind(null, match._id, p._id), label: t('Togli') }}
+                      destra={{ azione: cambiaSquadra.bind(null, match._id, p._id, lettera === 'A' ? 'B' : 'A'), label: t('Scambia') }}
+                    >
+                      <PlayerRow player={p} mio={p._id === mioId} prima={<Prestazione match={match} playerId={p._id} />} />
+                    </SwipeRiga>
+                  ) : (
+                    <PlayerRow player={p} mio={p._id === mioId} prima={<Prestazione match={match} playerId={p._id} />} />
+                  )}
+                </li>
+              ))}
+            </ul>
+          </Card>
+        )
+      })}
+    </div>
+  )
   return (
     <div className="space-y-3">
       {mia && match.stato !== 'giocata' && (
@@ -277,42 +316,14 @@ function Squadre({ match, mioId, gestisci, t }: { match: Match; mioId: string; g
           {match.pettorine === mia && ` · 🦺 ${t('porta la pettorina!')}`}
         </p>
       )}
-      {match.squadraA.length > 0 && match.squadraB.length > 0 && (
-        <CampoFormazioni seme={match._id} squadre={{ A: match.squadraA, B: match.squadraB }} nomi={{ A: nome('A'), B: nome('B') }} pettorine={match.pettorine} mioId={mioId} />
+      {match.squadraA.length > 0 && match.squadraB.length > 0 ? (
+        <VistaSquadre
+          campo={<CampoFormazioni seme={match._id} squadre={{ A: match.squadraA, B: match.squadraB }} nomi={{ A: nome('A'), B: nome('B') }} pettorine={match.pettorine} mioId={mioId} />}
+          elenco={elenco}
+        />
+      ) : (
+        elenco
       )}
-      <div className="grid gap-4 sm:grid-cols-2">
-        {teams.map(([lettera, players, color]) => {
-          const totale = players.reduce((s, p) => s + forza(p), 0)
-          return (
-            <Card key={lettera} className={`border-t-4 ${color}`}>
-              <h2 className="mb-3 flex items-center justify-between gap-2 font-semibold">
-                <span>
-                  {nome(lettera)}
-                  {match.pettorine === lettera && <span className="ml-2 rounded-full bg-zinc-100 px-2 py-0.5 text-xs font-normal dark:bg-zinc-800">🦺 {t('pettorine')}</span>}
-                </span>
-                <span className="text-sm font-normal text-zinc-500">{t('forza')} {t.numero(totale, { minimumFractionDigits: 1, maximumFractionDigits: 1 })}</span>
-              </h2>
-              <ul className="space-y-2">
-                {mioInCima(players, mioId, (p) => p._id).map((p) => (
-                  <li key={p._id}>
-                    {gestisci ? (
-                      // swipe a sinistra: torna tra quelli da allocare; a destra: passa nell'altra squadra
-                      <SwipeRiga
-                        sinistra={{ azione: togliDallaSquadra.bind(null, match._id, p._id), label: t('Togli') }}
-                        destra={{ azione: cambiaSquadra.bind(null, match._id, p._id, lettera === 'A' ? 'B' : 'A'), label: t('Scambia') }}
-                      >
-                        <PlayerRow player={p} mio={p._id === mioId} prima={<Prestazione match={match} playerId={p._id} />} />
-                      </SwipeRiga>
-                    ) : (
-                      <PlayerRow player={p} mio={p._id === mioId} prima={<Prestazione match={match} playerId={p._id} />} />
-                    )}
-                  </li>
-                ))}
-              </ul>
-            </Card>
-          )
-        })}
-      </div>
       {gestisci && senzaSquadra.length > 0 && (
         <Card className="space-y-2 border-dashed">
           <h2 className="font-semibold">{t('Senza squadra')}</h2>

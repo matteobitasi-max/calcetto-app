@@ -1,8 +1,10 @@
 import { timingSafeEqual } from 'node:crypto'
 import { sanity } from '@/lib/sanity'
 import { inviaAGiocatori } from '@/lib/push'
+import { ENTRO_CHIUSURA_MS, chiudiConvocazioni } from '@/lib/chiusura'
 
-// Promemoria 30 minuti prima della chiusura delle convocazioni, a chi non ha ancora risposto.
+// Promemoria 30 minuti prima della chiusura delle convocazioni, a chi non ha ancora risposto,
+// e chiusura delle convocazioni scadute (così si possono fare subito le formazioni).
 // Lo chiama ogni 5 minuti un servizio esterno (cron-job.org) con "Authorization: Bearer <CRON_SECRET>".
 // Ogni partita riceve un promemoria per ogni orario di chiusura (se l'organizzatore allunga, si ripete).
 export async function GET(request: Request) {
@@ -29,6 +31,14 @@ export async function GET(request: Request) {
     { ora: ora.toISOString(), tra30: tra30.toISOString() },
   )
 
+  // convocazioni scadute (da meno di un giorno) ancora aperte: si chiudono, con l'avviso a chi è in lista
+  const scadute = await sanity.fetch<string[]>(
+    `*[_type == "match" && coalesce(stato, "aperta") == "aperta" && chiusuraConvocazioni <= $ora && chiusuraConvocazioni > $da]._id`,
+    { ora: ora.toISOString(), da: new Date(ora.getTime() - ENTRO_CHIUSURA_MS).toISOString() },
+  )
+  const chiuse = []
+  for (const id of scadute) if (await chiudiConvocazioni(id).catch(() => false)) chiuse.push(id)
+
   const esiti = []
   for (const p of partite) {
     // segnato prima di inviare: se il controllo successivo parte mentre questo invia, non si ripete
@@ -49,5 +59,5 @@ export async function GET(request: Request) {
     ).catch(() => ({ inviate: 0, totali: p.mancanti.length }))
     esiti.push({ partita: p._id, destinatari: p.mancanti.length, ...r })
   }
-  return Response.json({ controllate: partite.length, esiti })
+  return Response.json({ controllate: partite.length, esiti, chiuse })
 }

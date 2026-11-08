@@ -246,4 +246,7 @@ export const partite: Record<string, string> = {
   "Scambialo con uno in lista": "Mit jemandem auf der Liste tauschen",
   "Scambia {nome} con…": "{nome} tauschen mit…",
   "Chi scegli va in lista d’attesa al suo posto; i posti restano gli stessi.": "Wen du wählst, kommt an seiner Stelle auf die Warteliste; die Zahl der Plätze bleibt gleich.",
+  "Campo": "Spielfeld",
+  "Elenco": "Liste",
+  "Come vedere le squadre": "Wie die Teams angezeigt werden",
 }
