@@ -160,4 +160,6 @@ export const tornei: Record<string, string> = {
   "Al completo": "Full",
   "Passa qui": "Switch here",
   "Punti non validi: da 0 a 10, e il pareggio non più della vittoria.": "Invalid points: 0 to 10, and a draw can't be worth more than a win.",
+  "Passa a Pro per creare il tuo torneo con tutte le funzioni dell’abbonamento Pro.": "Upgrade to Pro to create your own tournament with all the features of the Pro subscription.",
+  "Passa a Pro": "Upgrade to Pro",
 }
