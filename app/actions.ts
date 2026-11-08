@@ -331,8 +331,8 @@ const STATI: Stato[] = ['aperta', 'chiusa', 'giocata', 'annullata']
 export async function cambiaStato(matchId: string, stato: Stato) {
   await requireForDoc(matchId, 'organizzatore')
   if (!STATI.includes(stato)) throw new Error('Stato non valido')
-  const doc = await sanity.fetch<{ stato?: Stato; postiAutomatici?: boolean; convocazioni?: (RawConvocazione & { aggiunto?: boolean })[] } | null>(
-    `*[_type == "match" && _id == $id][0]{stato, postiAutomatici, convocazioni}`,
+  const doc = await sanity.fetch<{ stato?: Stato; postiAutomatici?: boolean; postiDisponibili?: number; convocazioni?: (RawConvocazione & { aggiunto?: boolean })[] } | null>(
+    `*[_type == "match" && _id == $id][0]{stato, postiAutomatici, postiDisponibili, convocazioni}`,
     { id: matchId },
   )
   const patch = sanity.patch(matchId).set({ stato })
@@ -343,7 +343,7 @@ export async function cambiaStato(matchId: string, stato: Stato) {
     const iscritti = doc.convocazioni.filter((c) => c.risposta !== 'assente').length
     const posti =
       stato === 'chiusa' && doc.stato === 'aperta' && iscritti >= 2
-        ? formatoDaIscritti(iscritti).giocano
+        ? formatoDaIscritti(iscritti, doc.postiDisponibili).giocano
         : stato === 'aperta' && doc.stato === 'chiusa'
           ? MAX_ISCRITTI
           : null

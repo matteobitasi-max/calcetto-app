@@ -7,8 +7,9 @@ export const MAX_ISCRITTI = 16
 
 // Alla chiusura si gioca con un numero pari: 16 iscritti → 8 contro 8,
 // 11 iscritti → 5 contro 5 e l'ultimo arrivato in lista d'attesa.
-export function formatoDaIscritti(iscritti: number) {
-  const giocano = Math.min(MAX_ISCRITTI, iscritti - (iscritti % 2))
+// Il tetto sono i posti della partita: 16, di più se l'organizzatore ha aggiunto qualcuno dalla lista d'attesa.
+export function formatoDaIscritti(iscritti: number, posti = MAX_ISCRITTI) {
+  const giocano = Math.min(Math.max(MAX_ISCRITTI, posti), iscritti - (iscritti % 2))
   return { giocano, perSquadra: giocano / 2, inAttesa: Math.max(0, iscritti - giocano) }
 }
 

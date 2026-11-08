@@ -249,7 +249,7 @@ export function getPartitePunteggio(legaId: string) {
 export function formatoInCorso(m: Match) {
   if (!m.postiAutomatici || m.stato !== 'aperta') return null
   const iscritti = m.convocazioni.filter((c) => c.risposta !== 'assente' && c.giocatore).length
-  return { iscritti, ...formatoDaIscritti(iscritti) }
+  return { iscritti, ...formatoDaIscritti(iscritti, m.postiDisponibili) }
 }
 
 // Km totali di ogni giocatore nelle partite giocate della lega.
