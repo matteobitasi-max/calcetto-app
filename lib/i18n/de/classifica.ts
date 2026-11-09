@@ -5,6 +5,7 @@ export const classifica: Record<string, string> = {
   "su {n} partite": "in {n} Spielen",
   "Meno gol subiti": "Wenigste Gegentore",
   "{gs} GS in {n} partite": "{gs} GT in {n} Spielen",
+  "{km} km in totale": "{km} km insgesamt",
   "{km} km a partita": "{km} km pro Spiel",
   "{n} partita": "{n} Spiel",
   "{n} partite": "{n} Spiele",

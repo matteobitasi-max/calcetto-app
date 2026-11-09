@@ -5,7 +5,7 @@ import { Capacitor } from '@capacitor/core'
 import { useEffect, useState, useTransition } from 'react'
 import { collegaStrava, kmDaStrava, salvaKm, togliKm } from '@/app/actions'
 import type { Distanza } from '@/lib/matches'
-import { Salute, chiediConsensoKm, escludiPartita, impostaKmAutomatici, nomeSalute, saluteDisponibile } from '@/lib/salute'
+import { Salute, chiediConsensoKm, escludiPartita, impostaKmAutomatici, kmAutomatici, nomeSalute, partiteEscluse, pochiKm, saluteDisponibile } from '@/lib/salute'
 import { useT } from './lingua'
 
 const DOPO_STRAVA = 'km-dopo-strava'
@@ -35,6 +35,15 @@ export function KmPartita({
   const [messaggio, setMessaggio] = useState<{ testo: string; errore?: boolean } | null>(null)
   const [salute, setSalute] = useState(false)
   const [nome, setNome] = useState('Apple Health')
+  // metri letti da Salute ma troppo pochi per una partita: si chiede se inserirli comunque
+  const [pochi, setPochi] = useState<number | null>(null)
+
+  const salva = (metri: number) =>
+    startTransition(async () => {
+      setPochi(null)
+      const r = await salvaKm(matchId, metri / 1000, 'salute')
+      setMessaggio(r.error ? { testo: r.error, errore: true } : { testo: `✅ ${t('{km} km da {app}', { km: formatoKm(metri / 1000), app: nome })}` })
+    })
 
   const daStrava = () =>
     startTransition(async () => {
@@ -65,6 +74,14 @@ export function KmPartita({
       sessionStorage.removeItem(DOPO_STRAVA)
     } catch {}
     if (dopo === matchId && stravaCollegato) daStrava()
+    // km automatici attivi ma niente salvato: se in Salute ci sono pochi km lo si fa notare
+    if (saluteDisponibile() && kmAutomatici() && !miei && fine <= Date.now() && !partiteEscluse().includes(matchId)) {
+      Salute.distanza({ inizio, fine })
+        .then(({ metri }) => {
+          if (metri >= 50 && pochiKm(metri, inizio, fine)) setPochi(metri)
+        })
+        .catch(() => undefined)
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- solo all'apertura della pagina
   }, [])
 
@@ -80,6 +97,11 @@ export function KmPartita({
             testo: t('In {app} non ci sono km registrati durante la partita (controlla anche di aver dato il permesso di leggere la distanza).', { app: nome }),
             errore: true,
           })
+          return
+        }
+        if (pochiKm(metri, inizio, fine)) {
+          setMessaggio(null)
+          setPochi(metri)
           return
         }
         const r = await salvaKm(matchId, metri / 1000, 'salute')
@@ -132,6 +154,31 @@ export function KmPartita({
           </button>
         )}
       </div>
+
+      {pochi != null && (
+        <div className="space-y-2 rounded-lg bg-amber-50 p-3 text-sm text-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
+          <p>
+            🤔 {t('Sembra che non avessi nessun tracker addosso: in {app} ci sono solo {km} km durante la partita.', { app: nome, km: formatoKm(pochi / 1000) })}
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <button type="button" disabled={pending} onClick={() => salva(pochi)} className={`${pulsante} bg-amber-600 text-white hover:bg-amber-700`}>
+              {t('Inserisci comunque')}
+            </button>
+            <button
+              type="button"
+              disabled={pending}
+              onClick={() => {
+                // non li si propone più per questa partita
+                escludiPartita(matchId)
+                setPochi(null)
+              }}
+              className={`${pulsante} text-amber-900 underline dark:text-amber-200`}
+            >
+              {t('Lascia stare')}
+            </button>
+          </div>
+        </div>
+      )}
 
       {pending && <p className="text-sm text-zinc-500">…</p>}
       {messaggio && <p className={`text-sm ${messaggio.errore ? 'text-red-600' : 'text-green-700 dark:text-green-400'}`}>{messaggio.testo}</p>}

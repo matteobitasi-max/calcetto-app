@@ -11,6 +11,10 @@ export const saluteDisponibile = () => Capacitor.isNativePlatform() && Capacitor
 // Su iPhone il nome ufficiale "Apple Health" (in italiano l'app si chiama Salute), come chiede Apple.
 export const nomeSalute = () => (Capacitor.getPlatform() === 'android' ? 'Health Connect' : 'Apple Health')
 
+// Meno di 1 km per ogni ora di partita: in campo non c'era nessun tracker addosso (telefono in borsa).
+// Questi km non si salvano da soli: si chiede al giocatore se inserirli comunque.
+export const pochiKm = (metri: number, inizio: number, fine: number) => metri < (fine - inizio) / 3600
+
 // Preferenze su questo telefono: km automatici attivi e partite da non ricompilare (km tolti a mano).
 const AUTO = 'km-salute-auto'
 const ESCLUSE = 'km-salute-escluse'

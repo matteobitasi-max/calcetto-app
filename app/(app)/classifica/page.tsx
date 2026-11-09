@@ -117,14 +117,15 @@ function Tabella({
   )
 }
 
-// Km totali corsi nelle partite (inseriti a mano o presi da Strava / Apple Salute).
+// Km corsi nelle partite (presi da Strava / Apple Salute / Health Connect): classifica per media a partita,
+// cioè i km totali divisi per le partite in cui sono stati registrati, così conta quanto corri, non quante volte giochi.
 function KmPercorsi({ km, giocatori, mioId, t }: { km: Map<string, { km: number; partite: number }>; giocatori: Map<string, Player>; mioId: string; t: T }) {
-  const righe = [...km.entries()].filter(([id]) => giocatori.has(id)).sort((a, b) => b[1].km - a[1].km)
+  const righe = [...km.entries()].filter(([id]) => giocatori.has(id)).sort((a, b) => b[1].km / b[1].partite - a[1].km / a[1].partite || b[1].partite - a[1].partite)
   if (righe.length === 0) return null
   const fmt = (n: number) => t.numero(n, { maximumFractionDigits: 1 })
   return (
     <Card>
-      <h2 className="mb-3 font-semibold">🏃 {t('Km percorsi')}</h2>
+      <h2 className="mb-3 font-semibold">🏃 {t('Km a partita')}</h2>
       <ol className="space-y-2">
         {righe.slice(0, 10).map(([id, k], i) => {
           const player = giocatori.get(id)!
@@ -135,10 +136,10 @@ function KmPercorsi({ km, giocatori, mioId, t }: { km: Map<string, { km: number;
               <Link href={`/giocatori/${id}`} className="min-w-0 flex-1 hover:underline">
                 <span className={`block truncate text-sm ${id === mioId ? 'font-extrabold' : 'font-medium'}`}>{displayName(player)}</span>
                 <span className="block text-xs text-zinc-500">
-                  {t('{km} km a partita', { km: fmt(k.km / k.partite) })} · {t.n(k.partite, '{n} partita', '{n} partite')}
+                  {t('{km} km in totale', { km: fmt(k.km) })} · {t.n(k.partite, '{n} partita', '{n} partite')}
                 </span>
               </Link>
-              <span className="text-lg font-bold tabular-nums">{fmt(k.km)}</span>
+              <span className="text-lg font-bold tabular-nums">{fmt(k.km / k.partite)}</span>
             </li>
           )
         })}

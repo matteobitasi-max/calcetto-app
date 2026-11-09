@@ -198,25 +198,13 @@ public class SalutePlugin: CAPPlugin, CAPBridgedPlugin {
                 call.reject(errore.localizedDescription)
                 return
             }
-            // Tutti i dati di distanza che toccano l'orario della partita, poi:
-            // - di ognuno si conta solo la parte dentro la partita (in proporzione al tempo);
-            // - si scartano quelli che durano più di 2 ore (riassunti di tutta la giornata, es. Garmin o altre app);
-            // - si somma per fonte (iPhone, Apple Watch, Garmin...) e si tiene la fonte con più metri,
-            //   così gli stessi passi registrati da telefono e orologio non si contano due volte.
+            // Il totale di Salute nell'orario della partita, lo stesso numero che mostra l'app Salute:
+            // somma tutte le fonti (iPhone, Apple Watch, Garmin...) senza contare due volte gli stessi passi
+            // registrati da telefono e orologio, e dei dati a cavallo dell'inizio o della fine conta solo la parte dentro.
             let filtro = HKQuery.predicateForSamples(withStart: inizio, end: fine, options: [])
-            let query = HKSampleQuery(sampleType: tipo, predicate: filtro, limit: HKObjectQueryNoLimit, sortDescriptors: nil) { _, campioni, _ in
-                var perFonte: [String: Double] = [:]
-                for case let c as HKQuantitySample in campioni ?? [] {
-                    let durata = c.endDate.timeIntervalSince(c.startDate)
-                    if durata > 2 * 3600 { continue }
-                    let dentro = min(c.endDate, fine).timeIntervalSince(max(c.startDate, inizio))
-                    if dentro <= 0 { continue }
-                    let quota = durata > 0 ? dentro / durata : 1
-                    let fonte = c.sourceRevision.source.bundleIdentifier
-                    perFonte[fonte, default: 0] += c.quantity.doubleValue(for: .meter()) * quota
-                }
+            let query = HKStatisticsQuery(quantityType: tipo, quantitySamplePredicate: filtro, options: .cumulativeSum) { _, statistiche, _ in
                 // senza permesso o senza dati Salute restituisce semplicemente 0
-                call.resolve(["metri": perFonte.values.max() ?? 0])
+                call.resolve(["metri": statistiche?.sumQuantity()?.doubleValue(for: .meter()) ?? 0])
             }
             self.salute.execute(query)
         }

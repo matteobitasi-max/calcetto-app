@@ -1216,27 +1216,29 @@ export async function salvaKm(matchId: string, km: number, fonte: 'salute'): Pro
   return {}
 }
 
-// Le mie partite finite negli ultimi 7 giorni, in cui ero in lista e mancano i miei km:
-// l'app per iPhone le completa da sola con Apple Salute (components/km-automatici.tsx).
-export async function partiteSenzaKm(): Promise<{ matchId: string; inizio: number; fine: number }[]> {
+// Le mie partite finite negli ultimi 7 giorni, in cui ero in lista e mancano i miei km, più quelle finite
+// da meno di 24 ore con i km presi da Salute: l'iPhone scrive in Salute con qualche minuto di ritardo,
+// quindi si rileggono finché si aggiornano. L'app li completa da sola (components/km-automatici.tsx).
+export async function partiteSenzaKm(): Promise<{ matchId: string; inizio: number; fine: number; km?: number }[]> {
   const mie = (await getMemberships()).map((m) => m._id)
   if (mie.length === 0) return []
   const ora = Date.now()
-  const partite = await sanity.fetch<{ _id: string; data: string; durataMinuti?: number; io: string }[]>(
+  const partite = await sanity.fetch<{ _id: string; data: string; durataMinuti?: number; io: string; d?: { _key: string; km?: number; fonte?: string }[] }[]>(
     `*[_type == "match" && coalesce(stato, "aperta") in ["chiusa", "giocata"] && data > $da && data < $a
       && count(convocazioni[risposta == "presente" && giocatore._ref in $mie]) > 0]{
       _id, data, durataMinuti,
       "io": convocazioni[risposta == "presente" && giocatore._ref in $mie][0].giocatore._ref,
-      "fatti": distanze[]._key
-    }[!(io in coalesce(fatti, []))]`,
+      "d": distanze[]{_key, km, fonte}
+    }`,
     { mie, da: new Date(ora - 7 * 86400_000).toISOString(), a: new Date(ora).toISOString() },
   )
   return partite
     .map((p) => {
       const { inizio, fine } = orarioPartita({ data: p.data, durataMinuti: p.durataMinuti ?? 60 })
-      return { matchId: p._id, inizio: inizio.getTime(), fine: fine.getTime() }
+      return { matchId: p._id, inizio: inizio.getTime(), fine: fine.getTime(), miei: p.d?.find((x) => x._key === p.io) }
     })
-    .filter((p) => p.fine <= ora)
+    .filter((p) => p.fine <= ora && (!p.miei || (p.miei.fonte === 'salute' && ora - p.fine < 86400_000)))
+    .map(({ miei, ...p }) => ({ ...p, km: miei?.km }))
 }
 
 export async function togliKm(matchId: string) {
