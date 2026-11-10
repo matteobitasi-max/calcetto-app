@@ -665,6 +665,30 @@ async function uploadFoto(foto: FormDataEntryValue | null) {
   return { foto: { _type: 'image', asset: { _type: 'reference', _ref: asset._id } } }
 }
 
+// I file delle immagini su Sanity sono visibili a chiunque abbia il link, anche col dataset privato:
+// una foto tolta o sostituita si cancella davvero (GDPR), se nessuna scheda la usa più e non è
+// la foto profilo dell'account `profiloDi` (che va nelle schede delle leghe in cui si entra dopo).
+async function cancellaFotoInutili(ids: (string | null | undefined)[], profiloDi?: string | null) {
+  try {
+    let tenere: string | undefined
+    if (profiloDi) {
+      const { clerkClient } = await import('@clerk/nextjs/server')
+      const utente = await (await clerkClient()).users.getUser(profiloDi).catch(() => null)
+      tenere = (utente?.privateMetadata as { fotoAsset?: string } | undefined)?.fotoAsset
+    }
+    for (const id of new Set(ids)) {
+      if (!id || id === tenere) continue
+      if (await sanity.fetch<number>(`count(*[references($id)])`, { id })) continue
+      await sanity.delete(id)
+    }
+  } catch {
+    // al massimo resta un file inutilizzato: non blocca il salvataggio
+  }
+}
+
+const fotoDellaScheda = (id: string) =>
+  sanity.fetch<{ vecchia?: string; clerkUserId?: string } | null>(`*[_id == $id][0]{"vecchia": foto.asset._ref, clerkUserId}`, { id })
+
 const badgeFromForm = (formData: FormData) => {
   const b = str(formData, 'badge')
   return b in BADGE ? b : undefined
@@ -682,7 +706,9 @@ export async function caricaFoto(playerId: string, _prev: FormState, formData: F
   const upload = await uploadFoto(formData.get('foto'))
   if (!upload) return { error: await tr('Nessuna foto selezionata.') }
   if ('error' in upload) return upload
+  const prima = await fotoDellaScheda(playerId)
   await sanity.patch(playerId).set({ foto: upload.foto }).commit()
+  await cancellaFotoInutili([prima?.vecchia], prima?.clerkUserId)
   refresh()
 }
 
@@ -743,7 +769,9 @@ export async function salvaGiocatore(playerId: string | null, _prev: FormState, 
     // voti cambiati a mano: diventano i nuovi voti di partenza (sparisce il miglioramento in viola)
     const prima = await sanity.fetch<Player['caratteristiche'] | null>(`*[_id == $id][0].caratteristiche`, { id })
     if (Object.keys(SKILLS).some((k) => (prima?.[k as Skill] ?? 5) !== fields.caratteristiche[k as Skill])) toUnset.push('caratteristicheBase')
+    const fotoPrima = fotoField || toUnset.includes('foto') ? await fotoDellaScheda(id) : null
     await sanity.patch(id).set(fields).unset(toUnset).commit()
+    if (fotoPrima) await cancellaFotoInutili([fotoPrima.vecchia], fotoPrima.clerkUserId)
   } else {
     id = (await sanity.create({ _type: 'player', lega: { _type: 'reference', _ref: admin.lega._id }, ...fields }))._id
   }
@@ -1412,6 +1440,10 @@ export async function salvaAccount(_prev: FormState, formData: FormData): Promis
   })
 
   const schede = await sanity.fetch<string[]>(`*[_type == "player" && clerkUserId == $id]._id`, { id: utente.id })
+  // foto nuova: quelle di prima (profilo e schede) si cancellano dopo il salvataggio, se non servono più
+  const fotoPrima = upload
+    ? [utente.fotoAsset, ...(await sanity.fetch<string[]>(`*[_id in $schede].foto.asset._ref`, { schede }))]
+    : []
   if (schede.length) {
     const valori = { cognome, telefono, ruolo, piede, dataNascita }
     const tx = sanity.transaction()
@@ -1429,6 +1461,7 @@ export async function salvaAccount(_prev: FormState, formData: FormData): Promis
     }
     await tx.commit()
   }
+  if (upload) await cancellaFotoInutili(fotoPrima, utente.id)
   // dalla pagina "Completa il tuo profilo" si torna dove si stava andando: chi era arrivato con l'invito
   // di una lega o di una squadra ci entra subito (quello di un torneo fa scegliere la squadra)
   const dopo = str(formData, 'dopo')
@@ -1602,7 +1635,10 @@ export async function eliminaAccount(): Promise<FormState> {
   }
   const iscrizioni = await sanity.fetch<string[]>(`*[_type == "pushSubscription" && clerkUserId == $id]._id`, { id: utente.id })
   for (const id of iscrizioni) tx.delete(id)
+  const foto = await sanity.fetch<string[]>(`*[_type == "player" && clerkUserId == $id].foto.asset._ref`, { id: utente.id })
   await tx.commit()
+  // le foto dell'account spariscono davvero (i file su Sanity sono raggiungibili da chi ha il link)
+  await cancellaFotoInutili([...foto, utente.fotoAsset])
 
   for (const n of nuoviOrganizzatori) {
     await inviaAGiocatori([n.id], (t) => ({
