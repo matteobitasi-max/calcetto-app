@@ -58,6 +58,7 @@ export async function inviaFcm(token: string, p: FcmPayload): Promise<FcmEsito> 
 
 // Come inviaFcm, con il motivo dell'errore (che finisce anche nei log di Vercel).
 export async function inviaFcmConDettagli(token: string, p: FcmPayload): Promise<{ esito: FcmEsito; motivo?: string }> {
+  if (process.env.NOTIFICHE_SPENTE === '1') return { esito: 'errore', motivo: 'notifiche spente (versione di prova)' }
   const sa = getAccount()
   if (!sa) return { esito: 'errore', motivo: 'FIREBASE_SERVICE_ACCOUNT mancante' }
   const res = await fetch(`https://fcm.googleapis.com/v1/projects/${sa.project_id}/messages:send`, {

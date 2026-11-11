@@ -59,6 +59,11 @@ type Iscrizione = { _id: string; tipo?: 'web' | 'ios' | 'android'; endpoint?: st
 // Invia ai dispositivi indicati: notifica web oppure, per le app native, Firebase.
 // I dispositivi che non esistono più (notifiche disattivate, app disinstallata) vengono rimossi.
 async function invia(subs: Iscrizione[], messaggio: Messaggio) {
+  // versione di prova (NOTIFICHE_SPENTE=1): non manda niente ai telefoni veri
+  if (process.env.NOTIFICHE_SPENTE === '1') {
+    console.log(`[notifiche spente] non inviata a ${subs.length} dispositivi`)
+    return { inviate: 0, totali: subs.length }
+  }
   const testo = (s: Iscrizione) => (typeof messaggio === 'function' ? messaggio(creaT(isLingua(s.lingua) ? s.lingua : 'it')) : messaggio)
   const esiti = await Promise.all(
     subs.map(async (s): Promise<'inviata' | 'scaduta' | 'errore'> => {
