@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { Salute, chiediConsensoKm, impostaKmAutomatici, kmAutomatici, nomeSalute, revocaConsensoKm, saluteDisponibile } from '@/lib/salute'
+import { conferma } from '@/components/conferma'
 import { useT } from '@/components/lingua'
 
 // Nel mio account (solo nell'app): km delle partite presi da soli da Apple Salute / Health Connect.
@@ -23,12 +24,22 @@ export function SaluteAccount() {
 
   const cambia = async () => {
     if (attivi) {
+      // revoca: si sceglie se cancellare anche i km già presi da Salute (OK) o tenerli (Annulla)
+      const cancella = await conferma({
+        testo: t('Vuoi cancellare anche i km che hai già preso da {app} in tutte le partite?', { app: nome }),
+        dettaglio: t('Se li tieni restano visibili alla lega: puoi toglierli quando vuoi da ogni partita.'),
+        ok: t('Cancellali'),
+        annulla: t('Tienili'),
+        pericolo: true,
+      })
       impostaKmAutomatici(false)
-      revocaConsensoKm()
       setAttivi(false)
+      setPending(true)
+      await revocaConsensoKm(cancella)
+      setPending(false)
       return
     }
-    if (!chiediConsensoKm(t('Per i km delle partite, The Cap legge da {app} solo la distanza camminata e corsa registrata durante le tue partite. È un dato legato alla salute: lo usiamo solo per mostrare i tuoi km ai membri della lega e puoi disattivarlo quando vuoi in Il mio account. Acconsenti?', { app: nome }))) return
+    if (!(await chiediConsensoKm(t('Per i km delle partite, The Cap legge da {app} solo la distanza camminata e corsa registrata durante le tue partite. È un dato legato alla salute: lo usiamo solo per mostrare i tuoi km ai membri della lega e puoi disattivarlo quando vuoi in Il mio account. Acconsenti?', { app: nome })), t('Acconsento'))) return
     setPending(true)
     try {
       // chiede il permesso di Salute (solo la prima volta compare la richiesta di Apple)

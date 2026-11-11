@@ -1,3 +1,4 @@
+import { Conferme } from "@/components/conferma";
 import type { Metadata, Viewport } from "next";
 import { ClerkProvider } from "@clerk/nextjs";
 import { Geist, Geist_Mono } from "next/font/google";
@@ -85,7 +86,10 @@ async function ConLingua({ children }: { children: React.ReactNode }) {
         },
       }}
     >
-      <LinguaProvider lingua={lingua}>{children}</LinguaProvider>
+      <LinguaProvider lingua={lingua}>
+        {children}
+        <Conferme />
+      </LinguaProvider>
     </ClerkProvider>
   );
 }

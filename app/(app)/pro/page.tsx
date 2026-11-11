@@ -1,124 +1,95 @@
 import Link from 'next/link'
-import { Suspense, type ReactNode } from 'react'
-import { MarchioPro } from '@/components/logo-c'
+import { Suspense } from 'react'
 import { getUtente, requirePlayer } from '@/lib/player'
 import { chiaviRevenueCat, mioAbbonamento, pagamentiConfigurati } from '@/lib/abbonamenti'
 import { AttivaPro } from '@/components/attiva-pro'
-import { ioPro, legaPro } from '@/lib/pro'
-import { ButtonLink, Card, Loading, PageTitle } from '@/components/ui'
+import { ChiusuraPro, Confronto, Domande, Garanzie, StatoLega, Testata, Vantaggi } from '@/components/vetrina-pro'
+import { MAX_LEGHE_PRO, ioPro, legaPro, oltreLimitePro } from '@/lib/pro'
+import { getPlayers } from '@/lib/matches'
+import { Card, Loading } from '@/components/ui'
 import { getT } from '@/lib/lingua'
 
 export default function ProPage() {
   return (
-    <>
-      <PageTitle>
-        The Cap <span className="ml-1 rounded-full bg-amber-400 px-2.5 py-0.5 align-middle text-xs font-bold text-zinc-900">PRO</span>
-      </PageTitle>
-      <Suspense fallback={<Loading />}>
-        <Vetrina />
-      </Suspense>
-    </>
+    <Suspense fallback={<Loading />}>
+      <Vetrina />
+    </Suspense>
   )
 }
 
-const FUNZIONI: { titolo: string; voci: [ReactNode, string][]; link?: [string, string] }[] = [
-  {
-    titolo: '🏆 Tornei',
-    voci: [
-      ['🔁', 'Girone all’italiana, tabellone a eliminazione diretta o gironi + tabellone'],
-      ['🗓️', 'Calendario e turni successivi creati da soli con i risultati'],
-      ['👕', 'Squadre con nome, foto e capitano, che invita i compagni con un link'],
-      ['📊', 'Classifiche, tabellone e marcatori sempre aggiornati'],
-    ],
-    link: ['/tornei', 'I miei tornei'],
-  },
-  {
-    titolo: '📈 Forma e voti dei giocatori',
-    voci: [
-      ['↑↓', 'Forma di ogni giocatore, aggiornata a ogni risultato (freccia accanto al voto)'],
-      ['⚖️', 'Formazioni automatiche che tengono conto di chi è in forma'],
-      ['🗳️', 'Ogni 5 partite, proposte per aggiornare i voti da gol, MVP, km e risultati: l’organizzatore approva o scarta'],
-    ],
-    link: ['/giocatori', 'Vai alla rosa'],
-  },
-  {
-    titolo: '👤 Il tuo abbonamento',
-    voci: [
-      [<MarchioPro key="c" size={16} />, 'Il marchio PRO accanto al tuo nome, in tutte le leghe'],
-      ['👑', 'Tutte le funzioni Pro nelle leghe che organizzi'],
-    ],
-  },
-  {
-    titolo: '🔜 In arrivo',
-    voci: [
-      ['👍', 'Voti tra compagni dopo la partita'],
-      ['📊', 'Statistiche avanzate dei giocatori e della lega'],
-    ],
-  },
-]
-
-// Cosa comprende la versione Pro, e se è attiva nella lega in cui sono.
+// La pagina Pro: per chi non ce l'ha è una vetrina (vantaggi, confronto, prezzi, domande);
+// per chi ce l'ha, il suo abbonamento e le scorciatoie alle funzioni.
 async function Vetrina() {
   const [me, t, utente] = await Promise.all([requirePlayer(), getT(), getUtente()])
-  const [attiva, mio, mioPro] = await Promise.all([legaPro(me.lega._id), utente ? mioAbbonamento(utente.id) : null, me.isAdmin ? ioPro(me.lega._id) : false])
-  return (
-    <div className="space-y-4">
-      {utente && pagamentiConfigurati() ? (
-        <Card className={`space-y-3 ${mio ? 'border-green-600 bg-green-50 dark:bg-green-950' : 'border-amber-400'}`}>
-          {!mio && (
-            <p className="text-sm">
-              {me.isAdmin
-                ? t('Con Pro, {lega} e tutte le leghe che organizzi hanno le funzioni qui sotto. Lo paghi solo tu: i giocatori le usano gratis.', { lega: me.lega.nome })
-                : t('Con Pro, le leghe che organizzi hanno le funzioni qui sotto. Lo paghi solo tu: i giocatori le usano gratis.')}
+  const [attiva, mio, mioPro, rosa, oltre] = await Promise.all([
+    legaPro(me.lega._id),
+    utente ? mioAbbonamento(utente.id) : null,
+    me.isAdmin ? ioPro(me.lega._id) : false,
+    getPlayers(me.lega._id),
+    me.isAdmin ? oltreLimitePro(me.lega._id) : false,
+  ])
+  const giocatori = rosa.filter((p) => p.attivo !== false).length
+  const lega = me.lega.nome
+  const vendibile = !!utente && pagamentiConfigurati()
+
+  // Già abbonato: il suo abbonamento in cima, poi cosa ha
+  if (mio && utente) {
+    return (
+      <div className="space-y-4">
+        <Testata t={t} titolo={t('Grazie per essere Pro!')} sotto={t('Tutte le funzioni Pro sono attive nelle tue leghe (fino a {n}).', { n: MAX_LEGHE_PRO })} />
+        {oltre && (
+          // questa lega è oltre quelle coperte dall'abbonamento
+          <Card className="space-y-2 border-amber-400 bg-amber-50 dark:bg-amber-950/40">
+            <p className="font-semibold">🏟️ {t('Gestisci tante leghe?')}</p>
+            <p className="text-sm text-zinc-700 dark:text-zinc-300">
+              {t('Il tuo Pro vale nelle prime {n} leghe che organizzi: {lega} è oltre questo limite. Per centri sportivi, scuole calcio e chi organizza tante leghe stiamo preparando il piano Club.', { n: MAX_LEGHE_PRO, lega })}
             </p>
-          )}
-          <AttivaPro utente={utente.id} chiavi={chiaviRevenueCat()} mio={mio} />
-        </Card>
-      ) : null}
-      <Card className={attiva ? 'border-green-600 bg-green-50 dark:bg-green-950' : ''}>
-        {attiva && me.isAdmin && !mioPro ? (
-          // il Pro della lega è di un altro organizzatore: i membri vedono forma e tornei, ma le funzioni da organizzatore sono di chi paga
-          <p className="text-sm font-medium text-green-900 dark:text-green-200">
-            {t('In {lega} il Pro è attivo grazie a un altro organizzatore: tutti vedono la forma e i tornei. Per creare tornei e approvare i voti serve il tuo abbonamento.', { lega: me.lega.nome })}
-          </p>
-        ) : attiva ? (
-          <p className="text-sm font-medium text-green-900 dark:text-green-200">
-            ✅ {t('La versione Pro è attiva in {lega}: tutto quello che vedi qui sotto è già disponibile.', { lega: me.lega.nome })}
-          </p>
-        ) : pagamentiConfigurati() ? (
-          <p className="text-sm">
-            {me.isAdmin
-              ? t('In {lega} la versione Pro non è ancora attiva.', { lega: me.lega.nome })
-              : t('In {lega} la versione Pro non è attiva: la attiva un organizzatore della lega con il suo abbonamento.', { lega: me.lega.nome })}
-          </p>
-        ) : (
-          <p className="text-sm">
-            {t('In {lega} la versione Pro non è ancora attiva. Arriverà presto: se vuoi provarla con la tua lega,', { lega: me.lega.nome })}{' '}
-            <Link href="/supporto" className="font-semibold text-green-700 hover:underline dark:text-green-400">
-              {t('scrivici')}
+            <Link href="/supporto" className="inline-block text-sm font-semibold text-green-700 hover:underline dark:text-green-400">
+              {t('Scrivici per il piano Club ›')}
             </Link>
-            .
-          </p>
+          </Card>
         )}
-      </Card>
-      {FUNZIONI.map((f) => (
-        <Card key={f.titolo} className="space-y-3">
-          <h2 className="font-semibold">{t(f.titolo)}</h2>
-          <ul className="space-y-2 text-sm text-zinc-600 dark:text-zinc-300">
-            {f.voci.map(([icona, testo]) => (
-              <li key={testo} className="flex gap-2">
-                <span className="flex min-w-6 shrink-0 justify-center">{icona}</span>
-                <span>{t(testo)}</span>
-              </li>
-            ))}
-          </ul>
-          {attiva && f.link && (
-            <ButtonLink href={f.link[0]} variant="secondary">
-              {t(f.link[1])} ›
-            </ButtonLink>
-          )}
+        <Card className="space-y-3 border-green-600 bg-green-50 dark:bg-green-950">
+          <AttivaPro utente={utente.id} chiavi={chiaviRevenueCat()} mio={mio} giocatori={giocatori} />
         </Card>
-      ))}
+        <Vantaggi t={t} link />
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-5 pb-20">
+      <Testata
+        t={t}
+        titolo={t('Porta la tua lega a un altro livello')}
+        sotto={
+          me.isAdmin
+            ? t('Tornei veri, la forma di ogni giocatore e squadre sempre equilibrate. Lo paghi solo tu: i {n} giocatori di {lega} lo usano gratis.', { n: giocatori, lega })
+            : t('Tornei veri, la forma di ogni giocatore e squadre sempre equilibrate, nelle leghe che organizzi. Lo paghi solo tu: i tuoi giocatori lo usano gratis.')
+        }
+        cta={vendibile}
+      />
+
+      <StatoLega t={t} attiva={attiva} admin={!!me.isAdmin} mioPro={mioPro} lega={lega} vendibile={vendibile} />
+
+      <Vantaggi t={t} link={attiva} />
+
+      <Confronto t={t} />
+
+      {vendibile && (
+        <section id="prezzi" className="scroll-mt-28 space-y-3">
+          <h2 className="text-center text-lg font-bold">{t('Scegli il tuo piano')}</h2>
+          <Card className="space-y-3 border-2 border-amber-400 shadow-lg shadow-amber-200/40 dark:shadow-none">
+            <AttivaPro utente={utente!.id} chiavi={chiaviRevenueCat()} mio={null} giocatori={giocatori} />
+          </Card>
+          <Garanzie t={t} />
+        </section>
+      )}
+
+      <Domande t={t} />
+
+      {vendibile && <ChiusuraPro t={t} />}
     </div>
   )
 }
+

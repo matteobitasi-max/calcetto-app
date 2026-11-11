@@ -5,5 +5,6 @@ export const VERSIONE_TERMINI = '2026-10-28'
 export type Consensi = {
   termini?: { versione: string; il: string }
   immagini?: { si: boolean; il: string }
-  km?: { si: boolean; il: string }
+  /** passati: alla revoca, se i km già presi da Salute sono stati cancellati o tenuti per scelta */
+  km?: { si: boolean; il: string; passati?: 'cancellati' | 'tenuti' }
 }

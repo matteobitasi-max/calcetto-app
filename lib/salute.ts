@@ -1,5 +1,6 @@
 import { Capacitor, registerPlugin } from '@capacitor/core'
 import { registraConsensoKm } from '@/app/actions'
+import { conferma } from '@/components/conferma'
 
 // Plugin nativo "Salute" dell'app: Apple Salute su iPhone (SalutePlugin in AppDelegate.swift),
 // Health Connect su Android (SalutePlugin.kt). Restituisce i metri percorsi tra inizio e fine.
@@ -42,14 +43,14 @@ export const escludiPartita = (matchId: string) => scrivi(ESCLUSE, JSON.stringif
 // Consenso esplicito prima di leggere i km (dati legati alla salute): chiesto una volta su questo telefono
 // e registrato sull'account con la data; disattivando i km si registra la revoca.
 const CONSENSO = 'km-salute-consenso'
-export function chiediConsensoKm(testo: string) {
+export async function chiediConsensoKm(testo: string, ok?: string) {
   if (leggi(CONSENSO) === '1') return true
-  if (!window.confirm(testo)) return false
+  if (!(await conferma({ testo, ok }))) return false
   scrivi(CONSENSO, '1')
   registraConsensoKm(true).catch(() => undefined)
   return true
 }
-export function revocaConsensoKm() {
+export function revocaConsensoKm(cancellaPassati: boolean) {
   scrivi(CONSENSO, null)
-  registraConsensoKm(false).catch(() => undefined)
+  return registraConsensoKm(false, cancellaPassati ? 'cancellati' : 'tenuti').catch(() => undefined)
 }

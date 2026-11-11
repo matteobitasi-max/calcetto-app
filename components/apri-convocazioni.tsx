@@ -1,5 +1,6 @@
 'use client'
 
+import { confermaInvio } from './conferma'
 import { useActionState } from 'react'
 import type { AvvisoState } from '@/app/actions'
 import { buttonClass } from './ui-classes'
@@ -30,7 +31,7 @@ export function ApriConvocazioni({
             disabled={pending}
             className={buttonClass('primary')}
             onClick={(e) => {
-              if (!window.confirm(conferma)) e.preventDefault()
+              confermaInvio(e, conferma)
             }}
           >
             {pending ? t('Invio…') : label}

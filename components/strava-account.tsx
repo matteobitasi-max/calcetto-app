@@ -1,5 +1,6 @@
 'use client'
 
+import { conferma } from '@/components/conferma'
 import { Browser } from '@capacitor/browser'
 import { Capacitor } from '@capacitor/core'
 import { useTransition } from 'react'
@@ -35,7 +36,7 @@ export function StravaAccount({ atleta, collegato }: { atleta?: string; collegat
         <button
           type="button"
           disabled={pending}
-          onClick={() => confirm(t('Scollegare Strava?')) && startTransition(() => scollegaStrava())}
+          onClick={async () => (await conferma(t('Scollegare Strava?'))) && startTransition(() => scollegaStrava())}
           className="shrink-0 text-xs text-zinc-500 underline disabled:opacity-50"
         >
           {t('Scollega')}

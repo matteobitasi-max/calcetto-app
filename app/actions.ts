@@ -992,13 +992,24 @@ export async function aggiungimiAllaLega(legaId: string) {
 }
 
 // Km da Apple Salute / Health Connect: il consenso (o la revoca) si registra con la data.
-export async function registraConsensoKm(si: boolean) {
+// Consenso ai km da Salute dato o revocato, con la data. Alla revoca si sceglie cosa fare dei km già presi
+// da Salute: cancellarli da tutte le partite o tenerli (scelta registrata, per poterla dimostrare).
+export async function registraConsensoKm(si: boolean, passati?: 'cancellati' | 'tenuti') {
   const utente = await getUtente()
   if (!utente) return
   const { clerkClient } = await import('@clerk/nextjs/server')
   await (await clerkClient()).users.updateUserMetadata(utente.id, {
-    privateMetadata: { consensi: { ...utente.consensi, km: { si, il: new Date().toISOString() } } },
+    privateMetadata: { consensi: { ...utente.consensi, km: { si, il: new Date().toISOString(), ...(!si && passati && { passati }) } } },
   })
+  if (si || passati !== 'cancellati') return
+  const schede = await sanity.fetch<string[]>(`*[_type == "player" && clerkUserId == $id]._id`, { id: utente.id })
+  const partite = await sanity.fetch<string[]>(`*[_type == "match" && count(distanze[_key in $schede && fonte == "salute"]) > 0]._id`, { schede })
+  if (partite.length) {
+    const tx = sanity.transaction()
+    for (const id of partite) tx.patch(id, (p) => p.unset(schede.map((s) => `distanze[_key == ${JSON.stringify(s)}]`)))
+    await tx.commit()
+  }
+  refresh()
 }
 
 // La lingua dell'app su questo dispositivo (e per le notifiche dei miei dispositivi). `vai`: dove tornare dopo.
@@ -1636,7 +1647,17 @@ export async function eliminaAccount(): Promise<FormState> {
   const iscrizioni = await sanity.fetch<string[]>(`*[_type == "pushSubscription" && clerkUserId == $id]._id`, { id: utente.id })
   for (const id of iscrizioni) tx.delete(id)
   const foto = await sanity.fetch<string[]>(`*[_type == "player" && clerkUserId == $id].foto.asset._ref`, { id: utente.id })
+  // la scheda dell'abbonamento Pro (con l'email): ricevute e pagamenti restano ad Apple / Google
+  const abbonamenti = await sanity.fetch<string[]>(`*[_type == "abbonamento" && clerkUserId == $id]._id`, { id: utente.id })
+  for (const id of abbonamenti) tx.delete(id)
   await tx.commit()
+  // e i dati dell'utente su RevenueCat (così non arrivano più aggiornamenti che ricreano la scheda)
+  if (process.env.REVENUECAT_SECRET_KEY) {
+    await fetch(`https://api.revenuecat.com/v1/subscribers/${encodeURIComponent(utente.id)}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${process.env.REVENUECAT_SECRET_KEY}` },
+    }).catch(() => undefined)
+  }
   // le foto dell'account spariscono davvero (i file su Sanity sono raggiungibili da chi ha il link)
   await cancellaFotoInutili([...foto, utente.fotoAsset])
 

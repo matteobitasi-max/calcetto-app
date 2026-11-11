@@ -1,5 +1,6 @@
 'use client'
 
+import { conferma } from './conferma'
 import { useState, useTransition } from 'react'
 import { createPortal } from 'react-dom'
 import { eliminaLega, esciDallaLega } from '@/app/actions'
@@ -48,7 +49,7 @@ export function EsciLega({ legaId, nome, organizzatore }: { legaId: string; nome
               <button
                 type="button"
                 disabled={pending}
-                onClick={() => confirm(t('Uscire da “{lega}”?', { lega: nome })) && esegui(() => esciDallaLega(legaId))}
+                onClick={async () => (await conferma(t('Uscire da “{lega}”?', { lega: nome }))) && esegui(() => esciDallaLega(legaId))}
                 className={`${voce} bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700`}
               >
                 🚪 {t('Esci dalla lega')}
@@ -61,9 +62,9 @@ export function EsciLega({ legaId, nome, organizzatore }: { legaId: string; nome
                 <button
                   type="button"
                   disabled={pending}
-                  onClick={() =>
-                    confirm(t('Eliminare “{lega}”? Spariscono per tutti partite, giocatori e classifiche.', { lega: nome })) &&
-                    confirm(t('Sicuro? Non si torna indietro.')) &&
+                  onClick={async () =>
+                    (await conferma({ testo: t('Eliminare “{lega}”? Spariscono per tutti partite, giocatori e classifiche.', { lega: nome }), pericolo: true })) &&
+                    (await conferma({ testo: t('Sicuro? Non si torna indietro.'), ok: t('Elimina la lega'), pericolo: true })) &&
                     esegui(() => eliminaLega(legaId))
                   }
                   className={`${voce} bg-red-50 text-red-700 hover:bg-red-100 dark:bg-red-950 dark:text-red-300`}

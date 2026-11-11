@@ -32,7 +32,7 @@ export const ingresso: Record<string, string> = {
   "Sicuro? Non si torna indietro.": "Are you sure? This can’t be undone.",
   "Esci ed elimina la lega": "Leave and delete the league",
   "Cancella per tutti partite, giocatori e classifiche.": "Deletes matches, players and standings for everyone.",
-  "Eliminare il tuo account? Verranno cancellati accesso, foto e dati personali in tutte le leghe. Se sei l’unico organizzatore di una lega, un altro giocatore della rosa diventerà organizzatore. Non si torna indietro.": "Delete your account? Your sign-in, photos and personal data in every league will be deleted. If you’re the only organiser of a league, another player in the squad will become organiser. This can’t be undone.",
+  "Eliminare il tuo account? Verranno cancellati accesso, foto e dati personali in tutte le leghe. Se sei l’unico organizzatore di una lega, un altro giocatore della rosa diventerà organizzatore. Se hai The Cap Pro, disdici l’abbonamento dalle impostazioni di Apple o Google: eliminando l’account non si ferma. Non si torna indietro.": "Delete your account? Your sign-in, photos and personal data in every league will be deleted. If you’re the only organiser of a league, another player in the squad will become organiser. If you have The Cap Pro, cancel the subscription in your Apple or Google settings: deleting your account doesn’t stop it. This can’t be undone.",
   "Elimina account": "Delete account",
   "Questi dati compaiono nella tua scheda giocatore, in tutte le tue leghe.": "These details appear on your player card, in all your leagues.",
   "Telefono (facoltativo)": "Phone (optional)",

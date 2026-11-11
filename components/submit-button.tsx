@@ -1,5 +1,6 @@
 'use client'
 
+import { confermaInvio } from './conferma'
 import type { ComponentProps } from 'react'
 import { useFormStatus } from 'react-dom'
 
@@ -11,7 +12,7 @@ export function SubmitButton({ children, pendingText, confirm, ...props }: Compo
       type="submit"
       disabled={pending || props.disabled}
       onClick={(e) => {
-        if (confirm && !window.confirm(confirm)) e.preventDefault()
+        if (confirm) confermaInvio(e, confirm)
       }}
       {...props}
     >

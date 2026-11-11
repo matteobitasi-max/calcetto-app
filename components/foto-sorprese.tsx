@@ -1,5 +1,6 @@
 'use client'
 
+import { conferma } from './conferma'
 import { startTransition, useActionState, useState, useTransition } from 'react'
 import type { FormState } from '@/app/actions'
 import { useSceltaFoto } from './scelta-foto'
@@ -40,7 +41,7 @@ export function FotoSorpreseEditor({
             <button
               type="button"
               disabled={togliendo}
-              onClick={() => confirm(t('Togliere questa foto?')) && startTogli(() => rimuovi(f.key))}
+              onClick={async () => (await conferma(t('Togliere questa foto?'))) && startTogli(() => rimuovi(f.key))}
               className="absolute right-1 top-1 flex h-7 w-7 items-center justify-center rounded-full bg-black/60 text-sm text-white"
               aria-label={t('Togli foto')}
             >

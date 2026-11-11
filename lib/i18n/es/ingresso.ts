@@ -32,7 +32,7 @@ export const ingresso: Record<string, string> = {
   "Sicuro? Non si torna indietro.": "¿Seguro? No se puede deshacer.",
   "Esci ed elimina la lega": "Salir y eliminar la liga",
   "Cancella per tutti partite, giocatori e classifiche.": "Borra para todos partidos, jugadores y clasificaciones.",
-  "Eliminare il tuo account? Verranno cancellati accesso, foto e dati personali in tutte le leghe. Se sei l’unico organizzatore di una lega, un altro giocatore della rosa diventerà organizzatore. Non si torna indietro.": "¿Eliminar tu cuenta? Se borrarán el acceso, las fotos y los datos personales en todas las ligas. Si eres el único organizador de una liga, otro jugador de la plantilla pasará a ser organizador. No se puede deshacer.",
+  "Eliminare il tuo account? Verranno cancellati accesso, foto e dati personali in tutte le leghe. Se sei l’unico organizzatore di una lega, un altro giocatore della rosa diventerà organizzatore. Se hai The Cap Pro, disdici l’abbonamento dalle impostazioni di Apple o Google: eliminando l’account non si ferma. Non si torna indietro.": "¿Eliminar tu cuenta? Se borrarán el acceso, las fotos y los datos personales en todas las ligas. Si eres el único organizador de una liga, otro jugador de la plantilla pasará a ser organizador. Si tienes The Cap Pro, cancela la suscripción en los ajustes de Apple o Google: eliminar la cuenta no la detiene. No se puede deshacer.",
   "Elimina account": "Eliminar cuenta",
   "Questi dati compaiono nella tua scheda giocatore, in tutte le tue leghe.": "Estos datos aparecen en tu ficha de jugador, en todas tus ligas.",
   "Telefono (facoltativo)": "Teléfono (opcional)",

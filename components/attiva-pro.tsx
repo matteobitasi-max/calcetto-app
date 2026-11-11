@@ -35,7 +35,7 @@ export function PianiPro() {
         <p className="font-bold">{t('Mensile')}</p>
         <p className="text-xs text-zinc-600 dark:text-zinc-300">{t('Disdici quando vuoi')}</p>
       </div>
-      <p className="col-span-2 text-xs text-zinc-500">{t('Primo mese gratis. Prezzi nell’App Store e in Google Play.')}</p>
+      <p className="col-span-2 text-xs text-zinc-500">{t('Prezzi nell’App Store e in Google Play.')}</p>
     </div>
   )
 }
@@ -52,7 +52,18 @@ async function prepara(utente: string, chiave: string) {
 }
 
 // Attivazione del Pro dentro l'app (acquisto in-app su App Store o Google Play).
-export function AttivaPro({ utente, chiavi, mio }: { utente: string; chiavi: { apple: string | null; google: string | null }; mio: MioPro }) {
+export function AttivaPro({
+  utente,
+  chiavi,
+  mio,
+  giocatori = 0,
+}: {
+  utente: string
+  chiavi: { apple: string | null; google: string | null }
+  mio: MioPro
+  /** giocatori della lega: per mostrare quanto costa a testa */
+  giocatori?: number
+}) {
   const t = useT()
   const [pacchetti, setPacchetti] = useState<PurchasesPackage[] | null>(null)
   const [errore, setErrore] = useState<string | null>(null)
@@ -219,32 +230,20 @@ export function AttivaPro({ utente, chiavi, mio }: { utente: string; chiavi: { a
         const annuale = p.packageType === PACKAGE_TYPE.ANNUAL
         const prova = p.product.introPrice?.price === 0 ? p.product.introPrice : null
         const risparmio = annuale && mensile ? Math.round((1 - p.product.price / (mensile.product.price * 12)) * 100) : 0
+        const valuta = (n: number) => t.numero(n, { style: 'currency', currency: p.product.currencyCode })
+        const alMese = annuale ? p.product.price / 12 : p.product.price
         return (
-          <button
+          <CartaPiano
             key={p.identifier}
-            type="button"
+            annuale={annuale}
+            prezzo={p.product.priceString}
+            risparmio={risparmio}
+            alMese={valuta(alMese)}
+            perGiocatore={giocatori > 1 ? valuta(alMese / giocatori) : null}
+            prova={prova ? (prova.periodUnit === 'MONTH' && prova.periodNumberOfUnits === 1 ? 'mese' : 'prova') : null}
             disabled={occupato}
             onClick={() => compra(p)}
-            className={`${buttonClass(annuale ? 'primary' : 'secondary')} w-full flex-col py-3`}
-          >
-            <span className="text-base font-bold">
-              {annuale ? t('Annuale') : t('Mensile')} · {p.product.priceString}
-              {annuale ? t('/anno') : t('/mese')}
-            </span>
-            {(prova || risparmio > 0) && (
-              <span className="text-xs font-normal opacity-90">
-                {[
-                  prova &&
-                    (prova.periodUnit === 'MONTH' && prova.periodNumberOfUnits === 1
-                      ? t('Primo mese gratis')
-                      : t('Prova gratuita')),
-                  risparmio > 0 && t('risparmi il {n}%', { n: risparmio }),
-                ]
-                  .filter(Boolean)
-                  .join(' · ')}
-              </span>
-            )}
-          </button>
+          />
         )
       })}
       {errore && <p className="whitespace-pre-line break-words text-sm text-red-600">{errore}</p>}
@@ -269,5 +268,62 @@ export function AttivaPro({ utente, chiavi, mio }: { utente: string; chiavi: { a
         )}
       </p>
     </div>
+  )
+}
+
+// Un piano (annuale o mensile) come carta da toccare per abbonarsi.
+export function CartaPiano({
+  annuale,
+  prezzo,
+  risparmio,
+  alMese,
+  perGiocatore,
+  prova,
+  disabled,
+  onClick,
+}: {
+  annuale: boolean
+  prezzo: string
+  risparmio: number
+  alMese: string
+  perGiocatore: string | null
+  prova: 'mese' | 'prova' | null
+  disabled?: boolean
+  onClick?: () => void
+}) {
+  const t = useT()
+  return (
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={onClick}
+      className={`relative w-full rounded-2xl border-2 p-4 text-left transition active:scale-[0.98] disabled:opacity-50 ${
+        annuale ? 'border-green-600 bg-green-50 shadow-md dark:bg-green-950' : 'border-zinc-200 bg-white dark:border-zinc-700 dark:bg-zinc-900'
+      }`}
+    >
+      {annuale && risparmio > 0 && (
+        <span className="absolute -top-3 right-4 rounded-full bg-amber-400 px-3 py-0.5 text-xs font-bold text-zinc-900 shadow">
+          {t('risparmi il {n}%', { n: risparmio })}
+        </span>
+      )}
+      <span className="flex items-baseline justify-between gap-2">
+        <span className="text-base font-bold">{annuale ? t('Annuale') : t('Mensile')}</span>
+        <span className="text-lg font-extrabold tabular-nums">
+          {prezzo}
+          <span className="text-xs font-medium text-zinc-500">{annuale ? t('/anno') : t('/mese')}</span>
+        </span>
+      </span>
+      <span className="mt-1 flex flex-wrap justify-between gap-x-3 text-xs text-zinc-600 dark:text-zinc-300">
+        <span>{annuale ? t('Solo {prezzo} al mese', { prezzo: alMese }) : t('Disdici quando vuoi')}</span>
+        {perGiocatore && <span>{t('{prezzo} al mese per giocatore', { prezzo: perGiocatore })}</span>}
+      </span>
+      <span
+        className={`mt-3 block rounded-xl py-2.5 text-center text-sm font-bold ${
+          annuale ? 'bg-green-600 text-white' : 'bg-zinc-100 text-zinc-900 dark:bg-zinc-800 dark:text-zinc-100'
+        }`}
+      >
+        {prova === 'mese' ? t('Inizia il mese gratis') : prova === 'prova' ? t('Inizia la prova gratuita') : t('Abbonati')}
+      </span>
+    </button>
   )
 }

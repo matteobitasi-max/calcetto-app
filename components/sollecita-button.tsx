@@ -1,5 +1,6 @@
 'use client'
 
+import { confermaInvio } from './conferma'
 import { useActionState } from 'react'
 import type { AvvisoState } from '@/app/actions'
 import { buttonClass } from './ui-classes'
@@ -16,7 +17,7 @@ export function SollecitaButton({ action, quanti }: { action: () => Promise<Avvi
         disabled={pending || quanti === 0}
         className={buttonClass('secondary')}
         onClick={(e) => {
-          if (!window.confirm(t.n(quanti, 'Mandare un promemoria a {n} giocatore?', 'Mandare un promemoria a {n} giocatori?'))) e.preventDefault()
+          confermaInvio(e, t.n(quanti, 'Mandare un promemoria a {n} giocatore?', 'Mandare un promemoria a {n} giocatori?'))
         }}
       >
         {pending ? t('Invio…') : `🔔 ${t('Sollecita ({n})', { n: quanti })}`}
