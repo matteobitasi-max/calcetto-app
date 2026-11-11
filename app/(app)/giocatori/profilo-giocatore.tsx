@@ -2,7 +2,7 @@ import { Suspense } from 'react'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { SignOutButton } from '@clerk/nextjs'
-import { displayName, eta, getMemberships, membroDi } from '@/lib/player'
+import { displayName, eta, getMemberships, isTitolare, membroDi } from '@/lib/player'
 import { getKmTotali, getPartitePunteggio, getPlayer, getPlayerStats, getStorico, type PartitaGiocata, type PlayerStats } from '@/lib/matches'
 import { classifica } from '@/lib/punteggio'
 import { TROFEI, trofeiLega, type IdTrofeo } from '@/lib/trofei'
@@ -13,6 +13,7 @@ import type { T } from '@/lib/i18n'
 import { immagineUrl } from '@/lib/image'
 import { caricaFoto, spostaGiocatore } from '@/app/actions'
 import { SpostaGiocatore } from '@/components/sposta-giocatore'
+import { ProvaKm } from '@/components/prova-km'
 import { AvatarUpload } from '@/components/avatar-upload'
 import { NotificheToggle } from '@/components/notifiche-toggle'
 import { PreferenzeNotifiche } from '@/components/preferenze-notifiche'
@@ -25,7 +26,7 @@ export async function ProfiloGiocatore({ id }: { id: string }) {
   // Le schede si vedono solo tra membri della stessa lega.
   const me = await membroDi(player?.legaId)
   if (!player || !me) notFound()
-  const [stats, storico, partite, kmTotali, trofeiTutti, mie, t] = await Promise.all([
+  const [stats, storico, partite, kmTotali, trofeiTutti, mie, t, titolare] = await Promise.all([
     getPlayerStats(id, me.lega._id),
     getStorico(id),
     getPartitePunteggio(me.lega._id),
@@ -33,6 +34,7 @@ export async function ProfiloGiocatore({ id }: { id: string }) {
     trofeiLega(me.lega._id),
     getMemberships(),
     getT(),
+    isTitolare(),
   ])
   const trofei = trofeiTutti.get(id) ?? {}
   const inClassifica = classifica(partite).find((r) => r.id === player._id)
@@ -146,6 +148,11 @@ export async function ProfiloGiocatore({ id }: { id: string }) {
           <Card className="p-0! empty:hidden">
             <SaluteAccount />
           </Card>
+          {titolare && (
+            <Card className="p-0! empty:hidden">
+              <ProvaKm />
+            </Card>
+          )}
           <Card className="divide-y divide-zinc-100 p-0! text-sm dark:divide-zinc-800">
             <Link href="/account" className="flex items-center justify-between px-4 py-3 hover:bg-zinc-50 dark:hover:bg-zinc-800">
               👤 {t('Il mio account (nome, telefono, nascita, ruolo, piede)')} <span className="text-zinc-400">›</span>
