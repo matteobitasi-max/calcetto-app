@@ -1,7 +1,8 @@
 import 'server-only'
 import { createHash, randomBytes } from 'node:crypto'
 import postgres from 'postgres'
-import { evaluate, parse } from 'groq-js'
+import { parse } from 'groq-js'
+import { evaluate } from '../vendor/groq-js'
 import { applicaPatch, type Documento, type Operazioni } from './patch'
 import { cancellaFile, caricaFoto } from './foto'
 

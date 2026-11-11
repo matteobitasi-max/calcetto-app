@@ -15,6 +15,8 @@ const eslintConfig = defineConfig([
     // Progetti nativi generati da Capacitor
     "android/**",
     "ios/**",
+    // Codice copiato da pacchetti esterni (lib/vendor/groq-js/index.ts)
+    "lib/vendor/**",
   ]),
 ]);
 
