@@ -18,6 +18,10 @@ const vecchioIndirizzo = (req: NextRequest) =>
   req.headers.get('accept')?.includes('text/html')
 
 export default function proxy(req: NextRequest, ev: NextFetchEvent) {
+  // manutenzione (MANUTENZIONE=1 su Vercel), es. durante lo spostamento dei dati: nessuno legge o scrive
+  if (process.env.MANUTENZIONE === '1') {
+    return new NextResponse(PAGINA_MANUTENZIONE, { status: 503, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store', 'Retry-After': '120' } })
+  }
   // i link d'invito già mandati col vecchio indirizzo si aprono nel browser: lì si va sul sito nuovo
   if (vecchioIndirizzo(req) && /^\/invito/.test(req.nextUrl.pathname)) return NextResponse.redirect(`https://www.thecapfc.app${req.nextUrl.pathname}`)
   if (vecchioIndirizzo(req)) return new NextResponse(PAGINA_SPOSTATI, { headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' } })
@@ -27,6 +31,11 @@ export default function proxy(req: NextRequest, ev: NextFetchEvent) {
 const PAGINA_SPOSTATI = `<!doctype html><html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>The Cap</title>
 <style>body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;font-family:system-ui,sans-serif;background:#bfe3ba;color:#14532d;text-align:center}main{max-width:22rem;padding:1.5rem}img{width:96px;border-radius:22%}a{display:block;margin-top:1.5rem;padding:.8rem;border-radius:.8rem;background:#16a34a;color:#fff;font-weight:600;text-decoration:none}p{color:#3f6212}</style></head>
 <body><main><img src="/icon-512.png" alt=""><h1>Aggiorna The Cap</h1><p>Abbiamo un nuovo indirizzo. Se usi l’app, aggiornala dall’App Store o da Google Play. Dal browser, continua qui:</p><p lang="en"><small>We have moved. Please update the app from the store, or continue in your browser:</small></p><a href="https://www.thecapfc.app/">www.thecapfc.app</a></main></body></html>`
+
+const PAGINA_MANUTENZIONE = `<!doctype html><html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>The Cap</title>
+<style>body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;font-family:system-ui,sans-serif;background:#bfe3ba;color:#14532d;text-align:center}main{max-width:22rem;padding:1.5rem}img{width:96px;border-radius:22%}p{color:#3f6212}button{margin-top:1rem;padding:.8rem 1.6rem;border:0;border-radius:.8rem;background:#16a34a;color:#fff;font-weight:600;font-size:1rem}</style></head>
+<body><main><img src="/icon-512.png" alt=""><h1>Torniamo subito ⚽</h1><p>Stiamo aggiornando The Cap: ci vogliono pochi minuti.</p><p lang="en"><small>We’re updating The Cap: back in a few minutes.</small></p><button onclick="location.reload()">Riprova</button></main>
+<script>setTimeout(function(){location.reload()},30000)</script></body></html>`
 
 export const config = {
   // Privacy, Termini, Supporto ed Elimina account restano fuori da Clerk: gli store le controllano
