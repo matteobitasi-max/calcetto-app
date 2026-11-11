@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import type { ReactNode } from 'react'
 import { MarchioPro } from '@/components/logo-c'
-import { BarraPro } from '@/components/barra-pro'
+import { BarraPro, LinkPrezzi } from '@/components/barra-pro'
 import { ButtonLink, Card } from '@/components/ui'
 import type { T } from '@/lib/i18n'
 import { MAX_LEGHE_PRO } from '@/lib/pro'
@@ -24,9 +24,9 @@ export function Testata({ t, titolo, sotto, cta }: { t: T; titolo: string; sotto
         <p className="text-sm leading-relaxed text-green-50">{sotto}</p>
         {cta && (
           <>
-            <a href="#prezzi" className="inline-flex rounded-xl bg-amber-400 px-5 py-3 text-sm font-bold text-zinc-900 shadow-md transition active:scale-95">
+            <LinkPrezzi className="inline-flex rounded-xl bg-amber-400 px-5 py-3 text-sm font-bold text-zinc-900 shadow-md transition active:scale-95">
               {t('Passa a Pro')} →
-            </a>
+            </LinkPrezzi>
             <ul className="flex flex-wrap gap-x-4 gap-y-1 text-xs font-medium text-green-100">
               <li>✓ {t('Paghi con Apple o Google')}</li>
               <li>✓ {t('Disdici quando vuoi')}</li>
@@ -296,9 +296,9 @@ export function ChiusuraPro({ t }: { t: T }) {
       <div className="rounded-3xl bg-gradient-to-br from-green-700 to-emerald-900 p-6 text-center text-white">
         <p className="text-lg font-bold">{t('La tua lega merita il meglio.')}</p>
         <p className="mt-1 text-sm text-green-100">{t('Nessun vincolo: se non ti convince, lo disdici quando vuoi dallo store.')}</p>
-        <a href="#prezzi" className="mt-4 inline-flex rounded-xl bg-amber-400 px-6 py-3 text-sm font-bold text-zinc-900 shadow-md transition active:scale-95">
+        <LinkPrezzi className="mt-4 inline-flex rounded-xl bg-amber-400 px-6 py-3 text-sm font-bold text-zinc-900 shadow-md transition active:scale-95">
           {t('Passa a Pro')} →
-        </a>
+        </LinkPrezzi>
       </div>
       <BarraPro testo={t('Passa a Pro')} sotto={t('Disdici quando vuoi · gratis per i giocatori')} />
     </>
