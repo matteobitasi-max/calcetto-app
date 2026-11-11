@@ -1,7 +1,9 @@
 import Link from 'next/link'
 import { Suspense } from 'react'
 import { displayName, requirePlayer, type Player } from '@/lib/player'
-import { getAllStats, getKmTotali, getPartitePunteggio, getPlayers, type PlayerStats } from '@/lib/matches'
+import { getAllStats, getKmRecord, getKmTotali, getPartitePunteggio, getPlayers, type PlayerStats } from '@/lib/matches'
+import { legaPro } from '@/lib/pro'
+import { KmBloccati, KmPercorsi } from '@/components/km-classifica'
 import { PUNTI, classifica, type RigaClassifica } from '@/lib/punteggio'
 import { Avatar, Card, Loading, PageTitle, PlayerBadge } from '@/components/ui'
 import { getT } from '@/lib/lingua'
@@ -23,11 +25,13 @@ type Riga = { player: Player; s: PlayerStats }
 
 async function Classifiche() {
   const [me, t] = await Promise.all([requirePlayer(), getT()])
-  const [players, stats, partite, km] = await Promise.all([
+  const [players, stats, partite, km, record, pro] = await Promise.all([
     getPlayers(me.lega._id),
     getAllStats(me.lega._id),
     getPartitePunteggio(me.lega._id),
     getKmTotali(me.lega._id),
+    getKmRecord(me.lega._id),
+    legaPro(me.lega._id),
   ])
   const righe: Riga[] = players.flatMap((player) => {
     const s = stats.get(player._id)
@@ -68,7 +72,11 @@ async function Classifiche() {
         valore={(s) => `${perc(s)}%`}
         dettaglio={(s) => `${s.vinte}${t('V|vittorie')} ${s.pari}${t('P|pari')} ${s.perse}${t('S|sconfitte')}`}
       />
-      <KmPercorsi km={km} giocatori={giocatori} mioId={me._id} t={t} />
+      {pro ? (
+        <KmPercorsi km={km} record={record} giocatori={giocatori} mioId={me._id} t={t} />
+      ) : (
+        <KmBloccati km={km} giocatori={giocatori} admin={!!me.isAdmin} t={t} />
+      )}
       <Tabella
         mioId={me._id}
         titolo={`🧱 ${t('Meno gol subiti')}`}
@@ -112,37 +120,6 @@ function Tabella({
             <span className="text-lg font-bold tabular-nums">{valore(s)}</span>
           </li>
         ))}
-      </ol>
-    </Card>
-  )
-}
-
-// Km corsi nelle partite (presi da Strava / Apple Salute / Health Connect): classifica per media a partita,
-// cioè i km totali divisi per le partite in cui sono stati registrati, così conta quanto corri, non quante volte giochi.
-function KmPercorsi({ km, giocatori, mioId, t }: { km: Map<string, { km: number; partite: number }>; giocatori: Map<string, Player>; mioId: string; t: T }) {
-  const righe = [...km.entries()].filter(([id]) => giocatori.has(id)).sort((a, b) => b[1].km / b[1].partite - a[1].km / a[1].partite || b[1].partite - a[1].partite)
-  if (righe.length === 0) return null
-  const fmt = (n: number) => t.numero(n, { maximumFractionDigits: 1 })
-  return (
-    <Card>
-      <h2 className="mb-3 font-semibold">🏃 {t('Km a partita')}</h2>
-      <ol className="space-y-2">
-        {righe.slice(0, 10).map(([id, k], i) => {
-          const player = giocatori.get(id)!
-          return (
-            <li key={id} className={`flex items-center gap-3 rounded-lg px-1 py-1 ${id === mioId ? 'bg-green-50 dark:bg-green-950' : ''}`}>
-              <span className="w-5 text-right text-sm tabular-nums text-zinc-400">{i + 1}</span>
-              <Avatar player={player} size={32} />
-              <Link href={`/giocatori/${id}`} className="min-w-0 flex-1 hover:underline">
-                <span className={`block truncate text-sm ${id === mioId ? 'font-extrabold' : 'font-medium'}`}>{displayName(player)}</span>
-                <span className="block text-xs text-zinc-500">
-                  {t('{km} km in totale', { km: fmt(k.km) })} · {t.n(k.partite, '{n} partita', '{n} partite')}
-                </span>
-              </Link>
-              <span className="text-lg font-bold tabular-nums">{fmt(k.km / k.partite)}</span>
-            </li>
-          )
-        })}
       </ol>
     </Card>
   )

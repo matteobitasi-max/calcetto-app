@@ -268,6 +268,18 @@ export async function getKmTotali(legaId: string) {
   return totali
 }
 
+// La partita in cui qualcuno ha corso di più nella lega (record), e i km totali di tutta la lega.
+export async function getKmRecord(legaId: string) {
+  return sanity.fetch<{ record: { id: string; km: number; data: string } | null; totale: number }>(
+    `{
+      "record": *[_type == "match" && lega._ref == $legaId && stato == "giocata" && count(distanze) > 0]{data, "d": distanze[]{"id": giocatore._ref, km}}
+        {"migliore": d | order(km desc)[0], data} | order(migliore.km desc)[0]{"id": migliore.id, "km": migliore.km, data},
+      "totale": math::sum(*[_type == "match" && lega._ref == $legaId && stato == "giocata"].distanze[].km)
+    }`,
+    { legaId },
+  )
+}
+
 // Le partite giocate di una lega, con solo quello che serve per la forma (Pro).
 export function getPartitePerForma(legaId: string) {
   return sanity.fetch<PartitaForma[]>(

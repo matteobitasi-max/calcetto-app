@@ -13,6 +13,7 @@ import type { T } from '@/lib/i18n'
 import { immagineUrl } from '@/lib/image'
 import { caricaFoto, spostaGiocatore } from '@/app/actions'
 import { SpostaGiocatore } from '@/components/sposta-giocatore'
+import { legaPro } from '@/lib/pro'
 import { ProvaKm } from '@/components/prova-km'
 import { AvatarUpload } from '@/components/avatar-upload'
 import { NotificheToggle } from '@/components/notifiche-toggle'
@@ -26,7 +27,7 @@ export async function ProfiloGiocatore({ id }: { id: string }) {
   // Le schede si vedono solo tra membri della stessa lega.
   const me = await membroDi(player?.legaId)
   if (!player || !me) notFound()
-  const [stats, storico, partite, kmTotali, trofeiTutti, mie, t, titolare] = await Promise.all([
+  const [stats, storico, partite, kmTotali, trofeiTutti, mie, t, titolare, pro] = await Promise.all([
     getPlayerStats(id, me.lega._id),
     getStorico(id),
     getPartitePunteggio(me.lega._id),
@@ -35,6 +36,7 @@ export async function ProfiloGiocatore({ id }: { id: string }) {
     getMemberships(),
     getT(),
     isTitolare(),
+    legaPro(me.lega._id),
   ])
   const trofei = trofeiTutti.get(id) ?? {}
   const inClassifica = classifica(partite).find((r) => r.id === player._id)
@@ -103,7 +105,7 @@ export async function ProfiloGiocatore({ id }: { id: string }) {
         )}
       </Card>
 
-      <Statistiche stats={stats} km={kmTotali.get(id)} t={t} />
+      <Statistiche stats={stats} km={kmTotali.get(id)} kmPro={pro} t={t} />
 
       <Card>
         <h2 className="mb-1 font-semibold">🏅 {t('Trofei')}</h2>
@@ -179,7 +181,7 @@ export async function ProfiloGiocatore({ id }: { id: string }) {
   )
 }
 
-function Statistiche({ stats: s, km, t }: { stats: PlayerStats; km?: { km: number; partite: number }; t: T }) {
+function Statistiche({ stats: s, km, kmPro, t }: { stats: PlayerStats; km?: { km: number; partite: number }; kmPro: boolean; t: T }) {
   if (s.giocate === 0) {
     return <Card className="text-sm text-zinc-500">{t('Le statistiche compariranno dopo la prima partita con il risultato.')}</Card>
   }
@@ -225,8 +227,8 @@ function Statistiche({ stats: s, km, t }: { stats: PlayerStats; km?: { km: numbe
             [t('Gol a partita'), media(s.gol)],
             [t('Gol subiti'), s.gs],
             [t('Subiti a partita'), media(s.gs)],
-            // km solo se ce ne sono (da Apple Salute): la media è sulle partite con i km
-            ...(km
+            // km (Pro) solo se ce ne sono: la media è sulle partite con i km
+            ...(km && kmPro
               ? ([
                   [`🏃 ${t('Km totali')}`, t.numero(km.km, { maximumFractionDigits: 1 })],
                   [t('Km a partita'), t.numero(km.km / km.partite, { maximumFractionDigits: 1 })],
@@ -240,6 +242,16 @@ function Statistiche({ stats: s, km, t }: { stats: PlayerStats; km?: { km: numbe
           </div>
         ))}
       </dl>
+      {km && !kmPro && (
+        <Link href="/pro" className="flex items-center gap-3 rounded-2xl bg-gradient-to-r from-amber-50 to-orange-50 p-3 ring-1 ring-amber-200 dark:from-amber-950/40 dark:to-orange-950/40 dark:ring-amber-900">
+          <span className="text-2xl">🏃</span>
+          <span className="min-w-0 flex-1 text-sm">
+            <span className="block font-semibold">{t('Km totali e a partita')}</span>
+            <span className="block text-xs text-zinc-600 dark:text-zinc-300">{t('Le statistiche dei km sono una funzione Pro.')}</span>
+          </span>
+          <span className="rounded-full bg-amber-400 px-2.5 py-0.5 text-xs font-bold text-zinc-900">PRO</span>
+        </Link>
+      )}
     </Card>
   )
 }

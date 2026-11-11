@@ -94,6 +94,13 @@ export function Vantaggi({ t, link }: { t: T; link?: boolean }) {
       vai: ['/giocatori', t('Vai alla rosa')],
     },
     {
+      icona: '🏃',
+      titolo: t('Chi corre di più?'),
+      testo: t('La classifica dei km a partita con il podio, il record di una partita e i km di tutta la lega. Nel profilo di ognuno, km totali e a partita.'),
+      disegno: <PodioKm />,
+      vai: ['/classifica', t('Vai alle statistiche')],
+    },
+    {
       icona: '⚖️',
       titolo: t('Squadre davvero equilibrate'),
       testo: t('Le formazioni automatiche tengono conto anche della forma, non solo dei voti: partite più combattute e meno discussioni.'),
@@ -166,6 +173,26 @@ function Forma() {
   )
 }
 
+function PodioKm() {
+  const posti: [string, string, string, string][] = [
+    ['🥈', 'Luca', '5,1', 'h-8 from-zinc-300 to-zinc-400'],
+    ['🥇', 'Marco', '6,3', 'h-12 from-amber-300 to-amber-500'],
+    ['🥉', 'Paolo', '4,7', 'h-5 from-orange-300 to-orange-500'],
+  ]
+  return (
+    <div className="grid grid-cols-3 items-end gap-2 rounded-2xl bg-zinc-50 px-4 pt-3 dark:bg-zinc-900" aria-hidden>
+      {posti.map(([medaglia, nome, km, barra]) => (
+        <div key={nome} className="flex flex-col items-center gap-0.5 text-center">
+          <span className="text-lg">{medaglia}</span>
+          <span className="text-xs font-semibold">{nome}</span>
+          <span className="text-sm font-extrabold tabular-nums">{km} km</span>
+          <span className={`w-full rounded-t-lg bg-gradient-to-b ${barra}`} />
+        </div>
+      ))}
+    </div>
+  )
+}
+
 function Bilancia() {
   return (
     <div className="flex items-center justify-center gap-4 rounded-2xl bg-gradient-to-r from-green-600 to-green-700 p-3 text-white" aria-hidden>
@@ -188,10 +215,11 @@ export function Confronto({ t }: { t: T }) {
     [t('Convocazioni, promemoria e lista d’attesa'), true],
     [t('Squadre automatiche dai voti, in campo'), true],
     [t('Risultati, gol, MVP e classifiche'), true],
-    [t('Km corsi da Apple Health, Health Connect o Strava'), true],
+    [t('I tuoi km di ogni partita da Apple Health, Health Connect o Strava'), true],
     [t('Tornei con gironi e tabellone'), false],
     [t('Forma dei giocatori a ogni partita'), false],
     [t('Squadre equilibrate anche sulla forma'), false],
+    [t('Classifica km, record e km nel profilo'), false],
     [t('Voti aggiornati con le proposte automatiche'), false],
     [t('Marchio PRO accanto al tuo nome'), false],
   ]
