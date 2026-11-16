@@ -27,6 +27,15 @@ export function SwipeRiga({ children, sinistra, destra }: { children: ReactNode;
   const gesto = useRef<{ x0: number; y0: number; base: number; verso: 'h' | 'v' | null } | null>(null)
   const appenaMosso = useRef(false)
   const aperto = dx !== 0
+  // I pulsanti sotto la riga si disegnano solo mentre la riga è spostata (e finché si richiude):
+  // lasciati sempre lì, sul bordo arrotondato ne sbucava un filo rosso sopra ogni riga.
+  const [sotto, setSotto] = useState(false)
+  if (aperto && !sotto) setSotto(true)
+  useEffect(() => {
+    if (aperto) return
+    const t = setTimeout(() => setSotto(false), 250)
+    return () => clearTimeout(t)
+  }, [aperto])
 
   useEffect(() => {
     const chiudi = (e: Event) => (e as CustomEvent<string>).detail !== id && setDx(0)
@@ -60,7 +69,7 @@ export function SwipeRiga({ children, sinistra, destra }: { children: ReactNode;
 
   const pulsante = (a: AzioneSwipe, lato: 'left' | 'right', colore: string, visibile: boolean) => (
     // pulsante di misura fissa, centrato: uguale su tutte le righe, anche quelle su due righe di testo
-    <form action={a.azione} className="absolute inset-y-0 flex items-center px-1" style={{ [lato]: 0, width: LARGHEZZA }} aria-hidden={!visibile}>
+    <form action={a.azione} className={`absolute inset-y-0 flex items-center px-1 ${sotto ? '' : 'invisible'}`} style={{ [lato]: 0, width: LARGHEZZA }} aria-hidden={!visibile}>
       <SubmitButton
         confirm={a.confirm}
         tabIndex={visibile ? 0 : -1}
