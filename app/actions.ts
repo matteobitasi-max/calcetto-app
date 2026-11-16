@@ -1288,6 +1288,26 @@ export async function togliKm(matchId: string) {
 export type EsitoStrava = { km?: number; attivita?: string; error?: string; daCollegare?: boolean }
 
 // Cerca su Strava l'attività fatta durante la partita e ne salva i km.
+// L'organizzatore corregge i km di un giocatore in lista, per esempio quando l'orologio non li scrive
+// nell'orario della partita: compaiono a tutti come "inseriti a mano". Campo vuoto = toglie i km.
+export async function correggiKm(matchId: string, _prev: FormState, formData: FormData): Promise<FormState> {
+  await requireForDoc(matchId, 'organizzatore')
+  const match = await getMatch(matchId)
+  if (!match) return { error: await tr('Partita non trovata') }
+  if (new Date() < orarioPartita(match).fine) return { error: await tr('I km si aggiungono a partita finita') }
+  const playerId = str(formData, 'giocatore')
+  if (!presenti(match).some((c) => c.giocatore._id === playerId)) return { error: await tr('Scegli un giocatore in lista.') }
+  const testo = str(formData, 'km').replace(',', '.')
+  if (!testo) {
+    await scriviKm(matchId, playerId, null, 'manuale')
+    return
+  }
+  const km = Number(testo)
+  const massimo = Math.round((KM_ORA_MAX * (match.durataMinuti ?? 60)) / 60)
+  if (!Number.isFinite(km) || km <= 0 || km > massimo) return { error: await tr('Scrivi un numero di km tra 0 e {max}.', { max: massimo }) }
+  await scriviKm(matchId, playerId, Math.round(km * 100) / 100, 'manuale')
+}
+
 export async function kmDaStrava(matchId: string): Promise<EsitoStrava> {
   if (!stravaConfigurato()) return { error: await tr('Strava non è ancora attivo su The Cap.') }
   const { me, match } = await partitaPerKm(matchId)

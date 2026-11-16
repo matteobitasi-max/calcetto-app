@@ -252,4 +252,12 @@ export const partite: Record<string, string> = {
   "Campo": "Campo",
   "Elenco": "Lista",
   "Come vedere le squadre": "Cómo ver los equipos",
+  "Correggi i km di un giocatore": "Corregir los km de un jugador",
+  "Salva": "Guardar",
+  "a mano": "a mano",
+  "Per chi non riesce a prenderli dall’orologio. Tutti li vedono come “a mano”. Lascia vuoto per togliere i km.": "Para quien no puede tomarlos del reloj. Todos los ven como “a mano”. Déjalo vacío para quitar los km.",
+  "Scegli un giocatore in lista.": "Elige un jugador de la lista.",
+  "Scrivi un numero di km tra 0 e {max}.": "Escribe un número de km entre 0 y {max}.",
+  "Partita non trovata": "Partido no encontrado",
+  "I km si aggiungono a partita finita": "Los km se añaden cuando termina el partido",
 }

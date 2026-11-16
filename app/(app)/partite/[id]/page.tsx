@@ -12,14 +12,15 @@ import { KmPartita } from '@/components/km-partita'
 import { MeteoPartita } from '@/components/meteo-partita'
 import { getT } from '@/lib/lingua'
 import type { T } from '@/lib/i18n'
-import { scambiaConAttesa, aggiungiDaAttesa, allungaFinestra, apriConvocazioni, cambiaSquadra, cambiaStato, convocaGiocatore, scegliLega, togliDallaPartita, togliDallaSquadra } from '@/app/actions'
+import { correggiKm, scambiaConAttesa, aggiungiDaAttesa, allungaFinestra, apriConvocazioni, cambiaSquadra, cambiaStato, convocaGiocatore, scegliLega, togliDallaPartita, togliDallaSquadra } from '@/app/actions'
 import { Countdown } from '@/components/countdown'
 import { ApriConvocazioni } from '@/components/apri-convocazioni'
 import { baseUrl } from '@/lib/url'
 import { SubmitButton } from '@/components/submit-button'
 import { SwipeRiga } from '@/components/swipe-riga'
 import { ScambiaAttesa } from '@/components/scambia-attesa'
-import { ButtonLink, Card, Loading, PlayerRow, StatoBadge, buttonClass } from '@/components/ui'
+import { ButtonLink, Card, Loading, PlayerRow, StatoBadge, buttonClass, inputClass } from '@/components/ui'
+import { ActionForm } from '@/components/action-form'
 import { FinestraInfo } from '../finestra-info'
 import { RispostaButtons } from '../risposta-buttons'
 import { Cassa, PagamentoInLista } from './cassa'
@@ -468,7 +469,9 @@ async function KmCard({ match, me, rosa }: { match: Match; me: Membro; rosa: Pla
   const { inizio, fine } = orarioPartita(match)
   const inLista = presenti(match).some((c) => c.giocatore._id === me._id)
   const mostroMiei = match.stato !== 'annullata' && inLista && !me.ospite && new Date() >= fine
-  if (!mostroMiei && match.distanze.length === 0) return null
+  // l'organizzatore può correggere i km di chi era in lista, a partita finita
+  const correggo = !!me.isAdmin && match.stato !== 'annullata' && new Date() >= fine && presenti(match).length > 0
+  if (!mostroMiei && !correggo && match.distanze.length === 0) return null
   const [utente, t] = await Promise.all([mostroMiei ? getUtente() : null, getT()])
   const collegato = !!(utente && stravaConfigurato() && (await getCollegamento(utente.id)))
   const nomi = new Map([...rosa, ...presenti(match).map((c) => c.giocatore)].map((p) => [p._id, displayName(p)]))
@@ -496,11 +499,44 @@ async function KmCard({ match, me, rosa }: { match: Match; me: Membro; rosa: Pla
                   <span className="mr-2 tabular-nums text-zinc-400">{i + 1}</span>
                   {nomi.get(d.giocatoreId) ?? t('Giocatore')}
                 </span>
-                <span className="tabular-nums">{t.numero(d.km, { maximumFractionDigits: 2 })} km</span>
+                <span className="tabular-nums">
+                  {d.fonte === 'manuale' && <span className="mr-1 text-xs font-normal text-zinc-500">✍️ {t('a mano')}</span>}
+                  {t.numero(d.km, { maximumFractionDigits: 2 })} km
+                </span>
               </li>
             ))}
           </ol>
         </div>
+      )}
+      {correggo && (
+        <details className="group border-t border-zinc-200 pt-3 dark:border-zinc-800">
+          <summary className="cursor-pointer list-none text-sm font-semibold text-green-700 dark:text-green-400 [&::-webkit-details-marker]:hidden">
+            ✏️ {t('Correggi i km di un giocatore')}
+          </summary>
+          <ActionForm action={correggiKm.bind(null, match._id)} className="mt-3 space-y-2">
+            <div className="flex gap-2">
+              <select name="giocatore" required defaultValue="" className={`${inputClass} min-w-0 flex-1`}>
+                <option value="" disabled>
+                  {t('Giocatore')}
+                </option>
+                {presenti(match).map((c) => {
+                  const km = match.distanze.find((d) => d.giocatoreId === c.giocatore._id)?.km
+                  return (
+                    <option key={c.giocatore._id} value={c.giocatore._id}>
+                      {displayName(c.giocatore)}
+                      {km != null ? ` · ${t.numero(km, { maximumFractionDigits: 2 })} km` : ''}
+                    </option>
+                  )
+                })}
+              </select>
+              <input name="km" inputMode="decimal" autoComplete="off" placeholder="km" className={`${inputClass} w-20`} />
+              <SubmitButton className={buttonClass('primary')} pendingText="…">
+                {t('Salva')}
+              </SubmitButton>
+            </div>
+            <p className="text-xs text-zinc-500">{t('Per chi non riesce a prenderli dall’orologio. Tutti li vedono come “a mano”. Lascia vuoto per togliere i km.')}</p>
+          </ActionForm>
+        </details>
       )}
     </Card>
   )
