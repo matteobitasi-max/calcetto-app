@@ -120,7 +120,7 @@ export function ScuotiFoto({ urls }: { urls: string[] }) {
     >
       {/* eslint-disable-next-line @next/next/no-img-element -- immagine dal CDN di Sanity */}
       <img src={aperta} alt={t('Foto sorpresa')} className="h-full w-full object-cover" />
-      <span className="absolute inset-x-0 bottom-[max(1.5rem,env(safe-area-inset-bottom))] text-center text-sm text-white drop-shadow">{t('Tocca per chiudere')}</span>
+      <span className="absolute inset-x-0 bottom-[max(1.5rem,var(--safe-area-inset-bottom,env(safe-area-inset-bottom)))] text-center text-sm text-white drop-shadow">{t('Tocca per chiudere')}</span>
     </div>,
     document.body,
   )

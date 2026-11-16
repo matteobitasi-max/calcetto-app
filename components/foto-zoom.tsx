@@ -53,7 +53,7 @@ export function FotoIngrandita({ url, nome, chiudi }: { url: string; nome: strin
         type="button"
         onClick={chiudi}
         aria-label={t('Chiudi')}
-        className="absolute right-4 top-[max(1rem,env(safe-area-inset-top))] flex h-10 w-10 items-center justify-center rounded-full bg-white text-lg text-zinc-900 shadow-lg"
+        className="absolute right-4 top-[max(1rem,var(--safe-area-inset-top,env(safe-area-inset-top)))] flex h-10 w-10 items-center justify-center rounded-full bg-white text-lg text-zinc-900 shadow-lg"
       >
         ✕
       </button>

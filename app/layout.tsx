@@ -25,7 +25,9 @@ const geistMono = Geist_Mono({
 });
 
 // viewport-fit=cover: nell'app iPhone il contenuto arriva fino ai bordi (notch, barra in basso),
-// e le zone sicure vengono rispettate con env(safe-area-inset-*).
+// e le zone sicure vengono rispettate con env(safe-area-inset-*). Su Android (edge-to-edge) Capacitor
+// scrive i valori veri in --safe-area-inset-*: usare sempre var(--safe-area-inset-X, env(safe-area-inset-X)),
+// soprattutto per ciò che sta in fondo, altrimenti finisce sotto i tasti del telefono.
 export const viewport: Viewport = {
   viewportFit: "cover",
   // Niente zoom automatico quando si tocca un campo (Safari permette comunque lo zoom con due dita).

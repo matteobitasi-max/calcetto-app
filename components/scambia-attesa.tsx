@@ -26,7 +26,7 @@ export function ScambiaAttesa({ nome, inLista, scambia }: { nome: string; inList
             role="dialog"
             aria-label={t('Scambia {nome} con…', { nome })}
             onClick={(e) => e.stopPropagation()}
-            className="max-h-[75vh] w-full max-w-md overflow-y-auto rounded-t-2xl bg-white p-4 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-xl sm:rounded-2xl dark:bg-zinc-900"
+            className="max-h-[75vh] w-full max-w-md overflow-y-auto rounded-t-2xl bg-white p-4 pb-[max(1rem,var(--safe-area-inset-bottom,env(safe-area-inset-bottom)))] shadow-xl sm:rounded-2xl dark:bg-zinc-900"
           >
             <h2 className="font-semibold">⇄ {t('Scambia {nome} con…', { nome })}</h2>
             <p className="mb-3 text-xs text-zinc-500">{t('Chi scegli va in lista d’attesa al suo posto; i posti restano gli stessi.')}</p>

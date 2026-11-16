@@ -42,7 +42,7 @@ export function EsciLega({ legaId, nome, organizzatore }: { legaId: string; nome
             role="dialog"
             aria-label={t('Esci da {lega}', { lega: nome })}
             onClick={(e) => e.target === e.currentTarget && !pending && setAperta(false)}
-            className="fixed inset-0 z-[60] flex items-end justify-center bg-black/50 p-4 sm:items-center"
+            className="fixed inset-0 z-[60] flex items-end justify-center bg-black/50 p-4 pb-[max(1rem,var(--safe-area-inset-bottom,env(safe-area-inset-bottom)))] sm:items-center"
           >
             <div className="w-full max-w-sm space-y-2 rounded-2xl bg-white p-4 shadow-2xl dark:bg-zinc-900">
               <p className="px-1 pb-1 text-center font-semibold">{nome}</p>

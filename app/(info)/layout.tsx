@@ -4,7 +4,7 @@ import Link from 'next/link'
 // Pagine informative pubbliche (privacy, supporto): leggibili anche senza accesso.
 export default function InfoLayout({ children }: LayoutProps<'/'>) {
   return (
-    <main className="mx-auto w-full max-w-2xl flex-1 space-y-6 bg-white p-6 pt-[max(1.5rem,var(--safe-area-inset-top,env(safe-area-inset-top)))] text-zinc-800 dark:bg-zinc-950 dark:text-zinc-200">
+    <main className="mx-auto w-full max-w-2xl flex-1 space-y-6 bg-white p-6 pt-[max(1.5rem,var(--safe-area-inset-top,env(safe-area-inset-top)))] pb-[max(1.5rem,var(--safe-area-inset-bottom,env(safe-area-inset-bottom)))] text-zinc-800 dark:bg-zinc-950 dark:text-zinc-200">
       <Link href="/" className="flex items-center gap-3">
         <Image src="/icon-512.png" alt="" width={48} height={48} className="rounded-[22%]" />
         <span className="text-xl font-bold">TheCap</span>

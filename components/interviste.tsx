@@ -118,7 +118,7 @@ function Lettore({ video, inizio, chiudi }: { video: VideoIntervista[]; inizio: 
                 </>
               )}
             </div>
-            <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-4 pb-[max(1rem,env(safe-area-inset-bottom))] text-white">
+            <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-4 pb-[max(1rem,var(--safe-area-inset-bottom,env(safe-area-inset-bottom)))] text-white">
               <p className="font-semibold leading-tight">{v.titolo}</p>
               {v.sotto && <p className="text-sm text-white/70">{v.sotto}</p>}
             </div>
@@ -126,7 +126,7 @@ function Lettore({ video, inizio, chiudi }: { video: VideoIntervista[]; inizio: 
         ))}
       </div>
 
-      <div className="pointer-events-none absolute inset-x-0 top-0 flex items-center justify-between p-3 pt-[max(0.75rem,env(safe-area-inset-top))] text-white">
+      <div className="pointer-events-none absolute inset-x-0 top-0 flex items-center justify-between p-3 pt-[max(0.75rem,var(--safe-area-inset-top,env(safe-area-inset-top)))] text-white">
         <span className="rounded-full bg-black/40 px-2 py-0.5 text-xs tabular-nums">
           {attivo + 1}/{video.length}
           {video.length > 1 && attivo === 0 && ` · ${t('scorri per il prossimo')}`}

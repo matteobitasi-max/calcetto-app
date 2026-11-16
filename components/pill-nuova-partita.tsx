@@ -47,7 +47,7 @@ export function PillNuovaPartita() {
             role="dialog"
             aria-label={t('Cosa vuoi organizzare?')}
             onClick={(e) => e.target === e.currentTarget && setScelta(false)}
-            className="fixed inset-0 z-[60] flex items-end justify-center bg-black/50 p-4 sm:items-center"
+            className="fixed inset-0 z-[60] flex items-end justify-center bg-black/50 p-4 pb-[max(1rem,var(--safe-area-inset-bottom,env(safe-area-inset-bottom)))] sm:items-center"
           >
             <div className="w-full max-w-sm space-y-1 rounded-2xl bg-white p-3 shadow-2xl dark:bg-zinc-900">
               <p className="px-4 pb-1 pt-1 font-semibold">{t('Cosa vuoi organizzare?')}</p>

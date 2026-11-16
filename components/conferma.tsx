@@ -74,7 +74,7 @@ export function Conferme() {
 
   return (
     <div
-      className="conferma-sfondo fixed inset-0 z-[100] flex items-end justify-center bg-black/45 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] backdrop-blur-sm sm:items-center"
+      className="conferma-sfondo fixed inset-0 z-[100] flex items-end justify-center bg-black/45 p-4 pb-[max(1rem,var(--safe-area-inset-bottom,env(safe-area-inset-bottom)))] backdrop-blur-sm sm:items-center"
       onClick={() => chiudi(false)}
     >
       <div

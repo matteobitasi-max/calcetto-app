@@ -42,7 +42,7 @@ export function useSceltaFoto({
         ref={dialog}
         // un tocco sullo sfondo chiude
         onClick={(e) => e.target === e.currentTarget && chiudi()}
-        className="mx-auto mb-0 mt-auto w-full max-w-md rounded-t-3xl bg-white p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] text-zinc-900 backdrop:bg-black/50 dark:bg-zinc-900 dark:text-zinc-100"
+        className="mx-auto mb-0 mt-auto w-full max-w-md rounded-t-3xl bg-white p-3 pb-[max(0.75rem,var(--safe-area-inset-bottom,env(safe-area-inset-bottom)))] text-zinc-900 backdrop:bg-black/50 dark:bg-zinc-900 dark:text-zinc-100"
       >
         <p className="px-4 pb-2 pt-1 text-center text-sm text-zinc-500">{titolo}</p>
         <button type="button" className={voceMenuFoto} onClick={() => scegli(fotocamera.current)}>
