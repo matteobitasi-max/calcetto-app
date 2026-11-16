@@ -69,6 +69,8 @@
     <uses-permission android:name="android.permission.CAMERA" />
     <!-- km percorsi nelle partite, letti da Health Connect (solo lettura) -->
     <uses-permission android:name="android.permission.health.READ_DISTANCE" />
+    <!-- passi nelle partite: per stimare i km quando l'orologio (es. Garmin) non scrive la distanza con l'orario -->
+    <uses-permission android:name="android.permission.health.READ_STEPS" />
     <!-- Health Connect funziona da Android 8: sotto, l'app si installa ma i km non ci sono -->
     <uses-sdk tools:overrideLibrary="androidx.health.connect.client" />
     <queries>
