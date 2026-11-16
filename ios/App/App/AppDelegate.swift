@@ -174,16 +174,41 @@ class NavigazioneResistente: NSObject, WKNavigationDelegate {
 // Apple Salute: i km camminati/corsi registrati (da iPhone, Apple Watch, Garmin...) tra l'inizio
 // e la fine della partita. Solo lettura; dalla pagina si usa come plugin "Salute"
 // (components/km-partita.tsx).
+//
+// Non tutte le app scrivono la distanza con l'orario giusto: Garmin, per esempio, la mette in Salute
+// come un unico totale del giorno, mentre i passi li scrive ogni 15 minuti. Per questo si leggono tre cose
+// nell'orario della partita e si tiene la più alta:
+// - la distanza camminata e corsa (iPhone, Apple Watch...);
+// - gli allenamenti (un'attività avviata sull'orologio porta i suoi km);
+// - i passi della fonte che ne ha contati di più, convertiti in metri con il passo di quella persona:
+//   km ÷ passi della stessa fonte negli ultimi giorni (per Garmin è il passo calibrato dall'orologio),
+//   o 0,8 m se non si può calcolare.
 @objc(SalutePlugin)
 public class SalutePlugin: CAPPlugin, CAPBridgedPlugin {
     public let identifier = "SalutePlugin"
     public let jsName = "Salute"
     public let pluginMethods: [CAPPluginMethod] = [CAPPluginMethod(name: "distanza", returnType: CAPPluginReturnPromise)]
     private let salute = HKHealthStore()
+    // Lunghezza di un passo quando non si può calcolare quella della persona (tra camminata e corsa).
+    private let metriPerPasso = 0.8
+
+    // Il totale di un dato nell'orario indicato, fonte per fonte (chiave: l'app che l'ha scritto).
+    private func perFonte(_ tipo: HKQuantityType, _ unita: HKUnit, _ filtro: NSPredicate, _ fatto: @escaping ([String: Double]) -> Void) {
+        salute.execute(HKStatisticsQuery(quantityType: tipo, quantitySamplePredicate: filtro, options: [.cumulativeSum, .separateBySource]) { _, statistiche, _ in
+            var totali: [String: Double] = [:]
+            for fonte in statistiche?.sources ?? [] {
+                if let valore = statistiche?.sumQuantity(for: fonte)?.doubleValue(for: unita) {
+                    totali[fonte.bundleIdentifier, default: 0] += valore
+                }
+            }
+            fatto(totali)
+        })
+    }
 
     @objc func distanza(_ call: CAPPluginCall) {
         guard HKHealthStore.isHealthDataAvailable(),
-              let tipo = HKQuantityType.quantityType(forIdentifier: .distanceWalkingRunning) else {
+              let tipoDistanza = HKQuantityType.quantityType(forIdentifier: .distanceWalkingRunning),
+              let tipoPassi = HKQuantityType.quantityType(forIdentifier: .stepCount) else {
             call.reject("Apple Salute non è disponibile su questo dispositivo")
             return
         }
@@ -193,20 +218,70 @@ public class SalutePlugin: CAPPlugin, CAPBridgedPlugin {
         }
         let inizio = Date(timeIntervalSince1970: inizioMs / 1000)
         let fine = Date(timeIntervalSince1970: fineMs / 1000)
-        salute.requestAuthorization(toShare: nil, read: [tipo]) { _, errore in
+        let tipoAllenamenti = HKObjectType.workoutType()
+        salute.requestAuthorization(toShare: nil, read: [tipoDistanza, tipoPassi, tipoAllenamenti]) { _, errore in
             if let errore {
                 call.reject(errore.localizedDescription)
                 return
             }
-            // Il totale di Salute nell'orario della partita, lo stesso numero che mostra l'app Salute:
-            // somma tutte le fonti (iPhone, Apple Watch, Garmin...) senza contare due volte gli stessi passi
-            // registrati da telefono e orologio, e dei dati a cavallo dell'inizio o della fine conta solo la parte dentro.
             let filtro = HKQuery.predicateForSamples(withStart: inizio, end: fine, options: [])
-            let query = HKStatisticsQuery(quantityType: tipo, quantitySamplePredicate: filtro, options: .cumulativeSum) { _, statistiche, _ in
+            let gruppo = DispatchGroup()
+            let coda = DispatchQueue(label: "salute.km")
+            var distanza = 0.0, allenamenti = 0.0
+            var passiPartita: [String: Double] = [:], passiGiorni: [String: Double] = [:], metriGiorni: [String: Double] = [:]
+            // per il passo di ogni persona: km e passi di ogni fonte nella settimana prima e nel giorno dopo
+            // (Garmin scrive i km del giorno solo quando si sincronizza, anche a notte fonda)
+            let giorni = HKQuery.predicateForSamples(withStart: inizio.addingTimeInterval(-7 * 86400), end: fine.addingTimeInterval(86400), options: [])
+
+            // 1. Il totale di Salute nell'orario della partita, lo stesso numero che mostra l'app Salute:
+            // somma tutte le fonti senza contare due volte gli stessi passi registrati da telefono e orologio,
+            // e dei dati a cavallo dell'inizio o della fine conta solo la parte dentro.
+            gruppo.enter()
+            self.salute.execute(HKStatisticsQuery(quantityType: tipoDistanza, quantitySamplePredicate: filtro, options: .cumulativeSum) { _, statistiche, _ in
+                let metri = statistiche?.sumQuantity()?.doubleValue(for: .meter()) ?? 0
+                coda.sync { distanza = metri }
+                gruppo.leave()
+            })
+
+            // 2. Gli allenamenti nell'orario della partita: i loro km, solo per la parte dentro la partita.
+            gruppo.enter()
+            self.salute.execute(HKSampleQuery(sampleType: tipoAllenamenti, predicate: filtro, limit: HKObjectQueryNoLimit, sortDescriptors: nil) { _, campioni, _ in
+                var migliore = 0.0
+                for allenamento in campioni as? [HKWorkout] ?? [] {
+                    guard let km = allenamento.totalDistance?.doubleValue(for: .meter()) else { continue }
+                    let durata = allenamento.endDate.timeIntervalSince(allenamento.startDate)
+                    let dentro = min(allenamento.endDate, fine).timeIntervalSince(max(allenamento.startDate, inizio))
+                    guard durata > 0, dentro > 0 else { continue }
+                    migliore = max(migliore, km * min(1, dentro / durata))
+                }
+                coda.sync { allenamenti = migliore }
+                gruppo.leave()
+            })
+
+            // 3. I passi, fonte per fonte (l'orologio, non il telefono in borsa), e il passo di ognuno.
+            gruppo.enter()
+            self.perFonte(tipoPassi, .count(), filtro) { t in coda.sync { passiPartita = t }; gruppo.leave() }
+            gruppo.enter()
+            self.perFonte(tipoPassi, .count(), giorni) { t in coda.sync { passiGiorni = t }; gruppo.leave() }
+            gruppo.enter()
+            self.perFonte(tipoDistanza, .meter(), giorni) { t in coda.sync { metriGiorni = t }; gruppo.leave() }
+
+            gruppo.notify(queue: coda) {
                 // senza permesso o senza dati Salute restituisce semplicemente 0
-                call.resolve(["metri": statistiche?.sumQuantity()?.doubleValue(for: .meter()) ?? 0])
+                var daiPassi = 0.0
+                if let orologio = passiPartita.max(by: { $0.value < $1.value }) {
+                    var passo = self.metriPerPasso
+                    // il passo di questa persona secondo la stessa app, se ci sono abbastanza dati e il valore è sensato
+                    if let metri = metriGiorni[orologio.key], let tutti = passiGiorni[orologio.key], tutti > 2000 {
+                        let calcolato = metri / tutti
+                        if calcolato >= 0.5 && calcolato <= 1.5 { passo = calcolato }
+                    }
+                    daiPassi = orologio.value * passo
+                }
+                let metri = max(distanza, allenamenti, daiPassi)
+                let fonte = metri == 0 ? "nessuna" : metri == distanza ? "distanza" : metri == allenamenti ? "allenamento" : "passi"
+                call.resolve(["metri": metri, "fonte": fonte])
             }
-            self.salute.execute(query)
         }
     }
 }

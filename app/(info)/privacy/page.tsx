@@ -45,8 +45,8 @@ export default async function PrivacyPage() {
         </li>
         <li>
           <b>Km percorsi</b>: i km di ogni partita, visibili ai membri della lega. Solo se lo scegli, li prendiamo
-          da <b>Apple Health</b> (l&apos;app Salute di iPhone) o <b>Health Connect</b> (Android): la distanza camminata/corsa registrata durante
-          l&apos;orario della partita, nient&apos;altro. Sono dati legati alla salute: li trattiamo solo con il tuo{' '}
+          da <b>Apple Health</b> (l&apos;app Salute di iPhone) o <b>Health Connect</b> (Android): la distanza camminata/corsa, i passi e gli allenamenti registrati durante
+          l&apos;orario della partita (i passi servono a stimare i km quando un orologio, per esempio Garmin, non scrive la distanza con l&apos;orario), nient&apos;altro. Sono dati legati alla salute: li trattiamo solo con il tuo{' '}
           <b>consenso esplicito</b>, che ti chiediamo quando attivi la funzione e che puoi revocare disattivandola. I dati di salute non
           vengono usati per pubblicità né venduti.
           In alternativa da <b>Strava</b> (la distanza dell&apos;attività fatta durante la partita).

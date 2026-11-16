@@ -77,7 +77,7 @@ export const ingresso: Record<string, string> = {
   "obbligatorio": "required",
   "Acconsento alla pubblicazione, da parte del creatore della lega, di foto e video in cui compaio (ad esempio le interviste).": "I consent to the league creator publishing photos and videos in which I appear (for example interviews).",
   "facoltativo, puoi cambiarlo quando vuoi": "optional, you can change it anytime",
-  "Per i km delle partite, The Cap legge da {app} solo la distanza camminata e corsa registrata durante le tue partite. È un dato legato alla salute: lo usiamo solo per mostrare i tuoi km ai membri della lega e puoi disattivarlo quando vuoi in Il mio account. Acconsenti?": "For match distance, The Cap reads from {app} only the walking and running distance recorded during your matches. This is health-related data: we use it only to show your km to league members, and you can turn it off anytime in My account. Do you consent?",
+  "Per i km delle partite, The Cap legge da {app} solo i dati sul movimento registrati durante le tue partite: distanza camminata e corsa, passi e allenamenti. Sono dati legati alla salute: li usiamo solo per mostrare i tuoi km ai membri della lega e puoi disattivarlo quando vuoi in Il mio account. Acconsenti?": "For match distance, The Cap reads from {app} only the movement data recorded during your matches: walking and running distance, steps and workouts. This is health-related data: we use it only to show your km to league members, and you can turn it off anytime in My account. Do you consent?",
   "Scarica da App Store": "Download on the App Store",
   "Scarica da Google Play": "Get it on Google Play",
   "Accedi o registrati: poi entri subito nella lega.": "Sign in or sign up: then you join the league right away.",

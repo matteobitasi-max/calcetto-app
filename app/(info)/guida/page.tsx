@@ -128,8 +128,8 @@ export default async function GuidaPage() {
       <h2>{it ? 'Km percorsi' : 'Distance'}</h2>
       <p>
         {it
-          ? 'Facoltativi: l’app legge da Apple Salute o Health Connect solo la distanza registrata durante l’orario della partita (con il tuo consenso), oppure si inseriscono a mano. Contano per il trofeo Maratoneta e, con Pro, per fiato e scatto.'
-          : 'Optional: the app reads from Apple Health or Health Connect only the distance recorded during the match (with your consent), or you enter it by hand. It counts for the Marathoner trophy and, with Pro, for stamina and acceleration.'}
+          ? 'Facoltativi: l’app legge da Apple Salute o Health Connect solo distanza, passi e allenamenti registrati durante l’orario della partita (con il tuo consenso), oppure si inseriscono a mano. Contano per il trofeo Maratoneta e, con Pro, per fiato e scatto.'
+          : 'Optional: the app reads from Apple Health or Health Connect only the distance, steps and workouts recorded during the match (with your consent), or you enter it by hand. It counts for the Marathoner trophy and, with Pro, for stamina and acceleration.'}
       </p>
 
       <h2>The Cap Pro</h2>

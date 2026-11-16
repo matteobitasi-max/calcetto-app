@@ -205,7 +205,7 @@ export const comune: Record<string, string> = {
   "Questo browser non supporta le notifiche.": "This browser doesn’t support notifications.",
   "Apple Health (Salute)": "Apple Health",
   "Apple Health (l’app Salute)": "Apple Health (the Health app)",
-  "The Cap legge da {app} solo la distanza camminata e corsa registrata durante l’orario delle tue partite, per mostrare i km che hai percorso. Non scrive nulla e non legge altri dati di salute.": "The Cap reads from {app} only the walking and running distance recorded during your matches, to show the km you covered. It writes nothing and reads no other health data.",
+  "The Cap legge da {app} solo distanza, passi e allenamenti registrati durante l’orario delle tue partite, per calcolare i km che hai percorso. Non scrive nulla e non legge altri dati di salute.": "The Cap reads from {app} only the distance, steps and workouts recorded during your matches, to work out the km you covered. It writes nothing and reads no other health data.",
   "Puoi cambiare il permesso quando vuoi da Impostazioni → Salute → Accesso ai dati e dispositivi → TheCap.": "You can change the permission any time in Settings → Health → Data Access & Devices → TheCap.",
   "Puoi cambiare il permesso quando vuoi dalle impostazioni di Health Connect.": "You can change the permission any time in Health Connect settings.",
   "Sì, procedi": "Yes, go ahead",

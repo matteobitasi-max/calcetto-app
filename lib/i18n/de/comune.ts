@@ -186,7 +186,7 @@ export const comune: Record<string, string> = {
   "Questo browser non supporta le notifiche.": "Dieser Browser unterstützt keine Benachrichtigungen.",
   "Apple Health (Salute)": "Apple Health (Health)",
   "Apple Health (l’app Salute)": "Apple Health (die Health-App)",
-  "The Cap legge da {app} solo la distanza camminata e corsa registrata durante l’orario delle tue partite, per mostrare i km che hai percorso. Non scrive nulla e non legge altri dati di salute.": "The Cap liest aus {app} nur die Geh- und Laufdistanz, die während deiner Spiele aufgezeichnet wurde, um deine km anzuzeigen. Es schreibt nichts und liest keine anderen Gesundheitsdaten.",
+  "The Cap legge da {app} solo distanza, passi e allenamenti registrati durante l’orario delle tue partite, per calcolare i km che hai percorso. Non scrive nulla e non legge altri dati di salute.": "The Cap liest aus {app} nur Distanz, Schritte und Trainings, die während deiner Spiele aufgezeichnet wurden, um deine km zu berechnen. Es schreibt nichts und liest keine anderen Gesundheitsdaten.",
   "Puoi cambiare il permesso quando vuoi da Impostazioni → Salute → Accesso ai dati e dispositivi → TheCap.": "Du kannst die Berechtigung jederzeit ändern unter Einstellungen → Health → Datenzugriff & Geräte → TheCap.",
   "Puoi cambiare il permesso quando vuoi dalle impostazioni di Health Connect.": "Du kannst die Berechtigung jederzeit in den Einstellungen von Health Connect ändern.",
   "Sì, procedi": "Ja, weiter",

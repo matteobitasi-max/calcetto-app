@@ -39,7 +39,7 @@ export function SaluteAccount() {
       setPending(false)
       return
     }
-    if (!(await chiediConsensoKm(t('Per i km delle partite, The Cap legge da {app} solo la distanza camminata e corsa registrata durante le tue partite. È un dato legato alla salute: lo usiamo solo per mostrare i tuoi km ai membri della lega e puoi disattivarlo quando vuoi in Il mio account. Acconsenti?', { app: nome })), t('Acconsento'))) return
+    if (!(await chiediConsensoKm(t('Per i km delle partite, The Cap legge da {app} solo i dati sul movimento registrati durante le tue partite: distanza camminata e corsa, passi e allenamenti. Sono dati legati alla salute: li usiamo solo per mostrare i tuoi km ai membri della lega e puoi disattivarlo quando vuoi in Il mio account. Acconsenti?', { app: nome })), t('Acconsento'))) return
     setPending(true)
     try {
       // chiede il permesso di Salute (solo la prima volta compare la richiesta di Apple)
@@ -61,7 +61,7 @@ export function SaluteAccount() {
         <p className="font-semibold">❤️ {ios ? t('Apple Health (Salute)') : 'Health Connect'}</p>
         <p className="mt-1 text-xs text-zinc-500">
           {t(
-            'The Cap legge da {app} solo la distanza camminata e corsa registrata durante l’orario delle tue partite, per mostrare i km che hai percorso. Non scrive nulla e non legge altri dati di salute.',
+            'The Cap legge da {app} solo distanza, passi e allenamenti registrati durante l’orario delle tue partite, per calcolare i km che hai percorso. Non scrive nulla e non legge altri dati di salute.',
             { app: ios ? t('Apple Health (l’app Salute)') : 'Health Connect' },
           )}{' '}
           {ios

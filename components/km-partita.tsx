@@ -86,7 +86,7 @@ export function KmPartita({
   }, [])
 
   const daSalute = async () => {
-    if (!(await chiediConsensoKm(t('Per i km delle partite, The Cap legge da {app} solo la distanza camminata e corsa registrata durante le tue partite. È un dato legato alla salute: lo usiamo solo per mostrare i tuoi km ai membri della lega e puoi disattivarlo quando vuoi in Il mio account. Acconsenti?', { app: nome })), t('Acconsento'))) return
+    if (!(await chiediConsensoKm(t('Per i km delle partite, The Cap legge da {app} solo i dati sul movimento registrati durante le tue partite: distanza camminata e corsa, passi e allenamenti. Sono dati legati alla salute: li usiamo solo per mostrare i tuoi km ai membri della lega e puoi disattivarlo quando vuoi in Il mio account. Acconsenti?', { app: nome })), t('Acconsento'))) return
     startTransition(async () => {
       try {
         const { metri } = await Salute.distanza({ inizio, fine })

@@ -88,7 +88,7 @@
 		</dict>
 	</array>
 	<key>NSHealthShareUsageDescription</key>
-	<string>The Cap legge da Salute solo la distanza percorsa durante l'orario delle tue partite, per mostrare i km corsi.</string>
+	<string>The Cap legge da Salute solo distanza, passi e allenamenti registrati durante l'orario delle tue partite, per calcolare i km corsi.</string>
 	<key>NSHealthUpdateUsageDescription</key>
 	<string>The Cap non scrive dati in Salute.</string>
 </dict>

@@ -4,7 +4,8 @@ import { conferma } from '@/components/conferma'
 
 // Plugin nativo "Salute" dell'app: Apple Salute su iPhone (SalutePlugin in AppDelegate.swift),
 // Health Connect su Android (SalutePlugin.kt). Restituisce i metri percorsi tra inizio e fine.
-export const Salute = registerPlugin<{ distanza(o: { inizio: number; fine: number }): Promise<{ metri: number }> }>('Salute')
+// Su iPhone `fonte` dice da dove vengono: distanza, allenamento o passi (stima, per chi ha Garmin).
+export const Salute = registerPlugin<{ distanza(o: { inizio: number; fine: number }): Promise<{ metri: number; fonte?: string }> }>('Salute')
 
 export const saluteDisponibile = () => Capacitor.isNativePlatform() && Capacitor.isPluginAvailable('Salute')
 
