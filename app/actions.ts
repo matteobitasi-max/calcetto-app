@@ -1510,7 +1510,12 @@ export async function salvaAccount(_prev: FormState, formData: FormData): Promis
   if (invito) await entraConInvito(invito, aggiornato)
   const squadra = dopo.match(/^\/invito-squadra\/([A-Za-z0-9]+)$/)?.[1]
   if (squadra) await entraConCodiceSquadra(squadra, aggiornato)
-  if (dopo) redirect(dopo.startsWith('/') && !dopo.startsWith('//') ? dopo : '/')
+  if (dopo) {
+    const vai = dopo.startsWith('/') && !dopo.startsWith('//') ? dopo : '/'
+    // chi non aveva mai accettato i Termini è appena arrivato: prima il tutorial con le funzioni chiave
+    // (chi riaccetta i Termini aggiornati no)
+    redirect(utente.consensi.termini ? vai : `/tutorial?dopo=${encodeURIComponent(vai)}`)
+  }
   refresh()
   return {}
 }

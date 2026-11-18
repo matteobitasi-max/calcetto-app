@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import type { Metadata } from 'next'
 import { getT } from '@/lib/lingua'
 import { MAX_GIOCATORI, MAX_ISCRITTI } from '@/lib/limiti'
@@ -23,6 +24,9 @@ export default async function GuidaPage() {
   return (
     <>
       <h1>📖 {it ? 'Come funziona The Cap' : 'How The Cap works'}</h1>
+      <p>
+        <Link href="/tutorial?dopo=/guida">▶️ {t('Rivedi il tutorial')}</Link>
+      </p>
 
       <h2>{it ? 'Le basi' : 'The basics'}</h2>
       {it ? (

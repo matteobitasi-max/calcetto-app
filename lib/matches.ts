@@ -252,10 +252,11 @@ export function formatoInCorso(m: Match) {
   return { iscritti, ...formatoDaIscritti(iscritti, m.postiDisponibili) }
 }
 
-// Km totali di ogni giocatore nelle partite giocate della lega.
+// Km totali di ogni giocatore nelle partite della lega. Contano tutte quelle non annullate, anche senza
+// risultato inserito: i km ci sono solo a partita finita e non dipendono dal risultato.
 export async function getKmTotali(legaId: string) {
   const partite = await sanity.fetch<{ d: { id: string; km: number }[] }[]>(
-    `*[_type == "match" && lega._ref == $legaId && stato == "giocata" && count(distanze) > 0]{"d": distanze[]{"id": giocatore._ref, km}}`,
+    `*[_type == "match" && lega._ref == $legaId && coalesce(stato, "aperta") != "annullata" && count(distanze) > 0]{"d": distanze[]{"id": giocatore._ref, km}}`,
     { legaId },
   )
   const totali = new Map<string, { km: number; partite: number }>()
@@ -272,9 +273,9 @@ export async function getKmTotali(legaId: string) {
 export async function getKmRecord(legaId: string) {
   return sanity.fetch<{ record: { id: string; km: number; data: string } | null; totale: number }>(
     `{
-      "record": *[_type == "match" && lega._ref == $legaId && stato == "giocata" && count(distanze) > 0]{data, "d": distanze[]{"id": giocatore._ref, km}}
+      "record": *[_type == "match" && lega._ref == $legaId && coalesce(stato, "aperta") != "annullata" && count(distanze) > 0]{data, "d": distanze[]{"id": giocatore._ref, km}}
         {"migliore": d | order(km desc)[0], data} | order(migliore.km desc)[0]{"id": migliore.id, "km": migliore.km, data},
-      "totale": math::sum(*[_type == "match" && lega._ref == $legaId && stato == "giocata"].distanze[].km)
+      "totale": math::sum(*[_type == "match" && lega._ref == $legaId && coalesce(stato, "aperta") != "annullata"].distanze[].km)
     }`,
     { legaId },
   )

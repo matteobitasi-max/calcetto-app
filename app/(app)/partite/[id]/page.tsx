@@ -119,7 +119,8 @@ async function MatchDetail({ params }: { params: Promise<{ id: string }> }) {
 
       <KmCard match={match} me={player} rosa={rosa} />
 
-      {player.isAdmin && match.stato !== 'giocata' && <AdminPanel match={match} whatsappUrl={await whatsappUrl(match, player.lega.nome, t)} t={t} />}
+      {/* a partita finita (oltre l'orario previsto) riaprire le convocazioni o annullarla non serve più */}
+      {player.isAdmin && match.stato !== 'giocata' && new Date() < orarioPartita(match).fine && <AdminPanel match={match} whatsappUrl={await whatsappUrl(match, player.lega.nome, t)} t={t} />}
 
       {match.squadraA.length + match.squadraB.length > 0 && (
         <Squadre match={match} mioId={player._id} gestisci={!!player.isAdmin && match.stato === 'chiusa'} t={t} />
