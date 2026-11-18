@@ -19,7 +19,9 @@ export default function TorneiPage() {
 }
 
 async function Elenco() {
-  const [, mie, t] = await Promise.all([requirePlayer(), getMemberships(), getT()])
+  const [io, leghe, t] = await Promise.all([requirePlayer(), getMemberships(), getT()])
+  // il super admin che guarda da ospite una lega di cui non fa parte vede solo i tornei di quella
+  const mie = io.ospite ? [io] : leghe
   const mioIn = new Map(mie.map((m) => [m.lega._id, m._id]))
   const [tornei, pro] = await Promise.all([
     getTorneiDelleLeghe(mie.map((m) => m.lega._id)),

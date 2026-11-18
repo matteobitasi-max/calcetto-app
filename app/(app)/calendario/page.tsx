@@ -40,10 +40,10 @@ export default function CalendarioPage({ searchParams }: PageProps<'/calendario'
 const pad = (n: number) => String(n).padStart(2, '0')
 
 async function Calendario({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
-  const [{ mese, lega, giorno }, , mie, t, utente] = await Promise.all([searchParams, requirePlayer(), getMemberships(), getT(), getUtente()])
-  // Solo le leghe di cui faccio parte (non quella in cui il super admin è entrato da ospite):
-  // di default tutte, o quella scelta dalla tendina.
-  const membri = mie
+  const [{ mese, lega, giorno }, io, mie, t, utente] = await Promise.all([searchParams, requirePlayer(), getMemberships(), getT(), getUtente()])
+  // Le leghe di cui faccio parte: di default tutte, o quella scelta dalla tendina. Il super admin che sta
+  // guardando da ospite una lega di cui non fa parte vede solo quella.
+  const membri = io.ospite ? [io] : mie
   if (!membri.length) {
     return (
       <Card className="space-y-2 text-center text-sm text-zinc-500">
@@ -104,7 +104,7 @@ async function Calendario({ searchParams }: { searchParams: Promise<Record<strin
           </Link>
           <div className="flex items-center gap-1">
             <h1 className="text-lg font-bold capitalize">{titolo}</h1>
-            {utente && <AggiungiCalendario percorso={percorsoCalendario(utente.id, t.lingua)} />}
+            {utente && !io.ospite && <AggiungiCalendario percorso={percorsoCalendario(utente.id, t.lingua)} />}
           </div>
           <Link href={url({ mese: succ })} className="rounded-lg px-3 py-1 text-lg hover:bg-zinc-100 dark:hover:bg-zinc-800" aria-label={t('Mese successivo')}>
             ›
