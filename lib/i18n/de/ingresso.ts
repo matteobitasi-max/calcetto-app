@@ -101,7 +101,6 @@ export const ingresso: Record<string, string> = {
   "Dai i voti ai giocatori": "Bewerte die Spieler",
   "Crea una partita": "Erstelle ein Spiel",
   "Crea un torneo": "Erstelle ein Turnier",
-  "Ti mostriamo in 4 passaggi come organizzare il calcetto con i tuoi amici. Scorri o tocca Avanti.": "In 4 Schritten zeigen wir dir, wie du Kicken mit deinen Freunden organisierst. Wische oder tippe auf Weiter.",
   "Tocca Crea una lega": "Tippe auf Liga erstellen",
   "Scrivi il nome (e la città per il meteo)": "Gib den Namen ein (und die Stadt fürs Wetter)",
   "Tocca Crea la lega: sei l’organizzatore": "Tippe auf Liga erstellen: du bist der Organisator",
@@ -117,4 +116,10 @@ export const ingresso: Record<string, string> = {
   "Nome, formato e numero di squadre": "Name, Format und Anzahl der Teams",
   "Tocca Bilancia: squadre equilibrate in un attimo": "Tippe auf Ausgleichen: ausgeglichene Teams im Nu",
   "Calendario, classifica e tabellone si creano da soli": "Spielplan, Tabelle und Turnierbaum entstehen von selbst",
+  "Meteo del campo": "Wetter am Platz",
+  "Ti mostriamo come organizzare il calcetto con i tuoi amici. Scorri o tocca Avanti.": "Wir zeigen dir, wie du Kicken mit deinen Freunden organisierst. Wische oder tippe auf Weiter.",
+  "Tocca il nome della lega in alto e poi Impostazioni lega": "Tippe oben auf den Namen der Liga und dann auf Liga-Einstellungen",
+  "Satispay: metti il tuo link e i giocatori pagano la quota con un tocco": "Satispay: füge deinen Link hinzu und die Spieler zahlen ihren Anteil mit einem Tipp",
+  "Città del campo: in ogni partita compare il meteo previsto": "Stadt des Platzes: bei jedem Spiel erscheint die Wettervorhersage",
+  "Interviste: incolla una playlist YouTube e i video compaiono da soli nell’app": "Interviews: füge eine YouTube-Playlist ein und die Videos erscheinen automatisch in der App",
 }

@@ -101,7 +101,6 @@ export const ingresso: Record<string, string> = {
   "Dai i voti ai giocatori": "Rate your players",
   "Crea una partita": "Create a match",
   "Crea un torneo": "Create a tournament",
-  "Ti mostriamo in 4 passaggi come organizzare il calcetto con i tuoi amici. Scorri o tocca Avanti.": "Here’s how to organise five-a-side with your friends in 4 steps. Swipe or tap Next.",
   "Tocca Crea una lega": "Tap Create a league",
   "Scrivi il nome (e la città per il meteo)": "Type the name (and the city for the weather)",
   "Tocca Crea la lega: sei l’organizzatore": "Tap Create the league: you’re the organiser",
@@ -117,4 +116,10 @@ export const ingresso: Record<string, string> = {
   "Nome, formato e numero di squadre": "Name, format and number of teams",
   "Tocca Bilancia: squadre equilibrate in un attimo": "Tap Balance: balanced teams in no time",
   "Calendario, classifica e tabellone si creano da soli": "Schedule, standings and bracket are created automatically",
+  "Meteo del campo": "Pitch weather",
+  "Ti mostriamo come organizzare il calcetto con i tuoi amici. Scorri o tocca Avanti.": "Here’s how to organise five-a-side with your friends. Swipe or tap Next.",
+  "Tocca il nome della lega in alto e poi Impostazioni lega": "Tap the league name at the top, then League settings",
+  "Satispay: metti il tuo link e i giocatori pagano la quota con un tocco": "Satispay: add your link and players pay their share with one tap",
+  "Città del campo: in ogni partita compare il meteo previsto": "Pitch city: every match shows the weather forecast",
+  "Interviste: incolla una playlist YouTube e i video compaiono da soli nell’app": "Interviews: paste a YouTube playlist and the videos appear in the app automatically",
 }

@@ -367,13 +367,84 @@ function SceneTorneo({ t, tempo: { passo, ms } }: Demo) {
   )
 }
 
+const DURATE_IMPOSTAZIONI = [2200, 3800, 3600, 4000] as const
+function SceneImpostazioni({ t, tempo: { passo, ms } }: Demo) {
+  const nome = t('Calcetto del giovedì')
+  const satispay = 'https://web.satispay.com/…'
+  const playlist = 'https://youtube.com/playlist…'
+  return (
+    <Telefono>
+      {passo === 0 && (
+        <div className="space-y-1.5 pt-2">
+          <div className="mx-auto flex w-fit items-center gap-1 rounded-full bg-zinc-100 px-3 py-1 font-semibold dark:bg-zinc-800">
+            ⚽ {nome} <span className="text-zinc-400">▾</span>
+          </div>
+          {ms > 600 && (
+            <Riquadro className="space-y-1 shadow-lg">
+              <p className="rounded-md px-1.5 py-1 text-zinc-500">⚽ {nome}</p>
+              <hr className="border-zinc-200 dark:border-zinc-800" />
+              <Tocco attivo={ms > 1200}>
+                <p className="rounded-md px-1.5 py-1 font-semibold">⚙️ {t('Impostazioni lega')}</p>
+              </Tocco>
+            </Riquadro>
+          )}
+        </div>
+      )}
+      {passo === 1 && (
+        <>
+          <p className="pt-3 font-semibold">💶 {t('Pagamenti con Satispay')}</p>
+          <Campo etichetta={t('Link di pagamento')} valore={ms < 1800 ? scrivi(satispay, ms, 200) : satispay} attivo={ms < 1800} />
+          {ms >= 1800 && (
+            <Riquadro className="space-y-1.5">
+              <p className="text-[10px] text-zinc-500">{t('Prossima partita')} · 5 €</p>
+              <Tocco attivo={ms > 2600}>
+                <div className="rounded-lg bg-[#F94C43] py-1.5 text-center font-semibold text-white">{t('Paga {quota} € con Satispay', { quota: 5 })}</div>
+              </Tocco>
+            </Riquadro>
+          )}
+        </>
+      )}
+      {passo === 2 && (
+        <>
+          <p className="pt-3 font-semibold">🌦️ {t('Meteo del campo')}</p>
+          <Campo etichetta={t('Città (per il meteo delle partite)')} valore={scrivi('Milano', ms, 200)} attivo={ms < 800} />
+          {ms >= 1300 && (
+            <Riquadro className="space-y-1 text-center">
+              <p className="text-[10px] text-zinc-500">{t('gio 20 nov, 21:00')}</p>
+              <p className="text-2xl">🌤️</p>
+              <p className="font-semibold">{t('{meteo}, {gradi}° previsti alle {ora}', { meteo: t('Poco nuvoloso'), gradi: 12, ora: '21:00' })}</p>
+            </Riquadro>
+          )}
+        </>
+      )}
+      {passo === 3 && (
+        <>
+          <p className="pt-3 font-semibold">🎤 {t('Interviste')}</p>
+          <Campo etichetta={t('Link della playlist')} valore={ms < 1700 ? scrivi(playlist, ms, 100) : playlist} attivo={ms < 1700} />
+          <div className="grid grid-cols-2 gap-1.5">
+            {['Marco', 'Luca'].map((g, i) => (
+              <div
+                key={g}
+                className={`overflow-hidden rounded-lg border border-zinc-200 bg-white transition-opacity duration-500 dark:border-zinc-800 dark:bg-zinc-900 ${ms > 2000 + i * 500 ? 'opacity-100' : 'opacity-0'}`}
+              >
+                <div className="flex h-12 items-center justify-center bg-zinc-800 text-lg text-white">▶</div>
+                <p className="truncate p-1 text-[10px] font-semibold">🎤 {g}</p>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+    </Telefono>
+  )
+}
+
 // ---------- il tutorial ----------
 
 type Scena = { titolo: string; pro?: boolean; passi: string[]; demo?: { Vista: (p: Demo) => ReactNode; durate: readonly number[] } }
 const SCENE: Scena[] = [
   {
     titolo: 'Benvenuto in The Cap!',
-    passi: ['Ti mostriamo in 4 passaggi come organizzare il calcetto con i tuoi amici. Scorri o tocca Avanti.'],
+    passi: ['Ti mostriamo come organizzare il calcetto con i tuoi amici. Scorri o tocca Avanti.'],
   },
   {
     titolo: 'Crea la tua lega',
@@ -395,6 +466,16 @@ const SCENE: Scena[] = [
     pro: true,
     demo: { Vista: SceneTorneo, durate: DURATE_TORNEO },
     passi: ['Tocca + Nuova partita e scegli Torneo', 'Nome, formato e numero di squadre', 'Tocca Bilancia: squadre equilibrate in un attimo', 'Calendario, classifica e tabellone si creano da soli'],
+  },
+  {
+    titolo: 'Impostazioni lega',
+    demo: { Vista: SceneImpostazioni, durate: DURATE_IMPOSTAZIONI },
+    passi: [
+      'Tocca il nome della lega in alto e poi Impostazioni lega',
+      'Satispay: metti il tuo link e i giocatori pagano la quota con un tocco',
+      'Città del campo: in ogni partita compare il meteo previsto',
+      'Interviste: incolla una playlist YouTube e i video compaiono da soli nell’app',
+    ],
   },
 ]
 
