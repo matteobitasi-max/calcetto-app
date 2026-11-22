@@ -43,7 +43,7 @@ export default function CalendarioPage({ searchParams }: PageProps<'/calendario'
 const pad = (n: number) => String(n).padStart(2, '0')
 
 async function Calendario({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
-  const [{ mese, lega, giorno }, io, mie, t, utente] = await Promise.all([searchParams, requirePlayer(), getMemberships(), getT(), getUtente()])
+  const [{ mese, lega, giorno, importati }, io, mie, t, utente] = await Promise.all([searchParams, requirePlayer(), getMemberships(), getT(), getUtente()])
   // Le leghe di cui faccio parte: di default tutte, o quella scelta dalla tendina. Il super admin che sta
   // guardando da ospite una lega di cui non fa parte vede solo quella.
   const membri = io.ospite ? [io] : mie
@@ -158,6 +158,22 @@ async function Calendario({ searchParams }: { searchParams: Promise<Record<strin
           <span>· {t('tocca un giorno per vederne le partite')}</span>
         </div>
       </Card>
+
+      {typeof importati === 'string' && Number(importati) > 0 && (
+        <p className="rounded-xl bg-green-50 p-3 text-sm font-medium text-green-800 dark:bg-green-950 dark:text-green-300">
+          ✅ {t('{n} eventi importati: li trovi nel calendario.', { n: Number(importati) })}
+        </p>
+      )}
+
+      {organizzo.length > 0 && (
+        <Link
+          href={`/calendario/importa${organizzo.length === 1 ? `?lega=${organizzo[0].lega._id}` : ''}`}
+          className="flex items-center justify-between rounded-xl border border-dashed border-zinc-300 px-4 py-3 text-sm font-semibold text-zinc-700 hover:border-green-600 hover:text-green-700 dark:border-zinc-700 dark:text-zinc-300 dark:hover:text-green-400"
+        >
+          📥 {t('Importa da un altro calendario')}
+          <span className="text-zinc-400">›</span>
+        </Link>
+      )}
 
       {giornoScelto && (
         <GiornoScelto

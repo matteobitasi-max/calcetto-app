@@ -13,7 +13,8 @@ import { SITO, baseUrl } from '@/lib/url'
 import { cercaCitta } from '@/lib/meteo'
 import { MAX_ALLENAMENTO, MAX_GIOCATORI, MAX_ISCRITTI } from '@/lib/limiti'
 import { riscriviPartita, type MatchDaUnire } from '@/lib/unisci'
-import { daysBetween, romeLocalToISO } from '@/lib/dates'
+import { addDays, daysBetween, isoToRomeLocal, romeLocalToISO } from '@/lib/dates'
+import { LIMITE_BYTE, leggiIcs, scaricaIcs, type EventoEsterno } from '@/lib/importa-calendario'
 import { inviaAGiocatori, inviaATutti, rimuoviIscrizione, salvaIscrizione, salvaTokenNativo, type PushSub } from '@/lib/push'
 import { chiudiConvocazioni, convocati } from '@/lib/chiusura'
 import { assicuraRicorrenze, getSeries, occurrenceId, rimuoviFutureVuote, type Series } from '@/lib/series'
@@ -333,6 +334,126 @@ export async function salvaPartita(matchId: string | null, _prev: FormState, for
   // svuota la memoria delle pagine dell'app: riaprendo una pagina (es. Modifica) si vedono i dati nuovi
   revalidatePath('/', 'layout')
   redirect(`/partite/${id}`)
+}
+
+// ---------- Importa da un calendario esterno ----------
+
+export type LetturaCalendario = { error?: string; eventi?: (EventoEsterno & { presente: boolean })[]; tuttoIlGiorno?: number }
+
+// Legge un calendario (.ics caricato o link pubblico) e mostra gli eventi futuri da scegliere.
+// "presente": nella lega c'è già una partita (o un allenamento) entro un'ora da quell'orario.
+export async function leggiCalendario(legaId: string, _prev: LetturaCalendario | undefined, formData: FormData): Promise<LetturaCalendario> {
+  await requireIn(legaId, 'organizzatore')
+  const file = formData.get('file')
+  const link = str(formData, 'link')
+  let contenuto: string
+  try {
+    if (file instanceof File && file.size > 0) {
+      if (file.size > LIMITE_BYTE) return { error: await tr('Il file è troppo grande.') }
+      contenuto = await file.text()
+    } else if (link) {
+      contenuto = await scaricaIcs(link)
+    } else {
+      return { error: await tr('Scegli un file .ics o incolla il link del calendario.') }
+    }
+  } catch (e) {
+    return {
+      error: await tr(
+        e instanceof Error && e.message === 'link'
+          ? 'Il link non è valido: deve iniziare con https:// o webcal://'
+          : 'Non riesco a scaricare il calendario: controlla che il link sia pubblico.',
+      ),
+    }
+  }
+  let letti: ReturnType<typeof leggiIcs>
+  try {
+    letti = leggiIcs(contenuto)
+  } catch {
+    return { error: await tr('Il file non sembra un calendario (.ics).') }
+  }
+  if (!letti.eventi.length) return { error: await tr('Nessun evento futuro con un orario in questo calendario.'), tuttoIlGiorno: letti.tuttoIlGiorno }
+  const ORA = 3_600_000
+  const esistenti = (
+    await sanity.fetch<string[]>(`*[_type == "match" && lega._ref == $legaId && coalesce(stato, "aperta") != "annullata" && data >= $da && data <= $a].data`, {
+      legaId,
+      da: new Date(new Date(letti.eventi[0].inizio).getTime() - ORA).toISOString(),
+      a: new Date(new Date(letti.eventi.at(-1)!.inizio).getTime() + ORA).toISOString(),
+    })
+  ).map((d) => new Date(d).getTime())
+  return {
+    eventi: letti.eventi.map((e) => ({ ...e, presente: esistenti.some((x) => Math.abs(x - new Date(e.inizio).getTime()) <= ORA) })),
+    tuttoIlGiorno: letti.tuttoIlGiorno,
+  }
+}
+
+// Crea le partite e gli allenamenti scelti tra gli eventi importati, con la stessa finestra di convocazioni per tutti.
+export async function importaEventi(legaId: string, _prev: FormState, formData: FormData): Promise<FormState> {
+  await requireIn(legaId, 'organizzatore')
+  type Scelto = { inizio: string; fine: string; titolo: string; luogo: string; tipo: 'partita' | 'allenamento' }
+  let scelti: Scelto[]
+  try {
+    scelti = JSON.parse(str(formData, 'eventi'))
+  } catch {
+    scelti = []
+  }
+  if (!Array.isArray(scelti) || !scelti.length) return { error: await tr('Scegli almeno un evento da importare.') }
+  if (scelti.length > 150) return { error: await tr('Al massimo 150 eventi alla volta.') }
+
+  const intero = (k: string, min: number, max: number, base: number) => {
+    const n = num(formData, k)
+    return n != null && Number.isInteger(n) && n >= min && n <= max ? n : base
+  }
+  const giorniPrima = intero('aperturaGiorni', 0, 14, 3)
+  const oraApertura = /^\d{2}:\d{2}$/.test(str(formData, 'aperturaOra')) ? str(formData, 'aperturaOra') : '10:00'
+  const orePrima = intero('chiusuraOre', 0, 48, 2)
+  const postiAllenamento = intero('postiAllenamento', 2, MAX_ALLENAMENTO, 16)
+  const quota = num(formData, 'quota')
+  if (quota != null && (quota < 0 || quota > 1000)) return { error: await tr('Quota non valida.') }
+
+  const adesso = Math.floor(Date.now() / 60_000) * 60_000
+  const lega = { _type: 'reference' as const, _ref: legaId }
+  const tx = sanity.transaction()
+  let creati = 0
+  let primo = ''
+  for (const e of scelti) {
+    const inizio = new Date(e?.inizio)
+    if (Number.isNaN(inizio.getTime()) || inizio.getTime() <= adesso) continue
+    const fine = new Date(e.fine)
+    const minuti = Number.isNaN(fine.getTime()) ? 60 : Math.round((fine.getTime() - inizio.getTime()) / 60_000)
+    const durata = Math.min(300, Math.max(10, minuti || 60))
+    // convocazioni: da N giorni prima all'ora scelta (non prima di adesso) fino a N ore prima dell'inizio
+    const giorno = isoToRomeLocal(inizio.toISOString()).slice(0, 10)
+    const apertura = Math.max(adesso, new Date(romeLocalToISO(`${addDays(giorno, -giorniPrima)}T${oraApertura}`)).getTime())
+    if (apertura >= inizio.getTime()) continue
+    let chiusura = inizio.getTime() - orePrima * 3_600_000
+    if (chiusura <= apertura) chiusura = inizio.getTime()
+    const titolo = typeof e.titolo === 'string' ? e.titolo.trim().slice(0, 120) : ''
+    const luogo = (typeof e.luogo === 'string' ? e.luogo.trim().slice(0, 120) : '') || titolo || (await tr('Da definire'))
+    const allenamento = e.tipo === 'allenamento'
+    tx.create({
+      _type: 'match',
+      lega,
+      ...(allenamento && { tipo: 'allenamento' }),
+      data: inizio.toISOString(),
+      durataMinuti: durata,
+      luogo,
+      aperturaConvocazioni: new Date(apertura).toISOString(),
+      chiusuraConvocazioni: new Date(chiusura).toISOString(),
+      durataFinestraMinuti: Math.max(15, Math.round((chiusura - apertura) / 60_000)),
+      postiDisponibili: allenamento ? postiAllenamento : MAX_ISCRITTI,
+      postiAutomatici: !allenamento,
+      ...(quota != null && { quota }),
+      ...(titolo && titolo !== luogo && { note: titolo }),
+      stato: 'aperta',
+      convocazioni: [],
+    })
+    creati++
+    if (!primo || inizio.toISOString() < primo) primo = inizio.toISOString()
+  }
+  if (!creati) return { error: await tr('Nessun evento importabile: sono già passati o troppo vicini.') }
+  await tx.commit()
+  revalidatePath('/', 'layout')
+  redirect(`/calendario?mese=${isoToRomeLocal(primo).slice(0, 7)}&lega=${legaId}&importati=${creati}`)
 }
 
 const STATI: Stato[] = ['aperta', 'chiusa', 'giocata', 'annullata']
