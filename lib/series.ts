@@ -8,6 +8,8 @@ import type { T } from './i18n'
 export type Series = {
   _id: string
   legaId: string
+  /** Allenamenti ricorrenti: ogni data generata è un allenamento. */
+  tipo?: 'allenamento'
   attiva?: boolean
   primaData: string
   ora: string
@@ -30,7 +32,7 @@ export type Series = {
 // Quante settimane in avanti tenere già create le partite.
 const ORIZZONTE_GIORNI = 42
 
-const seriesFields = `_id, "legaId": lega._ref, attiva, primaData, ora, ogniSettimane, fineData, durataMinuti, luogo, postiDisponibili, postiAutomatici, durataFinestraMinuti, quota, note,
+const seriesFields = `_id, "legaId": lega._ref, tipo, attiva, primaData, ora, ogniSettimane, fineData, durataMinuti, luogo, postiDisponibili, postiAutomatici, durataFinestraMinuti, quota, note,
   aperturaGiorniPrima, aperturaOra, chiusuraGiorniPrima, chiusuraOra, esclusi`
 
 export function getSeries(id: string) {
@@ -52,6 +54,7 @@ function occurrence(s: Series, day: string) {
     _id: occurrenceId(s._id, day),
     _type: 'match',
     lega: { _type: 'reference', _ref: s.legaId },
+    ...(s.tipo === 'allenamento' && { tipo: 'allenamento' }),
     serie: { _type: 'reference', _ref: s._id, _weak: true },
     data: romeLocalToISO(`${day}T${s.ora}`),
     durataMinuti: s.durataMinuti ?? 60,

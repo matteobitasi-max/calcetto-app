@@ -11,7 +11,7 @@ import { idPlaylist, intervisteDellaPlaylist } from '@/lib/interviste'
 import { kmStrava, scollega, stravaConfigurato, urlCollegamento } from '@/lib/strava'
 import { SITO, baseUrl } from '@/lib/url'
 import { cercaCitta } from '@/lib/meteo'
-import { MAX_GIOCATORI, MAX_ISCRITTI } from '@/lib/limiti'
+import { MAX_ALLENAMENTO, MAX_GIOCATORI, MAX_ISCRITTI } from '@/lib/limiti'
 import { riscriviPartita, type MatchDaUnire } from '@/lib/unisci'
 import { daysBetween, romeLocalToISO } from '@/lib/dates'
 import { inviaAGiocatori, inviaATutti, rimuoviIscrizione, salvaIscrizione, salvaTokenNativo, type PushSub } from '@/lib/push'
@@ -228,6 +228,8 @@ export async function salvaPartita(matchId: string | null, _prev: FormState, for
   const durata = num(formData, 'durataMinuti') ?? 60
   const quota = num(formData, 'quota')
   const note = str(formData, 'note')
+  // il tipo si sceglie alla creazione (partita o allenamento) e poi non cambia
+  const allenamento = !matchId && str(formData, 'tipo') === 'allenamento'
 
   if (!Number.isInteger(durata) || durata < 10 || durata > 300) return { error: await tr('Durata non valida (10-300 minuti).') }
   const durataFinestra = Math.max(15, Math.round(num(formData, 'durataFinestraMinuti') ?? 120))
@@ -239,14 +241,18 @@ export async function salvaPartita(matchId: string | null, _prev: FormState, for
   // Oltre il limite si va solo aggiungendo persone dalla lista d'attesa: in modifica
   // si può lasciare il numero raggiunto così, ma non aumentarlo ancora.
   const attuale = matchId
-    ? await sanity.fetch<{ posti?: number; stato?: Stato } | null>(`*[_type == "match" && _id == $id][0]{"posti": postiDisponibili, stato}`, {
+    ? await sanity.fetch<{ posti?: number; stato?: Stato; tipo?: string } | null>(`*[_type == "match" && _id == $id][0]{"posti": postiDisponibili, stato, tipo}`, {
         id: matchId,
       })
     : null
   const postiAttuali = attuale?.posti ?? 0
   // In base alle convocazioni: aperte fino al massimo; a convocazioni chiuse il numero è già deciso.
   if (automatici) posti = attuale?.stato === 'chiusa' ? postiAttuali : MAX_ISCRITTI
-  if (!automatici && posti > Math.max(MAX_GIOCATORI, postiAttuali)) {
+  // all'allenamento non si gioca a squadre: i posti possono essere di più
+  if ((allenamento || attuale?.tipo === 'allenamento') && posti > Math.max(MAX_ALLENAMENTO, postiAttuali)) {
+    return { error: await tr('Massimo {n} posti.', { n: MAX_ALLENAMENTO }) }
+  }
+  if (!automatici && !allenamento && attuale?.tipo !== 'allenamento' && posti > Math.max(MAX_GIOCATORI, postiAttuali)) {
     return { error: await tr('Massimo {n} giocatori: per andare oltre aggiungi le persone dalla lista d’attesa.', { n: MAX_GIOCATORI }) }
   }
 
@@ -260,6 +266,7 @@ export async function salvaPartita(matchId: string | null, _prev: FormState, for
     const serie = await sanity.create({
       _type: 'series',
       lega,
+      ...(allenamento && { tipo: 'allenamento' }),
       attiva: true,
       primaData: giorno,
       ora,
@@ -314,6 +321,7 @@ export async function salvaPartita(matchId: string | null, _prev: FormState, for
     const doc = await sanity.create({
       _type: 'match',
       lega,
+      ...(allenamento && { tipo: 'allenamento' }),
       ...fields,
       ...(quota != null && { quota }),
       ...(note && { note }),
@@ -369,7 +377,8 @@ export async function salvaFormazioni(
 ): Promise<FormState> {
   const { lega } = await requireForDoc(matchId, 'organizzatore')
   const match = await getMatch(matchId)
-  if (!match) return { error: await tr('Partita non trovata.') }
+  // gli allenamenti non hanno squadre
+  if (!match || match.tipo === 'allenamento') return { error: await tr('Partita non trovata.') }
   if (match.stato !== 'chiusa') return { error: await tr('Le formazioni si fanno dopo aver chiuso le convocazioni.') }
 
   const inLista = new Set(presenti(match).map((c) => c.giocatore._id))
@@ -590,7 +599,9 @@ export async function salvaSerie(seriesId: string, _prev: FormState, formData: F
 
   if (!luogo || ![ora, aperturaOra].every((o) => ORA.test(o))) return { error: await tr('Controlla luogo e orari.') }
   const automatici = formData.get('postiAutomatici') === 'on'
-  if (!automatici && (!Number.isInteger(posti) || posti < 2 || posti > MAX_GIOCATORI)) return { error: await tr('Da 2 a {n} giocatori.', { n: MAX_GIOCATORI }) }
+  // allenamenti ricorrenti: più posti, niente formati da partita
+  const massimo = current?.tipo === 'allenamento' ? MAX_ALLENAMENTO : MAX_GIOCATORI
+  if (!automatici && (!Number.isInteger(posti) || posti < 2 || posti > massimo)) return { error: await tr('Da 2 a {n} giocatori.', { n: massimo }) }
   // Confronto in minuti rispetto all'inizio della partita.
   const minutiPrima = (giorni: number, hhmm: string) => {
     const [h, m] = hhmm.split(':').map(Number)
@@ -855,7 +866,7 @@ export async function apriConvocazioni(matchId: string): Promise<AvvisoState> {
             tag: matchId,
           }
         : {
-            title: `⚽ ${t('Convocazioni aperte')}`,
+            title: match.tipo === 'allenamento' ? `🏃 ${t('Allenamento')} · ${t('Convocazioni aperte')}` : `⚽ ${t('Convocazioni aperte')}`,
             body: `${lega.nome} · ${t.data(match.data, breve)} · ${match.luogo}\n${
               match.postiAutomatici ? t('Rispondi entro {data}', { data: t.data(chiusura, breve) }) : t('{n} posti, rispondi entro {data}', { n: match.postiDisponibili, data: t.data(chiusura, breve) })
             }`,

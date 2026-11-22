@@ -5,6 +5,7 @@ import { requireIn } from '@/lib/player'
 import { contaFutureConRisposte, descriviSerie, getSeries } from '@/lib/series'
 import { ActionForm } from '@/components/action-form'
 import { PostiInput } from '@/components/posti-input'
+import { MAX_ALLENAMENTO } from '@/lib/limiti'
 import { DatePicker } from '@/components/date-picker'
 import { DURATE_FINESTRA } from '@/lib/limiti'
 import { SubmitButton } from '@/components/submit-button'
@@ -50,10 +51,16 @@ async function Form({ params }: { params: Promise<{ id: string }> }) {
         <Field label={t('Campo / luogo')}>
           <input name="luogo" required defaultValue={serie.luogo} className={inputClass} />
         </Field>
-        <div className="space-y-1 text-sm">
-          <span className="font-medium">{t('Giocatori in lista')}</span>
-          <PostiInput defaultValue={serie.postiDisponibili} defaultAutomatico={!!serie.postiAutomatici} />
-        </div>
+        {serie.tipo === 'allenamento' ? (
+          <Field label={t('Posti')}>
+            <input name="postiDisponibili" type="number" min={2} max={MAX_ALLENAMENTO} required defaultValue={serie.postiDisponibili} className={inputClass} />
+          </Field>
+        ) : (
+          <div className="space-y-1 text-sm">
+            <span className="font-medium">{t('Giocatori in lista')}</span>
+            <PostiInput defaultValue={serie.postiDisponibili} defaultAutomatico={!!serie.postiAutomatici} />
+          </div>
+        )}
         <div className="grid grid-cols-2 gap-4">
           <Field label={t('Durata (minuti)')}>
             <input name="durataMinuti" type="number" min={10} max={300} step={5} required defaultValue={serie.durataMinuti ?? 60} className={inputClass} />

@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation'
 import { Suspense } from 'react'
 import { canEnterResults, displayName, getCurrentPlayer, getUtente, membroDi, mioInCima, type Membro, type Player } from '@/lib/player'
 import { forza, nomeSquadra, numeroSquadra } from '@/lib/teams'
-import { finestra, formatoInCorso, getMatch, getPlayers, orarioPartita, ordinati, presenti, risultatoDa, type Match, type Risposta } from '@/lib/matches'
+import { finestra, formatoInCorso, getMatch, isAllenamento, getPlayers, orarioPartita, ordinati, presenti, risultatoDa, type Match, type Risposta } from '@/lib/matches'
 import { getCollegamento, stravaConfigurato } from '@/lib/strava'
 import { CampoFormazioni } from '@/components/campo-formazioni'
 import { conConvocazioniAggiornate } from '@/lib/chiusura'
@@ -80,7 +80,10 @@ async function MatchDetail({ params }: { params: Promise<{ id: string }> }) {
           </h1>
           <StatoBadge match={match} />
         </div>
-        <p className="text-sm font-semibold text-zinc-600 dark:text-zinc-300">🏟️ {player.lega.nome}</p>
+        <p className="text-sm font-semibold text-zinc-600 dark:text-zinc-300">
+          {isAllenamento(match) && <span className="mr-2 rounded-full bg-sky-100 px-2 py-0.5 text-xs text-sky-800 dark:bg-sky-950 dark:text-sky-300">🏃 {t('Allenamento')}</span>}
+          🏟️ {player.lega.nome}
+        </p>
         {match.torneo && (
           <Link href={`/tornei/${match.torneo._id}`} className="block text-sm font-semibold text-amber-700 hover:underline dark:text-amber-400">
             🏆 {match.torneo.nome} ·{' '}
@@ -99,12 +102,12 @@ async function MatchDetail({ params }: { params: Promise<{ id: string }> }) {
         <FinestraInfo match={match} />
         {(match.serieId || modificabile) && (
           <p className="text-sm text-zinc-500">
-            {match.serieId && `🔁 ${t('Partita ricorrente')}`}
+            {match.serieId && `🔁 ${isAllenamento(match) ? t('Allenamento ricorrente') : t('Partita ricorrente')}`}
             {modificabile && (
               <>
                 {match.serieId && ' · '}
                 <Link href={`/partite/${match._id}/modifica`} className="font-medium text-green-700 hover:underline dark:text-green-400">
-                  ✏️ {t('Modifica partita')}
+                  ✏️ {isAllenamento(match) ? t('Modifica allenamento') : t('Modifica partita')}
                 </Link>
               </>
             )}
@@ -370,7 +373,7 @@ function Squadre({ match, mioId, gestisci, t }: { match: Match; mioId: string; g
 async function whatsappUrl(match: Match, legaNome: string, t: T) {
   const breve = { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' } as const
   const testo = [
-    `⚽ *${t('Convocazioni aperte!')}* · ${legaNome}`,
+    `${isAllenamento(match) ? `🏃 *${t('Allenamento')}* · ` : '⚽ '}*${t('Convocazioni aperte!')}* · ${legaNome}`,
     `📅 ${t.data(match.data, breve)}`,
     `📍 ${match.luogo}`,
     `👥 ${t('{n} posti', { n: match.postiDisponibili })}${match.quota != null ? ` · ${match.quota} €` : ''}`,
@@ -445,7 +448,7 @@ function AdminPanel({ match, whatsappUrl, t }: { match: Match; whatsappUrl: stri
       {match.stato === 'chiusa' && !match.torneo && (
         <>
           <div className="flex flex-wrap gap-2">
-            {count >= 2 && new Date() < risultatoDa(match) && (
+            {count >= 2 && !isAllenamento(match) && new Date() < risultatoDa(match) && (
               <ButtonLink href={`/partite/${match._id}/formazioni`} variant={match.squadraA.length ? 'secondary' : 'primary'}>
                 ⚖️ {match.squadraA.length ? t('Modifica formazioni') : t('Fai le formazioni')}
               </ButtonLink>
@@ -458,8 +461,11 @@ function AdminPanel({ match, whatsappUrl, t }: { match: Match; whatsappUrl: stri
 
       <div className="flex flex-wrap gap-2 border-t border-zinc-200 pt-4 dark:border-zinc-800">
         {match.stato === 'annullata'
-          ? statoForm('aperta', t('Ripristina partita'), 'secondary')
-          : match.stato !== 'giocata' && statoForm('annullata', t('Annulla partita'), 'danger', t('Annullare la partita?'))}
+          ? statoForm('aperta', isAllenamento(match) ? t('Ripristina allenamento') : t('Ripristina partita'), 'secondary')
+          : match.stato !== 'giocata' &&
+            (isAllenamento(match)
+              ? statoForm('annullata', t('Annulla allenamento'), 'danger', t('Annullare l’allenamento?'))
+              : statoForm('annullata', t('Annulla partita'), 'danger', t('Annullare la partita?')))}
       </div>
     </Card>
   )

@@ -3,7 +3,7 @@ import { Suspense } from 'react'
 import { getMemberships, getUtente, requirePlayer } from '@/lib/player'
 import { percorsoCalendario } from '@/lib/calendario'
 import { AggiungiCalendario } from '@/components/aggiungi-calendario'
-import { finestra, getMatchesBetween, presenti, type Match, type Stato } from '@/lib/matches'
+import { allenamentoFinito, finestra, getMatchesBetween, isAllenamento, presenti, type Match, type Stato } from '@/lib/matches'
 import { isoToRomeLocal } from '@/lib/dates'
 import { getT } from '@/lib/lingua'
 import { inizialiGiorni, type T } from '@/lib/i18n'
@@ -11,6 +11,7 @@ import { assicuraRicorrenze } from '@/lib/series'
 import { Card, Loading, StatoBadge } from '@/components/ui'
 import { avatarUrl } from '@/lib/image'
 import { FiltroLega } from './filtro-lega'
+import { NuovoNelGiorno } from '@/components/scelta-nuovo'
 
 const DAY = 86_400_000
 
@@ -25,6 +26,8 @@ const COLORE: Record<Stato | 'non_ancora' | 'scaduta', string> = {
 
 // Colore del giorno: segue la finestra vera delle convocazioni, come l'etichetta.
 const coloreDi = (m: Match) => {
+  // un allenamento finito ha il colore di una partita giocata
+  if (allenamentoFinito(m)) return COLORE.giocata
   const f = m.stato === 'aperta' ? finestra(m) : null
   return COLORE[f === 'non_ancora' || f === 'scaduta' ? f : m.stato]
 }
@@ -136,7 +139,12 @@ async function Calendario({ searchParams }: { searchParams: Promise<Record<strin
             return (
               <Link key={key} href={url({ giorno: key })} scroll={false} className={`${base} ${colore}`} aria-current={key === giornoScelto ? 'date' : undefined}>
                 {giorno}
-                {partite && <span className="text-[10px] font-normal leading-none">⚽{partite.length > 1 && `×${partite.length}`}</span>}
+                {partite && (
+                  <span className="text-[10px] font-normal leading-none">
+                    {partite.every(isAllenamento) ? '🏃' : '⚽'}
+                    {partite.length > 1 && `×${partite.length}`}
+                  </span>
+                )}
               </Link>
             )
           })}
@@ -169,7 +177,10 @@ async function Calendario({ searchParams }: { searchParams: Promise<Record<strin
           delMese.map((match) => (
             <Link key={match._id} href={`/partite/${match._id}`} className="flex items-center justify-between gap-2 px-4 py-3 text-sm hover:bg-zinc-50 dark:hover:bg-zinc-800">
               <span className="min-w-0">
-                <span className="block font-medium capitalize">{t.data(match.data, { weekday: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+                <span className="block font-medium capitalize">
+                  {isAllenamento(match) && '🏃 '}
+                  {t.data(match.data, { weekday: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                </span>
                 <span className="block truncate text-zinc-500">
                   {piuLeghe && <b className="font-semibold">{nomeLega.get(match.legaId)} · </b>}
                   {match.luogo} · {presenti(match).length}/{match.postiDisponibili}
@@ -212,7 +223,10 @@ function GiornoScelto({
       {partite.map((match) => (
         <Link key={match._id} href={`/partite/${match._id}`} className="flex items-center justify-between gap-2 px-4 py-3 text-sm hover:bg-zinc-50 dark:hover:bg-zinc-800">
           <span className="min-w-0">
-            <span className="block font-semibold">🏟️ {nomeLega.get(match.legaId)}</span>
+            <span className="block font-semibold">
+              {isAllenamento(match) ? `🏃 ${t('Allenamento')} · ` : '🏟️ '}
+              {nomeLega.get(match.legaId)}
+            </span>
             <span className="block truncate text-zinc-500">
               {t.ora(match.data)} · {match.luogo} · {presenti(match).length}/{match.postiDisponibili}
             </span>
@@ -221,22 +235,8 @@ function GiornoScelto({
         </Link>
       ))}
       {organizzo.length > 0 && (
-        <div className="flex flex-wrap gap-2 px-4 py-3">
-          {organizzo.map((l) => (
-            <Link
-              key={l.id}
-              href={`/partite/nuova?giorno=${giorno}&lega=${l.id}`}
-              className="rounded-full bg-green-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-green-700"
-            >
-              ＋ {t('Nuova partita')}{organizzo.length > 1 && ` · ${l.nome}`}
-            </Link>
-          ))}
-          <Link
-            href={`/tornei/nuovo?giorno=${giorno}${organizzo.length === 1 ? `&lega=${organizzo[0].id}` : ''}`}
-            className="rounded-full bg-zinc-100 px-3 py-1.5 text-xs font-semibold hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700"
-          >
-            🏆 {t('Torneo da questo giorno')}
-          </Link>
+        <div className="px-4 py-3">
+          <NuovoNelGiorno giorno={giorno} lega={organizzo.length === 1 ? organizzo[0].id : undefined} scegliLega={organizzo.length > 1} />
         </div>
       )}
     </Card>

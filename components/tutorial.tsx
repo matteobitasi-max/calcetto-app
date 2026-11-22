@@ -95,6 +95,9 @@ function SceltaNuova({ t, tocca }: { t: T; tocca?: 'partita' | 'torneo' }) {
             <span className="block text-[10px] text-zinc-500">{t('Singola o ricorrente, con le convocazioni')}</span>
           </div>
         </Tocco>
+        <div className="rounded-md bg-zinc-100 p-1.5 dark:bg-zinc-800">
+          🏃 <b>{t('Allenamento')}</b>
+        </div>
         <Tocco attivo={tocca === 'torneo'}>
           <div className="rounded-md bg-zinc-100 p-1.5 dark:bg-zinc-800">
             🏆 <b>{t('Torneo')}</b>

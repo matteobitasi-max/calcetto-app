@@ -4,6 +4,8 @@ export const MAX_GIOCATORI = 14
 
 // "In base alle convocazioni": si convoca chi vuole fino a questo tetto (8 contro 8); oltre si va in lista d'attesa.
 export const MAX_ISCRITTI = 16
+// Allenamento: non si gioca a squadre, quindi i posti possono essere di più.
+export const MAX_ALLENAMENTO = 30
 
 // Alla chiusura si gioca con un numero pari: 16 iscritti → 8 contro 8,
 // 11 iscritti → 5 contro 5 e l'ultimo arrivato in lista d'attesa.

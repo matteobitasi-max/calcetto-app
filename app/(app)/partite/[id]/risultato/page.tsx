@@ -34,7 +34,8 @@ const giocatore = (p: Player): Giocatore => ({
 async function Editor({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const match = await getMatch(id)
-  if (!match) notFound()
+  // gli allenamenti non hanno un risultato
+  if (!match || match.tipo === 'allenamento') notFound()
   const [, t] = await Promise.all([requireIn(match.legaId, 'refertatore'), getT()])
 
   const indietro = (

@@ -5,7 +5,7 @@ import { IntervisteLega } from '@/components/interviste-lega'
 import { CodiceInvito, InvitoLink } from '@/components/invito-link'
 import { baseUrl } from '@/lib/url'
 import { getCurrentPlayer, getMemberships, getUtente, type Player } from '@/lib/player'
-import { finestra, formatoInCorso, getPastMatches, getPlayers, getUpcomingMatches, ordinati, presenti, type Match } from '@/lib/matches'
+import { finestra, formatoInCorso, getPastMatches, isAllenamento, getPlayers, getUpcomingMatches, ordinati, presenti, type Match } from '@/lib/matches'
 import { getT } from '@/lib/lingua'
 import type { T } from '@/lib/i18n'
 import { nomeSquadra } from '@/lib/teams'
@@ -158,7 +158,10 @@ function RigaPartita({ match, children, t }: { match: Match; children: ReactNode
   return (
     <Link href={`/partite/${match._id}`} className="flex items-center justify-between gap-2 px-4 py-3 text-sm hover:bg-zinc-50 dark:hover:bg-zinc-800">
       <span className="min-w-0">
-        <span className="block capitalize">{t.data(match.data, breve)}</span>
+        <span className="block capitalize">
+          {isAllenamento(match) && '🏃 '}
+          {t.data(match.data, breve)}
+        </span>
         <span className="block truncate text-xs text-zinc-500">{match.luogo}</span>
       </span>
       {children}
@@ -228,7 +231,7 @@ function ProssimaPartita({
 
   return (
     <section className="space-y-2">
-      <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">{t('Prossima partita')}</h2>
+      <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">{isAllenamento(match) ? `🏃 ${t('Prossimo allenamento')}` : t('Prossima partita')}</h2>
       <Card className="space-y-4 border-2 border-green-600">
         <Link href={`/partite/${match._id}`} className="block space-y-1">
           <h3 className="text-xl font-bold leading-tight">

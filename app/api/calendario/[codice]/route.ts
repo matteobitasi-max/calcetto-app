@@ -9,6 +9,7 @@ import { creaT, isLingua, type T } from '@/lib/i18n'
 
 type Partita = {
   _id: string
+  tipo?: string
   _updatedAt: string
   data: string
   luogo?: string
@@ -44,7 +45,7 @@ export async function GET(request: Request, { params }: RouteContext<'/api/calen
   const partite = leghe.length
     ? await sanity.fetch<Partita[]>(
         `*[_type == "match" && lega._ref in $leghe && data >= $da] | order(data asc){
-          _id, _updatedAt, data, luogo, durataMinuti, stato, note, aperturaConvocazioni, chiusuraConvocazioni, nomeA, nomeB, risultato,
+          _id, _updatedAt, tipo, data, luogo, durataMinuti, stato, note, aperturaConvocazioni, chiusuraConvocazioni, nomeA, nomeB, risultato,
           "lega": lega->nome, "torneo": torneo->nome,
           "mia": convocazioni[giocatore._ref in $miei][0].risposta
         }`,
@@ -85,7 +86,9 @@ function evento(p: Partita, t: T, sito: string) {
   const punteggio = giocata && r?.golA != null && r?.golB != null ? ` ${r.golA}–${r.golB}` : ''
   const titolo = p.torneo
     ? `🏆 ${p.torneo}: ${p.nomeA ?? '?'} – ${p.nomeB ?? '?'}${punteggio}`
-    : `⚽ ${p.lega ?? 'The Cap'}${punteggio}`
+    : p.tipo === 'allenamento'
+      ? `🏃 ${t('Allenamento')} · ${p.lega ?? 'The Cap'}`
+      : `⚽ ${p.lega ?? 'The Cap'}${punteggio}`
 
   const descrizione = [
     p.mia ? t(RISPOSTA[p.mia]) : !annullata && !giocata && !p.torneo ? `❓ ${t('Non hai risposto')}` : null,

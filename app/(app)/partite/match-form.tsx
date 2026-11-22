@@ -5,6 +5,7 @@ import { PostiInput } from '@/components/posti-input'
 import { Card, Field, inputClass } from '@/components/ui'
 import { adessoArrotondato, isoToRomeLocal, minutiTra } from '@/lib/dates'
 import type { Match } from '@/lib/matches'
+import { MAX_ALLENAMENTO } from '@/lib/limiti'
 import { QuandoFields } from './quando-fields'
 import { getT } from '@/lib/lingua'
 
@@ -13,6 +14,7 @@ export async function MatchForm({
   match,
   giorno,
   legaId,
+  allenamento,
   submitLabel,
 }: {
   action: (prev: FormState, fd: FormData) => Promise<FormState>
@@ -21,6 +23,8 @@ export async function MatchForm({
   giorno?: string
   /** Nuova partita: la lega in cui crearla (se non è quella attiva). */
   legaId?: string
+  /** Allenamento: niente formati da partita (5 vs 5…), solo il numero massimo di posti. */
+  allenamento?: boolean
   submitLabel: string
 }) {
   const t = await getT()
@@ -38,6 +42,7 @@ export async function MatchForm({
   return (
     <ActionForm action={action} className="space-y-4">
       {legaId && <input type="hidden" name="legaId" value={legaId} />}
+      {allenamento && !match && <input type="hidden" name="tipo" value="allenamento" />}
       <Card>
         <QuandoFields {...quando} nuova={!match} />
       </Card>
@@ -46,11 +51,18 @@ export async function MatchForm({
         <Field label={t('Campo / luogo')}>
           <input name="luogo" required placeholder={t('Centro sportivo…')} defaultValue={match?.luogo} className={inputClass} />
         </Field>
-        <div className="space-y-1 text-sm">
-          <span className="font-medium">{t('Giocatori in lista')}</span>
-          <p className="text-zinc-500">{t('Raggiunto questo numero, chi si convoca va in lista d’attesa.')}</p>
-          <PostiInput defaultValue={match?.postiDisponibili} defaultAutomatico={match ? !!match.postiAutomatici : true} />
-        </div>
+        {allenamento ? (
+          <Field label={t('Posti')}>
+            <p className="mb-1 text-xs text-zinc-500">{t('Raggiunto questo numero, chi si convoca va in lista d’attesa.')}</p>
+            <input name="postiDisponibili" type="number" min={2} max={MAX_ALLENAMENTO} required defaultValue={match?.postiDisponibili ?? 16} className={inputClass} />
+          </Field>
+        ) : (
+          <div className="space-y-1 text-sm">
+            <span className="font-medium">{t('Giocatori in lista')}</span>
+            <p className="text-zinc-500">{t('Raggiunto questo numero, chi si convoca va in lista d’attesa.')}</p>
+            <PostiInput defaultValue={match?.postiDisponibili} defaultAutomatico={match ? !!match.postiAutomatici : true} />
+          </div>
+        )}
         <div className="grid grid-cols-2 gap-4">
           <Field label={t('Durata (minuti)')}>
             <input name="durataMinuti" type="number" min={10} max={300} step={5} required defaultValue={match?.durataMinuti ?? 60} className={inputClass} />

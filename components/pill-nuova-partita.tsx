@@ -1,12 +1,11 @@
 'use client'
 
-import Link from 'next/link'
 import { useEffect, useRef, useState } from 'react'
-import { createPortal } from 'react-dom'
+import { SceltaNuovo } from './scelta-nuovo'
 import { useT } from '@/components/lingua'
 
 // "+ Nuova partita" fissa in basso a destra: si nasconde scorrendo verso il basso
-// e ricompare appena si torna su. Toccandola si sceglie tra una partita e un torneo (Pro).
+// e ricompare appena si torna su. Toccandola si sceglie tra partita, allenamento e torneo (Pro).
 export function PillNuovaPartita() {
   const t = useT()
   const [visibile, setVisibile] = useState(true)
@@ -25,8 +24,6 @@ export function PillNuovaPartita() {
     return () => window.removeEventListener('scroll', onScroll)
   }, [])
 
-  const voce = 'flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left hover:bg-zinc-100 dark:hover:bg-zinc-800'
-
   return (
     <>
       <button
@@ -41,38 +38,7 @@ export function PillNuovaPartita() {
       >
         <span className="text-lg leading-none">+</span> {t('Nuova partita')}
       </button>
-      {scelta &&
-        createPortal(
-          <div
-            role="dialog"
-            aria-label={t('Cosa vuoi organizzare?')}
-            onClick={(e) => e.target === e.currentTarget && setScelta(false)}
-            className="fixed inset-0 z-[60] flex items-end justify-center bg-black/50 p-4 pb-[max(1rem,var(--safe-area-inset-bottom,env(safe-area-inset-bottom)))] sm:items-center"
-          >
-            <div className="w-full max-w-sm space-y-1 rounded-2xl bg-white p-3 shadow-2xl dark:bg-zinc-900">
-              <p className="px-4 pb-1 pt-1 font-semibold">{t('Cosa vuoi organizzare?')}</p>
-              <Link href="/partite/nuova" className={voce} onClick={() => setScelta(false)}>
-                <span className="text-2xl">⚽</span>
-                <span className="min-w-0 flex-1">
-                  <span className="block font-semibold">{t('Partita')}</span>
-                  <span className="block text-xs text-zinc-500">{t('Singola o ricorrente, con le convocazioni')}</span>
-                </span>
-              </Link>
-              <Link href="/tornei/nuovo" className={voce} onClick={() => setScelta(false)}>
-                <span className="text-2xl">🏆</span>
-                <span className="min-w-0 flex-1">
-                  <span className="block font-semibold">{t('Torneo')}</span>
-                  <span className="block text-xs text-zinc-500">{t('Squadre fisse, girone e classifica')}</span>
-                </span>
-                <span className="rounded-full bg-amber-400 px-2 py-0.5 text-[10px] font-bold text-zinc-900">PRO</span>
-              </Link>
-              <button type="button" onClick={() => setScelta(false)} className="w-full py-2 text-sm text-zinc-500">
-                {t('Annulla')}
-              </button>
-            </div>
-          </div>,
-          document.body,
-        )}
+      {scelta && <SceltaNuovo chiudi={() => setScelta(false)} />}
     </>
   )
 }

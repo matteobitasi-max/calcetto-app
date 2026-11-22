@@ -55,9 +55,21 @@ export const RispostaBadge = async ({ risposta }: { risposta?: Risposta }) => {
   return <Badge label={t(label)} className={cls} />
 }
 
+function allenamentoFinito(m: { tipo?: string; stato: Stato; data?: string; durataMinuti?: number }) {
+  return m.tipo === 'allenamento' && m.stato !== 'annullata' && !!m.data && new Date(m.data).getTime() + (m.durataMinuti ?? 60) * 60_000 <= Date.now()
+}
+
 // L'etichetta segue la finestra vera delle convocazioni, non solo lo stato salvato.
-export const StatoBadge = async ({ match }: { match: { stato: Stato; aperturaConvocazioni: string; chiusuraConvocazioni: string } }) => {
+export const StatoBadge = async ({
+  match,
+}: {
+  match: { stato: Stato; aperturaConvocazioni: string; chiusuraConvocazioni: string; tipo?: string; data?: string; durataMinuti?: number }
+}) => {
   const t = await getT()
+  // allenamento finito: non c'è un risultato da aspettare
+  if (allenamentoFinito(match)) {
+    return <Badge label={t('Fatto')} className={STATO.giocata[1]} />
+  }
   const f = match.stato === 'aperta' ? finestra(match) : null
   const [label, cls] = STATO[f === 'non_ancora' || f === 'scaduta' ? f : match.stato] ?? STATO.aperta
   // non ancora aperte: quando si aprono (es. "Convocazioni dal 3 nov, 20:00")

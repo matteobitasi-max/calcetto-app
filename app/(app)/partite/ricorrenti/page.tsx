@@ -46,7 +46,10 @@ async function Elenco() {
           <Card key={s._id} className={`space-y-2 ${attiva ? '' : 'opacity-60'}`}>
             <div className="flex items-start justify-between gap-2">
               <div>
-                <h2 className="font-semibold capitalize">{quando}</h2>
+                <h2 className="font-semibold capitalize">
+                  {s.tipo === 'allenamento' && '🏃 '}
+                  {quando}
+                </h2>
                 <p className="text-sm text-zinc-500">
                   📍 {s.luogo} · {t('{n} giocatori', { n: s.postiDisponibili })}{s.quota != null && ` · ${s.quota} €`}
                 </p>

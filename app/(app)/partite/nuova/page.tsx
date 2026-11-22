@@ -8,41 +8,44 @@ import { Card, Loading, PageTitle } from '@/components/ui'
 import { getT } from '@/lib/lingua'
 import { MatchForm } from '../match-form'
 
-export default async function NuovaPartitaPage({ searchParams }: PageProps<'/partite/nuova'>) {
-  const t = await getT()
+export default function NuovaPartitaPage({ searchParams }: PageProps<'/partite/nuova'>) {
   return (
-    <>
-      <PageTitle>{t('Nuova partita')}</PageTitle>
-      <Suspense fallback={<Loading />}>
-        <Form searchParams={searchParams} />
-      </Suspense>
-    </>
+    <Suspense fallback={<Loading />}>
+      <Form searchParams={searchParams} />
+    </Suspense>
   )
 }
 
 async function Form({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
-  const [{ giorno, lega, scegli }, mie, attiva, t] = await Promise.all([searchParams, getMemberships(), getCurrentPlayer(), getT()])
+  const [{ giorno, lega, scegli, tipo }, mie, attiva, t] = await Promise.all([searchParams, getMemberships(), getCurrentPlayer(), getT()])
   const giornoScelto = typeof giorno === 'string' ? giorno : undefined
   const organizzate = mie.filter((m) => m.isAdmin)
+  // ?tipo=allenamento: stesso modulo, ma per un allenamento (niente squadre né risultato)
+  const allenamento = tipo === 'allenamento'
+  const extra = `${giornoScelto ? `&giorno=${giornoScelto}` : ''}${allenamento ? '&tipo=allenamento' : ''}`
+  const titolo = <PageTitle>{allenamento ? `🏃 ${t('Nuovo allenamento')}` : t('Nuova partita')}</PageTitle>
 
   // Senza lega indicata: quella attiva se la organizzo; altrimenti (o con "Cambia") si sceglie tra quelle che organizzo.
   if (typeof lega !== 'string' && organizzate.length > 1 && (scegli || !attiva?.isAdmin)) {
     return (
-      <Card className="space-y-1">
-        <p className="px-3 pb-1 font-semibold">{t('In quale lega?')}</p>
-        {organizzate.map((m) => (
-          <Link
-            key={m.lega._id}
-            href={`/partite/nuova?lega=${m.lega._id}${giornoScelto ? `&giorno=${giornoScelto}` : ''}`}
-            className="flex items-center gap-3 rounded-lg px-3 py-2 hover:bg-zinc-100 dark:hover:bg-zinc-800"
-          >
-            <Stemma lega={{ nome: m.lega.nome, logo: avatarUrl(m.lega.logo, 64) }} size={28} />
-            <span className="min-w-0 flex-1 truncate font-medium">{m.lega.nome}</span>
-            <Admin />
-            <span className="text-zinc-400">›</span>
-          </Link>
-        ))}
-      </Card>
+      <>
+        {titolo}
+        <Card className="space-y-1">
+          <p className="px-3 pb-1 font-semibold">{t('In quale lega?')}</p>
+          {organizzate.map((m) => (
+            <Link
+              key={m.lega._id}
+              href={`/partite/nuova?lega=${m.lega._id}${extra}`}
+              className="flex items-center gap-3 rounded-lg px-3 py-2 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+            >
+              <Stemma lega={{ nome: m.lega.nome, logo: avatarUrl(m.lega.logo, 64) }} size={28} />
+              <span className="min-w-0 flex-1 truncate font-medium">{m.lega.nome}</span>
+              <Admin />
+              <span className="text-zinc-400">›</span>
+            </Link>
+          ))}
+        </Card>
+      </>
     )
   }
 
@@ -55,23 +58,27 @@ async function Form({ searchParams }: { searchParams: Promise<Record<string, str
         : organizzate[0]
   return (
     <>
+      {titolo}
       {mie.length > 1 && (
         <p className="mb-3 text-sm text-zinc-500">
           {t('Nella lega')} <b>{admin.lega.nome}</b>
           {organizzate.length > 1 && (
             <>
               {' · '}
-              <Link
-                href={`/partite/nuova?scegli=1${giornoScelto ? `&giorno=${giornoScelto}` : ''}`}
-                className="font-medium text-green-700 hover:underline dark:text-green-400"
-              >
+              <Link href={`/partite/nuova?scegli=1${extra}`} className="font-medium text-green-700 hover:underline dark:text-green-400">
                 {t('Cambia')}
               </Link>
             </>
           )}
         </p>
       )}
-      <MatchForm action={salvaPartita.bind(null, null)} giorno={giornoScelto} legaId={admin.lega._id} submitLabel={t('Crea partita')} />
+      <MatchForm
+        action={salvaPartita.bind(null, null)}
+        giorno={giornoScelto}
+        legaId={admin.lega._id}
+        allenamento={allenamento}
+        submitLabel={allenamento ? t('Crea allenamento') : t('Crea partita')}
+      />
     </>
   )
 }

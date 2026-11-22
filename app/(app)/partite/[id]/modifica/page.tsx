@@ -9,15 +9,11 @@ import { getT } from '@/lib/lingua'
 import { MatchForm } from '../../match-form'
 import { AggiornaAllApertura } from '@/components/aggiorna-all-apertura'
 
-export default async function ModificaPartitaPage({ params }: PageProps<'/partite/[id]/modifica'>) {
-  const t = await getT()
+export default function ModificaPartitaPage({ params }: PageProps<'/partite/[id]/modifica'>) {
   return (
-    <>
-      <PageTitle>{t('Modifica partita')}</PageTitle>
-      <Suspense fallback={<Loading />}>
-        <Form params={params} />
-      </Suspense>
-    </>
+    <Suspense fallback={<Loading />}>
+      <Form params={params} />
+    </Suspense>
   )
 }
 
@@ -28,6 +24,7 @@ async function Form({ params }: { params: Promise<{ id: string }> }) {
   const [, t] = await Promise.all([requireIn(match.legaId, 'organizzatore'), getT()])
   return (
     <div className="space-y-4">
+      <PageTitle>{match.tipo === 'allenamento' ? t('Modifica allenamento') : t('Modifica partita')}</PageTitle>
       {match.serieId && (
         <p className="rounded-lg bg-zinc-100 p-3 text-sm text-zinc-600 dark:bg-zinc-900 dark:text-zinc-300">
           🔁 {t('Le modifiche valgono solo per questa partita.')}{' '}
@@ -37,7 +34,7 @@ async function Form({ params }: { params: Promise<{ id: string }> }) {
         </p>
       )}
       <AggiornaAllApertura />
-      <MatchForm key={match._rev} action={salvaPartita.bind(null, match._id)} match={match} submitLabel={t('Salva')} />
+      <MatchForm key={match._rev} action={salvaPartita.bind(null, match._id)} match={match} allenamento={match.tipo === 'allenamento'} submitLabel={t('Salva')} />
     </div>
   )
 }

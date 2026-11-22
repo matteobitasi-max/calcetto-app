@@ -27,7 +27,8 @@ export default async function FormazioniPage({ params }: PageProps<'/partite/[id
 async function Editor({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const trovata = await getMatch(id)
-  if (!trovata) notFound()
+  // gli allenamenti non hanno formazioni
+  if (!trovata || trovata.tipo === 'allenamento') notFound()
   const [, t] = await Promise.all([requireIn(trovata.legaId, 'organizzatore'), getT()])
   // tempo scaduto: le convocazioni si chiudono adesso, senza passare dal pulsante
   const match = await conConvocazioniAggiornate(trovata)

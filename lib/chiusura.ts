@@ -52,7 +52,8 @@ export async function chiudiConvocazioni(matchId: string) {
       await inviaAGiocatori(
         presenti(match).map((c) => c.giocatore._id),
         (t) => ({
-          title: `🔒 ${t('Convocazioni chiuse')} – ${t('Ricordate le pettorine')}`,
+          // all'allenamento niente squadre, quindi niente pettorine
+          title: match.tipo === 'allenamento' ? `🔒 ${t('Allenamento')} · ${t('Convocazioni chiuse')}` : `🔒 ${t('Convocazioni chiuse')} – ${t('Ricordate le pettorine')}`,
           body: `${t.data(match.data, { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })} · ${match.luogo}\n${convocati(match, t)}`,
           url: `/partite/${matchId}`,
           tag: matchId,

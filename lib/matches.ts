@@ -21,6 +21,8 @@ export type Match = {
   _id: string
   _rev: string
   legaId: string
+  /** Allenamento: convocazioni come una partita, ma niente squadre, risultato né classifica. */
+  tipo?: 'allenamento'
   data: string
   luogo: string
   serieId?: string
@@ -71,10 +73,15 @@ export const orarioPartita = (m: Pick<Match, 'data' | 'durataMinuti'>) => {
   return { inizio, fine: new Date(inizio.getTime() + (m.durataMinuti ?? 60) * 60_000) }
 }
 
+export const isAllenamento = (m: Pick<Match, 'tipo'>) => m.tipo === 'allenamento'
+// Un allenamento finito (passato l'orario) è concluso anche senza risultato: va tra le partite passate.
+export const allenamentoFinito = (m: Pick<Match, 'tipo' | 'data' | 'durataMinuti' | 'stato'>, ora = new Date()) =>
+  isAllenamento(m) && m.stato !== 'annullata' && orarioPartita(m).fine <= ora
+
 export type Pagamento = { giocatoreId: string; stato: 'dichiarato' | 'confermato'; metodo?: 'satispay' | 'contanti'; il?: string }
 
 const matchFields = `
-  _id, _rev, "legaId": lega._ref, data, luogo, postiDisponibili, postiAutomatici, quota, note, aperturaConvocazioni, chiusuraConvocazioni, durataFinestraMinuti, "serieId": serie._ref, notificaInviataIl,
+  _id, _rev, "legaId": lega._ref, tipo, data, luogo, postiDisponibili, postiAutomatici, quota, note, aperturaConvocazioni, chiusuraConvocazioni, durataFinestraMinuti, "serieId": serie._ref, notificaInviataIl,
   "stato": coalesce(stato, "aperta"),
   "convocazioni": coalesce(convocazioni[]{_key, risposta, rispostoIl, aggiunto, "giocatore": giocatore->{${playerFields}}}, []),
   "squadraA": coalesce(squadraA[]->{${playerFields}}, []),
@@ -90,18 +97,23 @@ const matchFields = `
 `
 
 // Le partite di una lega o, con un elenco, di più leghe insieme (vista "Tutte le leghe").
-export function getUpcomingMatches(legaId: string | string[]) {
-  return sanity.fetch<Match[]>(
+// In programma: aperte o chiuse (le partite restano qui finché non si inserisce il risultato),
+// tranne gli allenamenti già finiti, che non hanno un risultato da aspettare.
+export async function getUpcomingMatches(legaId: string | string[]) {
+  const partite = await sanity.fetch<Match[]>(
     `*[_type == "match" && lega._ref in $leghe && coalesce(stato, "aperta") in ["aperta", "chiusa"]] | order(data asc){${matchFields}}`,
     { leghe: [legaId].flat() },
   )
+  return partite.filter((m) => !allenamentoFinito(m))
 }
 
-export function getPastMatches(legaId: string | string[], limit = 20) {
-  return sanity.fetch<Match[]>(
-    `*[_type == "match" && lega._ref in $leghe && stato in ["giocata", "annullata"]] | order(data desc)[0...$limit]{${matchFields}}`,
-    { leghe: [legaId].flat(), limit },
+// Concluse: giocate, annullate e allenamenti finiti.
+export async function getPastMatches(legaId: string | string[], limit = 20) {
+  const partite = await sanity.fetch<Match[]>(
+    `*[_type == "match" && lega._ref in $leghe && (stato in ["giocata", "annullata"] || (tipo == "allenamento" && data < $ora))] | order(data desc)[0...$limit]{${matchFields}}`,
+    { leghe: [legaId].flat(), limit, ora: new Date().toISOString() },
   )
+  return partite.filter((m) => m.stato === 'giocata' || m.stato === 'annullata' || allenamentoFinito(m))
 }
 
 // Le partite di un torneo, per giornata.
