@@ -12,6 +12,7 @@ import { PillSalva } from '@/components/pill-salva'
 import { SatispaySetup } from '@/components/satispay-setup'
 import { SubmitButton } from '@/components/submit-button'
 import { Card, Field, Loading, PageTitle, inputClass } from '@/components/ui'
+import { EtichettaClub } from '@/components/pill-scelta'
 import { getT } from '@/lib/lingua'
 
 export default async function LegaPage() {
@@ -64,7 +65,7 @@ async function Impostazioni() {
                   <span className="min-w-0 flex-1">
                     <span className="flex items-center gap-2 font-semibold">
                       {titolo}
-                      {valore === 'club' && <span className="rounded-full bg-zinc-900 px-2 py-0.5 text-[10px] font-bold text-white dark:bg-white dark:text-zinc-900">CLUB</span>}
+                      {valore === 'club' && <EtichettaClub />}
                     </span>
                     <span className="block text-sm text-zinc-500">{testo}</span>
                   </span>
