@@ -122,4 +122,11 @@ export const ingresso: Record<string, string> = {
   "Satispay: metti il tuo link e i giocatori pagano la quota con un tocco": "Satispay: add your link and players pay their share with one tap",
   "Città del campo: in ogni partita compare il meteo previsto": "Pitch city: every match shows the weather forecast",
   "Interviste: incolla una playlist YouTube e i video compaiono da soli nell’app": "Interviews: paste a YouTube playlist and the videos appear in the app automatically",
+  "Che lega vuoi creare?": "What kind of league?",
+  "Lega tra amici": "League among friends",
+  "Chi risponde per primo gioca, con la lista d’attesa. Gratis.": "First to reply plays, with a waiting list. Free.",
+  "Per squadre con allenatore: convocati scelti da te, infortunati, pagelle, formazione con modulo. Include tutto il Pro.": "For teams with a coach: you pick the squad, injuries, ratings, line-up with formation. Includes everything in Pro.",
+  "Nome della squadra, es. ASD Real Giovedì": "Team name, e.g. Thursday United",
+  "Crea il Club": "Create the Club",
+  "Se non hai ancora il Club PRO, dopo la creazione ti mostriamo come attivarlo. Puoi sempre cambiare tipo di lega dalle impostazioni.": "If you don’t have Club PRO yet, we’ll show you how to turn it on after creating the league. You can always change the league type in settings.",
 }

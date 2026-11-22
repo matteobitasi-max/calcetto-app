@@ -1140,6 +1140,16 @@ export async function creaLega(_prev: EsitoNuovaLega, formData: FormData): Promi
   const lega = await sanity.create({ _type: 'league', nome, codiceInvito, creataDa: utente.id, ...(citta && { citta }) })
   await nuovaScheda(lega._id, utente, true)
   await attivaLega(lega._id)
+  // Club Allenatore: con il Club già attivo (o per il titolare) la lega nasce Club; altrimenti si apre la pagina
+  // del Club PRO per attivarlo (intanto la lega è tra amici: si può passare al Club anche dopo, dalle impostazioni)
+  if (str(formData, 'tipo') === 'club') {
+    const [titolare, club] = await Promise.all([isTitolare(), mioClub(utente.id)])
+    if (!titolare && !club) redirect(`/club?lega=${lega._id}`)
+    await sanity
+      .patch(lega._id)
+      .set({ club: true, tipo: 'squadra', ...(titolare ? {} : { clubDi: utente.id }) })
+      .commit()
+  }
   redirect('/')
 }
 

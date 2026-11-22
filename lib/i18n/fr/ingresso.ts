@@ -122,4 +122,11 @@ export const ingresso: Record<string, string> = {
   "Satispay: metti il tuo link e i giocatori pagano la quota con un tocco": "Satispay : ajoute ton lien et les joueurs paient leur part en un geste",
   "Città del campo: in ogni partita compare il meteo previsto": "Ville du terrain : chaque match affiche la météo prévue",
   "Interviste: incolla una playlist YouTube e i video compaiono da soli nell’app": "Interviews : colle une playlist YouTube et les vidéos apparaissent toutes seules dans l’app",
+  "Che lega vuoi creare?": "Quelle ligue veux-tu créer ?",
+  "Lega tra amici": "Ligue entre amis",
+  "Chi risponde per primo gioca, con la lista d’attesa. Gratis.": "Le premier qui répond joue, avec liste d’attente. Gratuit.",
+  "Per squadre con allenatore: convocati scelti da te, infortunati, pagelle, formazione con modulo. Include tutto il Pro.": "Pour les équipes avec entraîneur : convoqués choisis par toi, blessés, notes, composition avec schéma. Tout le Pro inclus.",
+  "Nome della squadra, es. ASD Real Giovedì": "Nom de l’équipe, ex. Real Jeudi",
+  "Crea il Club": "Créer le Club",
+  "Se non hai ancora il Club PRO, dopo la creazione ti mostriamo come attivarlo. Puoi sempre cambiare tipo di lega dalle impostazioni.": "Si tu n’as pas encore Club PRO, après la création on te montre comment l’activer. Tu peux toujours changer le type de ligue dans les réglages.",
 }

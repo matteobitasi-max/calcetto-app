@@ -18,7 +18,7 @@ export async function TipoLega({ lega }: { lega: Lega }) {
         {(
           [
             ['amici', '👥', t('Tra amici'), t('Chi risponde per primo gioca, con la lista d’attesa.'), salvaTipoLega.bind(null, lega._id, 'amici')],
-            ['club', '🧢', t('Club PRO'), t('Convocati scelti dall’allenatore, infortunati e squalificati, pagelle a fine partita. Include tutto il Pro.'), scegliClub.bind(null, lega._id)],
+            ['club', '🧢', t('Club Allenatore'), t('Convocati scelti dall’allenatore, infortunati e squalificati, pagelle a fine partita. Include tutto il Pro.'), scegliClub.bind(null, lega._id)],
           ] as const
         ).map(([valore, emoji, titolo, testo, azione]) => {
           const scelto = valore === 'club' ? !!lega.club && lega.tipo === 'squadra' : !(lega.club && lega.tipo === 'squadra')
