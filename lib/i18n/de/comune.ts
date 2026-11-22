@@ -266,4 +266,5 @@ export const comune: Record<string, string> = {
   "Marcatura, contrasti, chiusure e copertura": "Deckung, Zweikämpfe, Absichern und Stellungsspiel",
   "{gol} gol subiti dalla sua squadra (attesi {attesi})": "{gol} Gegentore seiner Mannschaft (erwartet {attesi})",
   "Come funziona": "So funktioniert's",
+  "Home": "Start",
 }

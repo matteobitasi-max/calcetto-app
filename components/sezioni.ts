@@ -1,6 +1,6 @@
 // Le sezioni del menu in alto e lo stile delle pillole (usati da server e client).
 export const SEZIONI = [
-  { href: '/', label: 'Partite', prefisso: '/partite' },
+  { href: '/', label: 'Home', prefisso: '/partite' },
   { href: '/calendario', label: 'Calendario', prefisso: '/calendario' },
   { href: '/classifica', label: 'Statistiche', prefisso: '/classifica' },
   { href: '/giocatori', label: 'Rosa', prefisso: '/giocatori' },
