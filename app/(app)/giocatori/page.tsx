@@ -2,23 +2,29 @@ import { Suspense } from 'react'
 import { displayName, mioInCima, overall, requirePlayer, type Player } from '@/lib/player'
 import { getPlayers, getUpcomingMatches } from '@/lib/matches'
 import { getT } from '@/lib/lingua'
-import { ButtonLink, Card, Loading, PageTitle, PlayerRow } from '@/components/ui'
+import { ButtonLink, Card, Loading, PageTitle, PlayerRow, buttonClass } from '@/components/ui'
+import { COLONNE_ORDINE, righeRosa, type Ordine } from '@/lib/rosa-tabella'
+import { RosaTabella } from './rosa-tabella'
 import { SwipeRiga } from '@/components/swipe-riga'
 import { convocaGiocatore, rimuoviDallaLega } from '@/app/actions'
 import type { ReactNode } from 'react'
 import Link from 'next/link'
 import { formaDellaLega, ioPro, legaPro } from '@/lib/pro'
 
-export default function GiocatoriPage() {
+export default function GiocatoriPage({ searchParams }: PageProps<'/giocatori'>) {
   return (
     <Suspense fallback={<Loading />}>
-      <Rosa />
+      <Rosa searchParams={searchParams} />
     </Suspense>
   )
 }
 
-async function Rosa() {
-  const me = await requirePlayer()
+async function Rosa({ searchParams }: { searchParams: PageProps<'/giocatori'>['searchParams'] }) {
+  const [me, { ordina }] = await Promise.all([requirePlayer(), searchParams])
+  // computer: la rosa in tabella, ordinata dalla colonna scelta (di base il voto)
+  const club = !!me.lega.club && me.lega.tipo === 'squadra'
+  const ordine = (COLONNE_ORDINE as readonly string[]).includes(String(ordina)) ? (ordina as Ordine) : 'voto'
+  const righeTabella = await righeRosa(me.lega._id, club, ordine)
   const [players, prossime, pro, mioPro] = await Promise.all([
     getPlayers(me.lega._id),
     me.isAdmin ? getUpcomingMatches(me.lega._id) : [],
@@ -68,6 +74,9 @@ async function Rosa() {
         action={
           me.isAdmin && (
             <span className="flex gap-2">
+              <a href="/api/rosa" download className={`${buttonClass('secondary')} hidden lg:inline-flex`} title={t('Scarica la rosa per Excel')}>
+                ⬇️ {t('Esporta')}
+              </a>
               <ButtonLink href="/giocatori/importa" variant="secondary" title={t('Importa giocatori da Excel o CSV')}>
                 📥 {t('Importa')}
               </ButtonLink>
@@ -98,7 +107,11 @@ async function Rosa() {
           </Link>
         </p>
       )}
-      <Card>
+      {/* computer: tabella; telefono: l'elenco con gli swipe */}
+      <div className="mb-4 hidden lg:block">
+        <RosaTabella righe={righeTabella} ordine={ordine} club={club} mioId={me._id} t={t} />
+      </div>
+      <Card className="lg:hidden">
         <ul className="space-y-3">
           {mioInCima(attivi, me._id, (p) => p._id).map((p) => (
             <li key={p._id}>

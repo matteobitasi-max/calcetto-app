@@ -268,4 +268,7 @@ export const comune: Record<string, string> = {
   "Come funziona": "Comment ça marche",
   "Home": "Accueil",
   "Chi apre il link e fa l’accesso entra subito nella rosa.": "Qui ouvre le lien et se connecte entre tout de suite dans l’effectif.",
+  "Menu": "Menu",
+  "Strumenti": "Outils",
+  "Altro": "Plus",
 }

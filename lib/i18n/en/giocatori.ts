@@ -114,4 +114,7 @@ export const giocatori: Record<string, string> = {
   "Il numero di maglia va da 0 a 99.": "The shirt number goes from 0 to 99.",
   "Il numero {n} è già di {nome}.": "Number {n} already belongs to {nome}.",
   "Cognome, Telefono, Soprannome, Numero di maglia": "Surname, Phone, Nickname, Shirt number",
+  "Voto": "Rating",
+  "Scarica la rosa per Excel": "Download the squad for Excel",
+  "Esporta": "Export",
 }

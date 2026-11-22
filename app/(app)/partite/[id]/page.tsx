@@ -640,19 +640,30 @@ async function PagelleCard({ match, me }: { match: Match; me: Membro }) {
           {inLista.map((c) => {
             const p = pagella.get(c.giocatore._id)
             return (
-              <div key={c.giocatore._id} className="space-y-1.5 border-b border-zinc-100 pb-3 last:border-0 dark:border-zinc-800">
-                <div className="flex items-center justify-between gap-2">
-                  <span className="min-w-0 truncate text-sm font-medium">{displayName(c.giocatore)}</span>
-                  <select name={`voto-${c.giocatore._id}`} defaultValue={p?.voto ?? ''} aria-label={t('Voto di {nome}', { nome: displayName(c.giocatore) })} className={`${inputClass} w-24`}>
-                    <option value="">—</option>
-                    {voti.map((v) => (
-                      <option key={v} value={v}>
-                        {t.numero(v)}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <input name={`nota-${c.giocatore._id}`} maxLength={280} defaultValue={p?.nota} placeholder={t('Nota per il giocatore (facoltativa)')} className={inputClass} />
+              // computer: nome | voto | nota sulla stessa riga; telefono: nome e voto, la nota sotto
+              <div
+                key={c.giocatore._id}
+                className="grid grid-cols-[minmax(0,1fr)_6rem] items-center gap-x-2 gap-y-1.5 border-b border-zinc-100 pb-3 last:border-0 dark:border-zinc-800 lg:grid-cols-[12rem_6rem_minmax(0,1fr)] lg:pb-2"
+              >
+                <span className="min-w-0 truncate text-sm font-medium">
+                  {c.giocatore.numero != null && <span className="mr-1 text-zinc-400">{c.giocatore.numero}</span>}
+                  {displayName(c.giocatore)}
+                </span>
+                <select name={`voto-${c.giocatore._id}`} defaultValue={p?.voto ?? ''} aria-label={t('Voto di {nome}', { nome: displayName(c.giocatore) })} className={`${inputClass} w-24`}>
+                  <option value="">—</option>
+                  {voti.map((v) => (
+                    <option key={v} value={v}>
+                      {t.numero(v)}
+                    </option>
+                  ))}
+                </select>
+                <input
+                  name={`nota-${c.giocatore._id}`}
+                  maxLength={280}
+                  defaultValue={p?.nota}
+                  placeholder={t('Nota per il giocatore (facoltativa)')}
+                  className={`${inputClass} col-span-2 lg:col-span-1`}
+                />
               </div>
             )
           })}

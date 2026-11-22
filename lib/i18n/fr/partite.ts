@@ -375,4 +375,6 @@ export const partite: Record<string, string> = {
   "In campo può andare solo chi è in lista.": "Seuls les joueurs de la liste peuvent jouer.",
   "Un giocatore è in due posti.": "Un joueur est à deux postes.",
   "Dal calcio a 5 al calcio a 11: 4-4-2, 3-5-2, 4-3-3 e gli altri, con i titolari proposti.": "Du foot à 5 au foot à 11 : 4-4-2, 3-5-2, 4-3-3 et les autres, avec les titulaires proposés.",
+  "Disponibili": "Disponibles",
+  "Trascina i giocatori sul campo; dal campo qui per toglierli.": "Glisse les joueurs sur le terrain ; ramène-les ici pour les retirer.",
 }

@@ -8,6 +8,7 @@ import { Avatar } from '@/components/ui'
 import { LegaZoom } from '@/components/logo-zoom'
 import { LegaMenu } from '@/components/lega-menu'
 import { MenuSezioni } from '@/components/menu-sezioni'
+import { MenuLaterale } from '@/components/menu-laterale'
 import { SEZIONI, barraClass, pillClass } from '@/components/sezioni'
 import { NotificheNativeListener } from '@/components/notifiche-native'
 import { caricaLogoLega } from '@/app/actions'
@@ -23,13 +24,14 @@ export default async function AppLayout({ children }: LayoutProps<'/'>) {
   return (
     <div className="campo flex min-h-full flex-1 flex-col">
       <header className="sticky top-0 z-10 border-b border-zinc-200 bg-white/90 pt-[var(--safe-area-inset-top,env(safe-area-inset-top))] backdrop-blur dark:border-zinc-800 dark:bg-zinc-900/90">
-        <div className="mx-auto max-w-2xl px-4">
+        {/* sul computer l'intestazione si allarga; le pillole lasciano il posto al menu a sinistra */}
+        <div className="mx-auto max-w-2xl px-4 lg:max-w-6xl lg:px-6">
           <div className="flex items-center gap-3 py-2">
             <Suspense fallback={<span className="h-10 flex-1" />}>
               <LegaEUtente />
             </Suspense>
           </div>
-          <nav className={`${barraClass} mb-2.5`}>
+          <nav className={`${barraClass} mb-2.5 lg:hidden`}>
             {/* La pillola evidenziata dipende dalla pagina: fuori dal Suspense resta il menu senza evidenziazione */}
             <Suspense
               fallback={SEZIONI.map((s) => (
@@ -47,11 +49,27 @@ export default async function AppLayout({ children }: LayoutProps<'/'>) {
       <UsaApp />
       <RiprendiInvito />
       <KmAutomatici />
-      <main className="linee-campo mx-auto w-full max-w-2xl flex-1 p-4 pb-[max(1rem,var(--safe-area-inset-bottom,env(safe-area-inset-bottom)))]">
-        {children}
-      </main>
+      {/* computer: menu fisso a sinistra e contenuto più largo; telefono: com'era */}
+      <div className="mx-auto flex w-full max-w-6xl flex-1 lg:gap-6 lg:px-6">
+        <aside className="hidden w-56 shrink-0 lg:block">
+          <div className="sticky top-24 py-4">
+            <Suspense>
+              <MenuLateraleLega />
+            </Suspense>
+          </div>
+        </aside>
+        <main className="linee-campo mx-auto w-full max-w-2xl flex-1 p-4 pb-[max(1rem,var(--safe-area-inset-bottom,env(safe-area-inset-bottom)))] lg:max-w-3xl">
+          {children}
+        </main>
+      </div>
     </div>
   )
+}
+
+// Il menu a sinistra del computer: gli strumenti di chi organizza solo agli organizzatori.
+async function MenuLateraleLega() {
+  const me = await getCurrentPlayer()
+  return <MenuLaterale organizzatore={!!me?.isAdmin} club={!!me?.lega.club && me.lega.tipo === 'squadra'} />
 }
 
 // La lega attiva (con il menu per cambiarla) e la mia foto, che apre il mio profilo.

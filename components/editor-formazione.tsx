@@ -70,52 +70,89 @@ export function EditorFormazione({
         </button>
       </div>
 
-      <CampoTitolari modulo={modulo} giocatori={scelti.map((id) => (id ? (perId.get(id) ?? null) : null))} attivo={attivo} onTocca={(i) => setAttivo(attivo === i ? null : i)} />
+      {/* computer: campo a sinistra, panchina a destra da cui trascinare; telefono: uno sotto l'altro */}
+      <div className="space-y-4 lg:grid lg:grid-cols-[minmax(0,1fr)_15rem] lg:items-start lg:gap-4 lg:space-y-0">
+        <div className="space-y-4">
+          <CampoTitolari
+            modulo={modulo}
+            giocatori={scelti.map((id) => (id ? (perId.get(id) ?? null) : null))}
+            attivo={attivo}
+            onTocca={(i) => setAttivo(attivo === i ? null : i)}
+            onLascia={(posto, id) => {
+              metti(posto, id)
+              setAttivo(null)
+            }}
+          />
 
-      {attivo != null && (
-        <div className="space-y-2 rounded-xl border-2 border-yellow-300 bg-yellow-50 p-3 dark:bg-yellow-950/30">
-          <p className="text-sm font-semibold">
-            {t('Chi va in questo posto?')} <span className="text-zinc-500">({SIGLA[ps[attivo].ruolo]})</span>
-          </p>
-          <div className="flex flex-wrap gap-1.5">
-            {candidati.map((c) => (
-              <button
-                key={c.id}
-                type="button"
-                onClick={() => {
-                  metti(attivo, c.id)
-                  setAttivo(null)
-                }}
-                className={`rounded-full border px-2.5 py-1 text-xs ${scelti[attivo] === c.id ? 'border-green-600 bg-green-600 text-white' : inCampo.has(c.id) ? 'border-zinc-300 text-zinc-500 dark:border-zinc-700' : 'border-zinc-400 bg-white font-semibold dark:bg-zinc-900'}`}
-              >
-                {c.numero != null && `${c.numero} `}
-                {c.nome}
-                {c.ruolo && <span className="opacity-60"> · {c.ruolo.slice(0, 3)}</span>}
-              </button>
-            ))}
-            {scelti[attivo] && (
-              <button type="button" onClick={() => (metti(attivo, null), setAttivo(null))} className="rounded-full border border-red-300 px-2.5 py-1 text-xs text-red-700 dark:text-red-400">
-                {t('Lascia vuoto')}
-              </button>
-            )}
-          </div>
+          {attivo != null && (
+            <div className="space-y-2 rounded-xl border-2 border-yellow-300 bg-yellow-50 p-3 dark:bg-yellow-950/30">
+              <p className="text-sm font-semibold">
+                {t('Chi va in questo posto?')} <span className="text-zinc-500">({SIGLA[ps[attivo].ruolo]})</span>
+              </p>
+              <div className="flex flex-wrap gap-1.5">
+                {candidati.map((c) => (
+                  <button
+                    key={c.id}
+                    type="button"
+                    onClick={() => {
+                      metti(attivo, c.id)
+                      setAttivo(null)
+                    }}
+                    className={`rounded-full border px-2.5 py-1 text-xs ${scelti[attivo] === c.id ? 'border-green-600 bg-green-600 text-white' : inCampo.has(c.id) ? 'border-zinc-300 text-zinc-500 dark:border-zinc-700' : 'border-zinc-400 bg-white font-semibold dark:bg-zinc-900'}`}
+                  >
+                    {c.numero != null && `${c.numero} `}
+                    {c.nome}
+                    {c.ruolo && <span className="opacity-60"> · {c.ruolo.slice(0, 3)}</span>}
+                  </button>
+                ))}
+                {scelti[attivo] && (
+                  <button type="button" onClick={() => (metti(attivo, null), setAttivo(null))} className="rounded-full border border-red-300 px-2.5 py-1 text-xs text-red-700 dark:text-red-400">
+                    {t('Lascia vuoto')}
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+
         </div>
-      )}
-
-      <div className="rounded-xl border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-900">
-        <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-zinc-500">
-          🪑 {t('Panchina')} ({panchina.length})
-        </p>
-        {panchina.length === 0 ? (
-          <p className="text-sm text-zinc-500">{t('Nessuno in panchina.')}</p>
-        ) : (
-          <p className="text-sm">{panchina.map((c) => `${c.numero != null ? `${c.numero} ` : ''}${c.nome}`).join(' · ')}</p>
-        )}
+        {/* panchina: si trascina un giocatore da qui al campo, o dal campo qui per toglierlo */}
+        <div
+          onDragOver={(e) => e.preventDefault()}
+          onDrop={(e) => {
+            e.preventDefault()
+            const id = e.dataTransfer.getData('text/plain')
+            if (id) setScelti((v) => v.map((x) => (x === id ? null : x)))
+          }}
+          className="rounded-xl border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-900 lg:sticky lg:top-24"
+        >
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-zinc-500">
+            🪑 {t('Panchina')} ({panchina.length})
+          </p>
+          {panchina.length === 0 ? (
+            <p className="text-sm text-zinc-500">{t('Nessuno in panchina.')}</p>
+          ) : (
+            <ul className="flex flex-wrap gap-1.5 lg:flex-col">
+              {panchina.map((c) => (
+                <li
+                  key={c.id}
+                  draggable
+                  onDragStart={(e) => e.dataTransfer.setData('text/plain', c.id)}
+                  className="flex cursor-grab items-center gap-2 rounded-lg border border-zinc-200 bg-zinc-50 px-2 py-1 text-sm active:cursor-grabbing dark:border-zinc-700 dark:bg-zinc-800"
+                >
+                  <span className="w-5 text-right text-xs font-semibold tabular-nums text-zinc-400">{c.numero ?? ''}</span>
+                  <span className="flex-1 truncate">{c.nome}</span>
+                  {c.ruolo && <span className="text-[10px] text-zinc-500">{c.ruolo.slice(0, 3)}</span>}
+                </li>
+              ))}
+            </ul>
+          )}
+          <p className="mt-2 hidden text-[11px] text-zinc-500 lg:block">{t('Trascina i giocatori sul campo; dal campo qui per toglierli.')}</p>
+        </div>
       </div>
 
       {stato?.error && <p className="text-sm text-red-600 dark:text-red-400">{stato.error}</p>}
       <div className="fixed inset-x-0 bottom-0 z-20 border-t border-zinc-200 bg-white/95 p-4 pb-[max(1rem,var(--safe-area-inset-bottom,env(safe-area-inset-bottom)))] backdrop-blur dark:border-zinc-800 dark:bg-zinc-950/95">
-        <button type="submit" disabled={invio} className={`${buttonClass('primary')} mx-auto block w-full max-w-md py-3`}>
+        <button type="submit" disabled={invio} className={`${buttonClass('primary')} mx-auto flex w-full max-w-md py-3`}>
           {invio ? t('Salvo…') : t('Salva formazione')}
         </button>
       </div>

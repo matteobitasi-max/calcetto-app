@@ -16,6 +16,7 @@ export function CampoTitolari({
   mioId,
   attivo,
   onTocca,
+  onLascia,
 }: {
   modulo: string
   /** un giocatore (o null, posto vuoto) per ogni posto: 0 è il portiere */
@@ -24,6 +25,8 @@ export function CampoTitolari({
   /** il posto selezionato nell'editor */
   attivo?: number | null
   onTocca?: (posto: number) => void
+  /** computer: un giocatore trascinato su un posto (id del giocatore) */
+  onLascia?: (posto: number, id: string) => void
 }) {
   const ps = posti(modulo)
   const quante = Math.max(...ps.map((p) => p.linea)) + 1
@@ -69,7 +72,22 @@ export function CampoTitolari({
         const stile = { left: `${x}%`, top: `${y}%` }
         const classi = 'absolute flex w-[22%] -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-0.5'
         return onTocca ? (
-          <button key={p.indice} type="button" onClick={() => onTocca(p.indice)} className={classi} style={stile}>
+          <button
+            key={p.indice}
+            type="button"
+            onClick={() => onTocca(p.indice)}
+            // trascinamento: chi è in campo si può spostare su un altro posto (o in panchina)
+            draggable={!!g && !!onLascia}
+            onDragStart={(e) => g && e.dataTransfer.setData('text/plain', g.id)}
+            onDragOver={(e) => onLascia && e.preventDefault()}
+            onDrop={(e) => {
+              e.preventDefault()
+              const id = e.dataTransfer.getData('text/plain')
+              if (id && onLascia) onLascia(p.indice, id)
+            }}
+            className={`${classi} ${onLascia ? 'cursor-grab active:cursor-grabbing' : ''}`}
+            style={stile}
+          >
             {contenuto}
           </button>
         ) : (
