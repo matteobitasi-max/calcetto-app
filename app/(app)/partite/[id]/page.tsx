@@ -14,14 +14,14 @@ import { KmPartita } from '@/components/km-partita'
 import { MeteoPartita } from '@/components/meteo-partita'
 import { getT } from '@/lib/lingua'
 import type { T } from '@/lib/i18n'
-import { correggiKm, scambiaConAttesa, aggiungiDaAttesa, allungaFinestra, apriConvocazioni, cambiaSquadra, cambiaStato, convocaGiocatore, scegliLega, togliDallaPartita, togliDallaSquadra } from '@/app/actions'
+import { correggiKm, salvaPagelle, scambiaConAttesa, aggiungiDaAttesa, allungaFinestra, apriConvocazioni, cambiaSquadra, cambiaStato, convocaGiocatore, scegliLega, togliDallaPartita, togliDallaSquadra } from '@/app/actions'
 import { Countdown } from '@/components/countdown'
 import { ApriConvocazioni } from '@/components/apri-convocazioni'
 import { baseUrl } from '@/lib/url'
 import { SubmitButton } from '@/components/submit-button'
 import { SwipeRiga } from '@/components/swipe-riga'
 import { ScambiaAttesa } from '@/components/scambia-attesa'
-import { ButtonLink, Card, Loading, PlayerRow, StatoBadge, buttonClass, inputClass } from '@/components/ui'
+import { ButtonLink, Card, Loading, PlayerRow, StatoBadge, buttonClass, coloreVoto, inputClass } from '@/components/ui'
 import { ActionForm } from '@/components/action-form'
 import { FinestraInfo } from '../finestra-info'
 import { RispostaButtons } from '../risposta-buttons'
@@ -142,6 +142,8 @@ async function MatchDetail({ params }: { params: Promise<{ id: string }> }) {
       </Card>
 
       <KmCard match={match} me={player} rosa={rosa} />
+
+      <PagelleCard match={match} me={player} />
 
       {/* a partita finita (oltre l'orario previsto) riaprire le convocazioni o annullarla non serve più */}
       {player.isAdmin && match.stato !== 'giocata' && new Date() < orarioPartita(match).fine && <AdminPanel match={match} whatsappUrl={await whatsappUrl(match, player.lega.nome, t)} t={t} />}
@@ -566,6 +568,75 @@ async function KmCard({ match, me, rosa }: { match: Match; me: Membro; rosa: Pla
           </ActionForm>
         </details>
       )}
+    </Card>
+  )
+}
+
+// Leghe "Squadra": pagelle dell'allenatore a fine partita. Il voto lo vedono tutti; la nota solo il giocatore
+// interessato e gli organizzatori. L'allenatore le scrive (e le corregge) da qui.
+async function PagelleCard({ match, me }: { match: Match; me: Membro }) {
+  if (!match.pagelleAttive || match.tipo === 'allenamento' || match.torneo || match.stato === 'annullata') return null
+  if (new Date() < orarioPartita(match).fine) return null
+  const t = await getT()
+  const inLista = presenti(match)
+  const pagella = new Map(match.pagelle.map((p) => [p.giocatoreId, p]))
+  if (me.isAdmin) {
+    if (!inLista.length) return null
+    const voti = Array.from({ length: 19 }, (_, i) => 10 - i * 0.5)
+    return (
+      <Card className="space-y-3">
+        <h2 className="font-semibold">📝 {t('Pagelle')}</h2>
+        <p className="text-xs text-zinc-500">{t('Il voto lo vedono tutti, la nota solo il giocatore e gli organizzatori. Lascia il voto vuoto per non dare la pagella.')}</p>
+        <ActionForm action={salvaPagelle.bind(null, match._id)} className="space-y-3">
+          {inLista.map((c) => {
+            const p = pagella.get(c.giocatore._id)
+            return (
+              <div key={c.giocatore._id} className="space-y-1.5 border-b border-zinc-100 pb-3 last:border-0 dark:border-zinc-800">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="min-w-0 truncate text-sm font-medium">{displayName(c.giocatore)}</span>
+                  <select name={`voto-${c.giocatore._id}`} defaultValue={p?.voto ?? ''} aria-label={t('Voto di {nome}', { nome: displayName(c.giocatore) })} className={`${inputClass} w-24`}>
+                    <option value="">—</option>
+                    {voti.map((v) => (
+                      <option key={v} value={v}>
+                        {t.numero(v)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <input name={`nota-${c.giocatore._id}`} maxLength={280} defaultValue={p?.nota} placeholder={t('Nota per il giocatore (facoltativa)')} className={inputClass} />
+              </div>
+            )
+          })}
+          <SubmitButton className={buttonClass('primary')} pendingText={t('Salvo…')}>
+            {t('Salva pagelle')}
+          </SubmitButton>
+        </ActionForm>
+      </Card>
+    )
+  }
+  if (!match.pagelle.length) return null
+  const mia = pagella.get(me._id)
+  const nomi = new Map(inLista.map((c) => [c.giocatore._id, displayName(c.giocatore)]))
+  const elenco = [...match.pagelle].sort((a, b) => b.voto - a.voto)
+  return (
+    <Card className="space-y-3">
+      <h2 className="font-semibold">📝 {t('Pagelle')}</h2>
+      {mia && (
+        <div className="rounded-lg bg-green-50 p-3 text-sm dark:bg-green-950">
+          <p className="font-semibold">
+            {t('Il tuo voto')}: <span className={`ml-1 rounded-md px-1.5 py-0.5 tabular-nums ${coloreVoto(mia.voto)}`}>{t.numero(mia.voto)}</span>
+          </p>
+          {mia.nota && <p className="mt-1 whitespace-pre-line text-zinc-700 dark:text-zinc-300">“{mia.nota}”</p>}
+        </div>
+      )}
+      <ol className="space-y-1 text-sm">
+        {elenco.map((p) => (
+          <li key={p.giocatoreId} className={`flex justify-between ${p.giocatoreId === me._id ? 'font-bold' : ''}`}>
+            <span>{nomi.get(p.giocatoreId) ?? t('Giocatore')}</span>
+            <span className={`rounded-md px-1.5 tabular-nums ${coloreVoto(p.voto)}`}>{t.numero(p.voto)}</span>
+          </li>
+        ))}
+      </ol>
     </Card>
   )
 }

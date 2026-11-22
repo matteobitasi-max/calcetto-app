@@ -3,8 +3,9 @@
 import { useEffect, useState, useSyncExternalStore, useTransition } from 'react'
 import { Capacitor } from '@capacitor/core'
 import { Purchases, PACKAGE_TYPE, type PurchasesPackage } from '@revenuecat/purchases-capacitor'
-import { aggiornaPro } from '@/app/actions'
-import { ENTITLEMENT_PRO } from '@/lib/entitlement'
+import { aggiornaClub, aggiornaPro } from '@/app/actions'
+import { useRouter } from 'next/navigation'
+import { ENTITLEMENT_CLUB, ENTITLEMENT_PRO, OFFERING_CLUB } from '@/lib/entitlement'
 import { buttonClass } from './ui-classes'
 import { useT } from './lingua'
 
@@ -57,14 +58,21 @@ export function AttivaPro({
   chiavi,
   mio,
   giocatori = 0,
+  piano = 'pro',
+  legaId,
 }: {
   utente: string
   chiavi: { apple: string | null; google: string | null }
   mio: MioPro
   /** giocatori della lega: per mostrare quanto costa a testa */
   giocatori?: number
+  /** "club": l'abbonamento Club Allenatore (offering "club"); dopo l'acquisto si accende nella lega indicata */
+  piano?: 'pro' | 'club'
+  legaId?: string
 }) {
   const t = useT()
+  const router = useRouter()
+  const club = piano === 'club'
   const [pacchetti, setPacchetti] = useState<PurchasesPackage[] | null>(null)
   const [errore, setErrore] = useState<string | null>(null)
   const [messaggio, setMessaggio] = useState<string | null>(null)
@@ -85,7 +93,8 @@ export function AttivaPro({
       .then(() => Purchases.getOfferings())
       .then((o) => {
         if (!vivo) return
-        const lista = [...(o.current?.availablePackages ?? [])].sort((a, b) => (a.packageType === PACKAGE_TYPE.ANNUAL ? -1 : b.packageType === PACKAGE_TYPE.ANNUAL ? 1 : 0))
+        const offerta = club ? o.all?.[OFFERING_CLUB] : o.current
+        const lista = [...(offerta?.availablePackages ?? [])].sort((a, b) => (a.packageType === PACKAGE_TYPE.ANNUAL ? -1 : b.packageType === PACKAGE_TYPE.ANNUAL ? 1 : 0))
         setPacchetti(lista)
       })
       .catch((e: { code?: string | number; message?: string }) => {
@@ -97,12 +106,14 @@ export function AttivaPro({
     return () => {
       vivo = false
     }
-  }, [pronta, mio, utente, chiave, t])
+  }, [pronta, mio, utente, chiave, t, club])
 
   const dopo = () =>
     startTransition(async () => {
-      const r = await aggiornaPro()
+      const r = club ? await aggiornaClub(legaId ?? null) : await aggiornaPro()
       if (r?.error) setErrore(r.error)
+      // Club acquistato dalla scelta del tipo di lega: si torna alle impostazioni, con il Club acceso
+      else if (club && legaId) router.push('/lega')
     })
 
   const compra = async (p: PurchasesPackage) => {
@@ -126,8 +137,8 @@ export function AttivaPro({
     try {
       await prepara(utente, chiave!)
       const { customerInfo } = await Purchases.restorePurchases()
-      if (customerInfo.entitlements.active[ENTITLEMENT_PRO]) dopo()
-      else setMessaggio(t('Nessun abbonamento Pro trovato su questo account dello store.'))
+      if (customerInfo.entitlements.active[club ? ENTITLEMENT_CLUB : ENTITLEMENT_PRO]) dopo()
+      else setMessaggio(club ? t('Nessun abbonamento Club trovato su questo account dello store.') : t('Nessun abbonamento Pro trovato su questo account dello store.'))
     } catch {
       setErrore(t('Ripristino non riuscito. Riprova.'))
     } finally {
@@ -152,7 +163,7 @@ export function AttivaPro({
     const disdici = mio.store ? GESTIONE[mio.store] : undefined
     return (
       <div className="space-y-3 text-sm">
-        <p className="font-medium text-green-900 dark:text-green-200">✅ {t('Hai The Cap Pro.')}</p>
+        <p className="font-medium text-green-900 dark:text-green-200">✅ {club ? t('Hai il Club Allenatore.') : t('Hai The Cap Pro.')}</p>
         <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-zinc-600 dark:text-zinc-300">
           {piano && (
             <>
@@ -203,7 +214,7 @@ export function AttivaPro({
     return (
       <div className="space-y-3">
         <PianiPro />
-        <p className="text-sm">{t('Puoi attivare Pro dall’app The Cap sul tuo iPhone o telefono Android, nella pagina The Cap Pro.')}</p>
+        <p className="text-sm">{club ? t('Puoi attivare il Club dall’app The Cap sul tuo iPhone o telefono Android, da Impostazioni lega → Tipo di lega.') : t('Puoi attivare Pro dall’app The Cap sul tuo iPhone o telefono Android, nella pagina The Cap Pro.')}</p>
       </div>
     )
   }
@@ -213,7 +224,11 @@ export function AttivaPro({
       <div className="space-y-3">
         <PianiPro />
         <p className="text-sm text-zinc-500">
-          {Capacitor.isPluginAvailable('Purchases') ? t('Pro non è ancora disponibile. Riprova più tardi.') : t('Aggiorna l’app The Cap dallo store per attivare Pro.')}
+          {Capacitor.isPluginAvailable('Purchases')
+            ? club
+              ? t('Il Club non è ancora disponibile negli store: scrivici per provarlo.')
+              : t('Pro non è ancora disponibile. Riprova più tardi.')
+            : t('Aggiorna l’app The Cap dallo store per attivare Pro.')}
         </p>
       </div>
     )
@@ -225,7 +240,9 @@ export function AttivaPro({
   return (
     <div className="space-y-3">
       {!pacchetti && !errore && <p className="animate-pulse text-sm text-zinc-500">{t('Caricamento…')}</p>}
-      {pacchetti?.length === 0 && <p className="text-sm text-zinc-500">{t('Pro non è ancora disponibile. Riprova più tardi.')} (offering vuota)</p>}
+      {pacchetti?.length === 0 && (
+        <p className="text-sm text-zinc-500">{club ? t('Il Club non è ancora disponibile negli store: scrivici per provarlo.') : `${t('Pro non è ancora disponibile. Riprova più tardi.')} (offering vuota)`}</p>
+      )}
       {pacchetti?.map((p) => {
         const annuale = p.packageType === PACKAGE_TYPE.ANNUAL
         const prova = p.product.introPrice?.price === 0 ? p.product.introPrice : null

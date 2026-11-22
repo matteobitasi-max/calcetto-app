@@ -52,6 +52,10 @@ export type Lega = {
   club?: boolean
   /** Squadra con allenatore: convocati scelti dall'allenatore, indisponibili. Senza: lega tra amici. */
   tipo?: 'squadra'
+  /** Squadra: i giocatori possono convocarsi da soli (come tra amici). Di base convoca l'allenatore. */
+  autoconvocazione?: boolean
+  /** Squadra: pagelle a fine partita con note (di base sì; false per spegnerle). */
+  pagelle?: boolean
 } & { logo?: SanityImage; codiceInvito?: string; satispayLink?: string; satispayQr?: SanityImage; fotoSorprese: (SanityImage & { _key: string })[]; citta?: { nome: string; lat: number; lon: number }; playlistInterviste?: string }
 
 export type Player = {

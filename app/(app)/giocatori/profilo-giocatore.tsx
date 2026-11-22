@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { SignOutButton } from '@clerk/nextjs'
 import { displayName, eta, getMemberships, isTitolare, membroDi } from '@/lib/player'
-import { getKmTotali, getPartitePunteggio, getPlayer, getPlayerStats, getStorico, type PartitaGiocata, type PlayerStats } from '@/lib/matches'
+import { getKmTotali, getPagelleGiocatore, getPartitePunteggio, getPlayer, getPlayerStats, getStorico, type PartitaGiocata, type PlayerStats } from '@/lib/matches'
 import { classifica } from '@/lib/punteggio'
 import { TROFEI, trofeiLega, type IdTrofeo } from '@/lib/trofei'
 import { Medaglia } from '@/components/medaglia'
@@ -20,7 +20,7 @@ import { NotificheToggle } from '@/components/notifiche-toggle'
 import { PreferenzeNotifiche } from '@/components/preferenze-notifiche'
 import { IntervisteLega } from '@/components/interviste-lega'
 import { Indisponibilita } from '@/components/indisponibilita'
-import { Avatar, Card, Overall, PlayerBadge, SkillBars, buttonClass } from '@/components/ui'
+import { Avatar, Card, Overall, PlayerBadge, SkillBars, buttonClass, coloreVoto } from '@/components/ui'
 
 // Il profilo di un giocatore: usato sia per /giocatori/[id] sia per il mio /profilo.
 export async function ProfiloGiocatore({ id }: { id: string }) {
@@ -108,6 +108,7 @@ export async function ProfiloGiocatore({ id }: { id: string }) {
 
       {/* leghe "Squadra": infortunato, squalificato o indisponibile */}
       {me.lega.club && me.lega.tipo === 'squadra' && <Indisponibilita player={player} modifica={canEdit} />}
+      {me.lega.club && me.lega.tipo === 'squadra' && me.lega.pagelle !== false && <MediaPagelle legaId={me.lega._id} giocatoreId={player._id} t={t} />}
 
       <Statistiche stats={stats} km={kmTotali.get(id)} kmPro={pro} t={t} />
 
@@ -338,5 +339,22 @@ function Trofeo({ id, sbloccato, t }: { id: IdTrofeo; sbloccato?: { il: string; 
       <span className="flex h-8 items-center text-xs font-semibold leading-tight">{t(tr.nome)}</span>
       <span className={`text-[11px] text-zinc-500 ${sbloccato && sbloccato.volte > 1 ? '' : 'invisible'}`}>×{sbloccato?.volte ?? 1}</span>
     </Medaglia>
+  )
+}
+
+// Leghe "Squadra" con le pagelle: media dei voti dell'allenatore e gli ultimi voti.
+async function MediaPagelle({ legaId, giocatoreId, t }: { legaId: string; giocatoreId: string; t: T }) {
+  const { media, partite, ultimi } = await getPagelleGiocatore(legaId, giocatoreId)
+  if (media == null) return null
+  return (
+    <Card className="flex items-center justify-between gap-3">
+      <div>
+        <h2 className="font-semibold">📝 {t('Pagelle dell’allenatore')}</h2>
+        <p className="text-xs text-zinc-500">
+          {t('{n} partite', { n: partite })} · {t('ultimi voti')}: {ultimi.map((v) => t.numero(v)).join(' · ')}
+        </p>
+      </div>
+      <span className={`rounded-lg px-2.5 py-1 text-xl font-bold tabular-nums ${coloreVoto(media)}`}>{t.numero(Math.round(media * 10) / 10)}</span>
+    </Card>
   )
 }

@@ -28,7 +28,7 @@ export async function GET(request: Request) {
       "mancanti": *[_type == "player" && lega._ref == ^.lega._ref && attivo != false
         && !(_id in ^.convocazioni[].giocatore._ref)
         && !(defined(indisponibile) && (!defined(indisponibile.fino) || indisponibile.fino >= $oggi))
-        && (!(^.lega->club == true && ^.lega->tipo == "squadra" && coalesce(^.tipo, "") != "allenamento" && !defined(^.torneo)) || _id in ^.convocati[]._ref)]._id
+        && (!(^.lega->club == true && ^.lega->tipo == "squadra" && ^.lega->autoconvocazione != true && coalesce(^.tipo, "") != "allenamento" && !defined(^.torneo)) || _id in ^.convocati[]._ref)]._id
     }`,
     // leghe "Squadra": solo i convocati dall'allenatore; mai chi è indisponibile
     { ora: ora.toISOString(), tra30: tra30.toISOString(), oggi: ora.toISOString().slice(0, 10) },

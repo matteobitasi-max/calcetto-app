@@ -23,8 +23,11 @@ export type Match = {
   legaId: string
   /** Allenamento: convocazioni come una partita, ma niente squadre, risultato né classifica. */
   tipo?: 'allenamento'
-  /** La lega è una "Squadra" (Club): le partite hanno i convocati scelti dall'allenatore. */
+  /** La lega è una "Squadra" (Club) in cui convoca l'allenatore: le partite hanno i convocati scelti da lui. */
   squadra?: boolean
+  /** Leghe "Squadra" con le pagelle: a fine partita l'allenatore dà voto e nota a chi era in lista. */
+  pagelleAttive?: boolean
+  pagelle: Pagella[]
   /** Convocati scelti dall'allenatore (id dei giocatori): solo loro possono rispondere. */
   convocati?: string[]
   data: string
@@ -68,6 +71,9 @@ export type Match = {
   nomeB?: string
 }
 
+// Pagella dell'allenatore: voto da 1 a 10 (a mezzi punti) e nota, visibile solo al giocatore e agli organizzatori.
+export type Pagella = { giocatoreId: string; voto: number; nota?: string }
+
 export type FonteKm = 'strava' | 'salute' | 'manuale'
 export type Distanza = { giocatoreId: string; km: number; fonte?: FonteKm }
 
@@ -87,7 +93,7 @@ export const allenamentoFinito = (m: Pick<Match, 'tipo' | 'data' | 'durataMinuti
 export type Pagamento = { giocatoreId: string; stato: 'dichiarato' | 'confermato'; metodo?: 'satispay' | 'contanti'; il?: string }
 
 const matchFields = `
-  _id, _rev, "legaId": lega._ref, tipo, "squadra": lega->club == true && lega->tipo == "squadra", "convocati": convocati[]._ref, data, luogo, postiDisponibili, postiAutomatici, quota, note, aperturaConvocazioni, chiusuraConvocazioni, durataFinestraMinuti, "serieId": serie._ref, notificaInviataIl,
+  _id, _rev, "legaId": lega._ref, tipo, "squadra": lega->club == true && lega->tipo == "squadra" && lega->autoconvocazione != true, "pagelleAttive": lega->club == true && lega->tipo == "squadra" && lega->pagelle != false, "pagelle": coalesce(pagelle[]{"giocatoreId": giocatore._ref, voto, nota}, []), "convocati": convocati[]._ref, data, luogo, postiDisponibili, postiAutomatici, quota, note, aperturaConvocazioni, chiusuraConvocazioni, durataFinestraMinuti, "serieId": serie._ref, notificaInviataIl,
   "stato": coalesce(stato, "aperta"),
   "convocazioni": coalesce(convocazioni[]{_key, risposta, rispostoIl, aggiunto, "giocatore": giocatore->{${playerFields}}}, []),
   "squadraA": coalesce(squadraA[]->{${playerFields}}, []),
@@ -268,6 +274,18 @@ export function formatoInCorso(m: Match) {
   if (!m.postiAutomatici || m.stato !== 'aperta') return null
   const iscritti = m.convocazioni.filter((c) => c.risposta !== 'assente' && c.giocatore).length
   return { iscritti, ...formatoDaIscritti(iscritti, m.postiDisponibili) }
+}
+
+// Pagelle dell'allenatore di un giocatore nella lega: media e numero di partite (le più recenti per prime).
+export async function getPagelleGiocatore(legaId: string, giocatoreId: string) {
+  const voti = await sanity.fetch<{ voto: number; data: string }[]>(
+    `*[_type == "match" && lega._ref == $legaId && coalesce(stato, "aperta") != "annullata" && $id in pagelle[].giocatore._ref] | order(data desc){
+      data, "voto": pagelle[giocatore._ref == $id][0].voto
+    }`,
+    { legaId, id: giocatoreId },
+  )
+  const validi = voti.filter((v) => typeof v.voto === 'number')
+  return { media: validi.length ? validi.reduce((s, v) => s + v.voto, 0) / validi.length : null, partite: validi.length, ultimi: validi.slice(0, 5).map((v) => v.voto) }
 }
 
 // Km totali di ogni giocatore nelle partite della lega. Contano tutte quelle non annullate, anche senza

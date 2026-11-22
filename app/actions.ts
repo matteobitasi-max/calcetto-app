@@ -24,7 +24,7 @@ import { LETTERE_GIRONI, SQUADRE_PREDEFINITE, classifica, nomePredefinito, giorn
 import { daCreare, primoTurnoTeste, primoTurnoValido, tabellone } from '@/lib/tabellone'
 import { nomeSquadra } from '@/lib/teams'
 import { formaDellaLega, ioPro, legaPro, organizzatoriPro } from '@/lib/pro'
-import { sincronizzaAbbonamento } from '@/lib/abbonamenti'
+import { mioClub, sincronizzaAbbonamento } from '@/lib/abbonamenti'
 import { indisponibileIl, type MotivoIndisponibile } from '@/lib/roster'
 import { COOKIE_LINGUA, isLingua, type T } from '@/lib/i18n'
 import { getLingua, getT } from '@/lib/lingua'
@@ -60,7 +60,7 @@ export async function rispondi(matchId: string, risposta: 'presente' | 'assente'
       }) | null
     >(
       `*[_type == "match" && _id == $id][0]{_rev, stato, aperturaConvocazioni, chiusuraConvocazioni, postiDisponibili, convocazioni, data, tipo, torneo,
-        "squadra": lega->club == true && lega->tipo == "squadra", "convocati": convocati[]._ref}`,
+        "squadra": lega->club == true && lega->tipo == "squadra" && lega->autoconvocazione != true, "convocati": convocati[]._ref}`,
       { id: matchId },
     )
     if (!doc) throw new Error('Partita non trovata')
@@ -167,7 +167,7 @@ export async function convocaGiocatore(matchId: string, giocatoreId: string) {
       { _rev: string; stato: Stato; torneo?: Match['torneo']; postiDisponibili: number; convocazioni?: RawConvocazione[]; data: string; tipo?: Match['tipo']; squadra?: boolean; convocati?: string[] } | null
     >(
       `*[_type == "match" && _id == $id][0]{_rev, stato, torneo, postiDisponibili, convocazioni, data, tipo,
-        "squadra": lega->club == true && lega->tipo == "squadra", "convocati": convocati[]._ref}`,
+        "squadra": lega->club == true && lega->tipo == "squadra" && lega->autoconvocazione != true, "convocati": convocati[]._ref}`,
       { id: matchId },
     )
     if (!doc) throw new Error('Partita non trovata')
@@ -1241,11 +1241,34 @@ export async function scegliLega(legaId: string, vai = '/') {
 
 // ---------- Club: leghe "Squadra" con allenatore ----------
 
-// Per ora il Club lo accende il titolare dell'app, lega per lega (l'abbonamento negli store arriverà dopo).
-export async function attivaClub(legaId: string, attivo: boolean) {
-  if (!(await isTitolare())) throw new Error('Solo il titolare dell’app')
-  const p = sanity.patch(legaId)
-  await (attivo ? p.set({ club: true }) : p.unset(['club', 'tipo'])).commit()
+// "Club Allenatore" scelto nel tipo di lega: con il Club già attivo (o per il titolare) la lega diventa una squadra
+// con allenatore; altrimenti si va al pagamento, e dopo l'acquisto si torna qui con il Club acceso.
+export async function scegliClub(legaId: string) {
+  await requireIn(legaId, 'organizzatore')
+  const utente = await getUtente()
+  if (!utente) redirect('/sign-in')
+  const [titolare, club] = await Promise.all([isTitolare(), mioClub(utente.id)])
+  if (!titolare && !club) redirect(`/club?lega=${legaId}`)
+  await sanity
+    .patch(legaId)
+    .set({ club: true, tipo: 'squadra', ...(titolare ? {} : { clubDi: utente.id }) })
+    .commit()
+  revalidatePath('/', 'layout')
+}
+
+// Dopo l'acquisto del Club nell'app: si verifica l'abbonamento e si accende il Club nella lega scelta.
+export async function aggiornaClub(legaId: string | null): Promise<FormState> {
+  const utente = await getUtente()
+  if (!utente) return { error: await tr('Devi aver fatto l’accesso.') }
+  try {
+    await sincronizzaAbbonamento(utente.id, utente.emails[0])
+  } catch {
+    return { error: await tr('Non riesco a verificare l’abbonamento. Riprova tra qualche minuto.') }
+  }
+  if (legaId && (await mioClub(utente.id))) {
+    await requireIn(legaId, 'organizzatore')
+    await sanity.patch(legaId).set({ club: true, tipo: 'squadra', clubDi: utente.id }).commit()
+  }
   revalidatePath('/', 'layout')
 }
 
@@ -1260,6 +1283,39 @@ export async function salvaTipoLega(legaId: string, tipo: 'amici' | 'squadra') {
     await sanity.patch(legaId).unset(['tipo']).commit()
   }
   revalidatePath('/', 'layout')
+}
+
+// Opzioni della lega "Squadra": giocatori che si convocano da soli, pagelle a fine partita.
+export async function salvaOpzioneSquadra(legaId: string, opzione: 'autoconvocazione' | 'pagelle', attiva: boolean) {
+  await requireIn(legaId, 'organizzatore')
+  // autoconvocazione: di base no (convoca l'allenatore); pagelle: di base sì
+  const p = sanity.patch(legaId)
+  if (opzione === 'autoconvocazione') await (attiva ? p.set({ autoconvocazione: true }) : p.unset(['autoconvocazione'])).commit()
+  else await (attiva ? p.unset(['pagelle']) : p.set({ pagelle: false })).commit()
+  revalidatePath('/', 'layout')
+}
+
+// Pagelle a fine partita: l'allenatore dà un voto (1-10, a mezzi punti) e una nota a chi era in lista.
+// Un voto lasciato vuoto toglie la pagella di quel giocatore.
+export async function salvaPagelle(matchId: string, _prev: FormState, formData: FormData): Promise<FormState> {
+  await requireForDoc(matchId, 'organizzatore')
+  const match = await getMatch(matchId)
+  if (!match || !match.pagelleAttive || match.tipo === 'allenamento' || match.torneo) return { error: await tr('Partita non trovata.') }
+  if (match.stato === 'annullata') return { error: await tr('La partita è annullata.') }
+  if (new Date() < orarioPartita(match).fine) return { error: await tr('Le pagelle si danno a partita finita.') }
+  const pagelle = []
+  for (const c of presenti(match)) {
+    const id = c.giocatore._id
+    const testo = str(formData, `voto-${id}`).replace(',', '.')
+    if (!testo) continue
+    const voto = Number(testo)
+    if (!Number.isFinite(voto) || voto < 1 || voto > 10 || Math.round(voto * 2) !== voto * 2) return { error: await tr('I voti vanno da 1 a 10, a mezzi punti.') }
+    const nota = str(formData, `nota-${id}`).slice(0, 280)
+    pagelle.push({ _key: id, _type: 'pagella', giocatore: { _type: 'reference', _ref: id }, voto, ...(nota && { nota }) })
+  }
+  await sanity.patch(matchId).set({ pagelle }).commit()
+  refresh()
+  return {}
 }
 
 const MOTIVI: MotivoIndisponibile[] = ['infortunio', 'squalifica', 'altro']
