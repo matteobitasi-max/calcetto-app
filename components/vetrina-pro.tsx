@@ -230,7 +230,7 @@ export function Confronto({ t }: { t: T }) {
     [t('Pagelle a fine partita, con note'), 2],
     [t('Presenze agli allenamenti'), 2],
     [t('Regole della squadra'), 2],
-    [t('Formazione con modulo e ruoli'), 2, true],
+    [t('Formazione con modulo e ruoli'), 2],
     [t('Staff: vice, preparatore, dirigente'), 2, true],
     [t('Dati dalle telecamere Veo'), 2, true],
   ]
@@ -276,6 +276,7 @@ export function SezioneClub({ t, legaId }: { t: T; legaId?: string }) {
     ['📝', t('Pagelle a fine partita'), t('Voto e nota a ogni giocatore, con la media nel profilo.')],
     ['🏃', t('Presenze agli allenamenti'), t('Quante volte ognuno si è allenato, in percentuale.')],
     ['⚙️', t('Regole della squadra'), t('Scegli tu se i giocatori possono convocarsi da soli.')],
+    ['🧢', t('Formazione con modulo e ruoli'), t('Dal calcio a 5 al calcio a 11: 4-4-2, 3-5-2, 4-3-3 e gli altri, con i titolari proposti.')],
   ]
   return (
     <Card className="space-y-4 border-2 border-zinc-900 dark:border-white">
@@ -296,7 +297,7 @@ export function SezioneClub({ t, legaId }: { t: T; legaId?: string }) {
         ))}
       </ul>
       <p className="text-xs text-zinc-500">
-        <b>{t('In arrivo nel Club')}:</b> {[t('Formazione con modulo e ruoli'), t('Staff: vice, preparatore, dirigente'), t('Dati dalle telecamere Veo')].join(' · ')}
+        <b>{t('In arrivo nel Club')}:</b> {[t('Staff: vice, preparatore, dirigente'), t('Dati dalle telecamere Veo')].join(' · ')}
       </p>
       <Link href={`/club${legaId ? `?lega=${legaId}` : ''}`} className="block rounded-xl bg-zinc-900 py-3 text-center text-sm font-bold text-white hover:bg-zinc-800 dark:bg-white dark:text-zinc-900">
         {t('Scopri Club PRO ›')}

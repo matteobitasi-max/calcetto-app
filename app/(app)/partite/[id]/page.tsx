@@ -3,6 +3,9 @@ import { notFound } from 'next/navigation'
 import { Suspense } from 'react'
 import { canEnterResults, displayName, getCurrentPlayer, getUtente, membroDi, mioInCima, type Membro, type Player } from '@/lib/player'
 import { indisponibileIl } from '@/lib/roster'
+import { posti as postiModulo } from '@/lib/moduli'
+import { avatarUrl } from '@/lib/image'
+import { CampoTitolari, type Pedina } from '@/components/campo-titolari'
 import { isoToRomeLocal } from '@/lib/dates'
 import { forza, nomeSquadra, numeroSquadra } from '@/lib/teams'
 import { conSelezione, finestra, formatoInCorso, getMatch, isAllenamento, getPlayers, orarioPartita, ordinati, presenti, risultatoDa, type Match, type Risposta } from '@/lib/matches'
@@ -147,6 +150,8 @@ async function MatchDetail({ params }: { params: Promise<{ id: string }> }) {
 
       {/* a partita finita (oltre l'orario previsto) riaprire le convocazioni o annullarla non serve più */}
       {player.isAdmin && match.stato !== 'giocata' && new Date() < orarioPartita(match).fine && <AdminPanel match={match} whatsappUrl={await whatsappUrl(match, player.lega.nome, t)} t={t} />}
+
+      <FormazioneClub match={match} me={player} />
 
       {match.squadraA.length + match.squadraB.length > 0 && (
         <Squadre match={match} mioId={player._id} gestisci={!!player.isAdmin && match.stato === 'chiusa'} t={t} />
@@ -567,6 +572,50 @@ async function KmCard({ match, me, rosa }: { match: Match; me: Membro; rosa: Pla
             <p className="text-xs text-zinc-500">{t('Per chi non riesce a prenderli dall’orologio. Tutti li vedono come “a mano”. Lascia vuoto per togliere i km.')}</p>
           </ActionForm>
         </details>
+      )}
+    </Card>
+  )
+}
+
+// Club: la formazione titolare con il modulo, sul campo, e la panchina. L'allenatore la fa o la cambia da qui.
+async function FormazioneClub({ match, me }: { match: Match; me: Membro }) {
+  if (!match.club || match.tipo === 'allenamento' || match.torneo || match.stato === 'annullata') return null
+  const inLista = presenti(match).map((c) => c.giocatore)
+  const salvata = match.formazione
+  if (!salvata && !(me.isAdmin && inLista.length)) return null
+  const t = await getT()
+  const perId = new Map(inLista.map((p) => [p._id, p]))
+  const pedina = (id: string): Pedina | null => {
+    const p = perId.get(id)
+    return p ? { id: p._id, nome: p.cognome ? `${p.nome} ${p.cognome[0]}.` : displayName(p), numero: p.numero, foto: avatarUrl(p.foto, 96) } : null
+  }
+  const campo = salvata ? postiModulo(salvata.modulo).map((ps) => {
+    const id = salvata.posti.find((x) => x.posto === ps.indice)?.id
+    return id ? pedina(id) : null
+  }) : []
+  const inCampo = new Set(campo.filter(Boolean).map((g) => g!.id))
+  const panchina = inLista.filter((p) => !inCampo.has(p._id))
+  return (
+    <Card className="space-y-3">
+      <div className="flex items-center justify-between gap-2">
+        <h2 className="font-semibold">🧢 {t('Formazione')}</h2>
+        {me.isAdmin && inLista.length > 0 && (
+          <ButtonLink href={`/partite/${match._id}/formazione`} variant={salvata ? 'secondary' : 'primary'}>
+            {salvata ? t('Modifica formazione') : t('Fai la formazione')}
+          </ButtonLink>
+        )}
+      </div>
+      {salvata ? (
+        <>
+          <CampoTitolari modulo={salvata.modulo} giocatori={campo} mioId={me._id} />
+          {panchina.length > 0 && (
+            <p className="text-sm">
+              <span className="font-semibold">🪑 {t('Panchina')}:</span> {panchina.map((p) => `${p.numero != null ? `${p.numero} ` : ''}${displayName(p)}`).join(' · ')}
+            </p>
+          )}
+        </>
+      ) : (
+        <p className="text-sm text-zinc-500">{t('Scegli il modulo e chi va in campo: l’app propone i titolari da ruoli e caratteristiche.')}</p>
       )}
     </Card>
   )

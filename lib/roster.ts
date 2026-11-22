@@ -56,6 +56,9 @@ export type Lega = {
   autoconvocazione?: boolean
   /** Squadra: pagelle a fine partita con note (di base sì; false per spegnerle). */
   pagelle?: boolean
+  /** Club: giocatori per squadra (5, 6, 7, 8, 9 o 11, portiere compreso) e modulo preferito (es. 4-4-2). */
+  formato?: number
+  modulo?: string
 } & { logo?: SanityImage; codiceInvito?: string; satispayLink?: string; satispayQr?: SanityImage; fotoSorprese: (SanityImage & { _key: string })[]; citta?: { nome: string; lat: number; lon: number }; playlistInterviste?: string }
 
 export type Player = {

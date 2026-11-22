@@ -1,5 +1,5 @@
 import { Suspense } from 'react'
-import { aggiungiFotoSorpresa, rigeneraInvito, salvaOpzioneSquadra, salvaTipoLega, scegliClub, rimuoviFotoSorpresa, salvaInterviste, salvaLega, salvaPagamentiLega } from '@/app/actions'
+import { aggiungiFotoSorpresa, rigeneraInvito, salvaFormatoLega, salvaOpzioneSquadra, salvaTipoLega, scegliClub, rimuoviFotoSorpresa, salvaInterviste, salvaLega, salvaPagamentiLega } from '@/app/actions'
 import { linkPlaylist } from '@/lib/interviste'
 import { FotoSorpreseEditor } from '@/components/foto-sorprese'
 import { isTitolare, requireAdmin } from '@/lib/player'
@@ -13,6 +13,8 @@ import { SatispaySetup } from '@/components/satispay-setup'
 import { SubmitButton } from '@/components/submit-button'
 import { Card, Field, Loading, PageTitle, inputClass } from '@/components/ui'
 import { EtichettaClub } from '@/components/pill-scelta'
+import { FormatoLega } from '@/components/formato-lega'
+import { isFormato } from '@/lib/moduli'
 import { getT } from '@/lib/lingua'
 
 export default async function LegaPage() {
@@ -96,6 +98,9 @@ async function Impostazioni() {
                 </SubmitButton>
               </form>
             ))}
+          {lega.club && lega.tipo === 'squadra' && (
+            <FormatoLega azione={salvaFormatoLega.bind(null, lega._id)} formato={isFormato(lega.formato) ? lega.formato : 11} modulo={lega.modulo} />
+          )}
         </div>
       </Card>
 

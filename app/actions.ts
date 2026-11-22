@@ -25,6 +25,7 @@ import { daCreare, primoTurnoTeste, primoTurnoValido, tabellone } from '@/lib/ta
 import { nomeSquadra } from '@/lib/teams'
 import { formaDellaLega, ioPro, legaPro, organizzatoriPro } from '@/lib/pro'
 import { mioClub, sincronizzaAbbonamento } from '@/lib/abbonamenti'
+import { isFormato, moduloPer, moduloValido, posti as postiModulo } from '@/lib/moduli'
 import { indisponibileIl, type MotivoIndisponibile } from '@/lib/roster'
 import { COOKIE_LINGUA, isLingua, type T } from '@/lib/i18n'
 import { getLingua, getT } from '@/lib/lingua'
@@ -1328,6 +1329,43 @@ export async function salvaPagelle(matchId: string, _prev: FormState, formData: 
   await sanity.patch(matchId).set({ pagelle }).commit()
   refresh()
   return {}
+}
+
+// Club: formato di gioco (giocatori per squadra) e modulo preferito della lega.
+export async function salvaFormatoLega(legaId: string, _prev: FormState, formData: FormData): Promise<FormState> {
+  await requireIn(legaId, 'organizzatore')
+  const formato = Number(str(formData, 'formato'))
+  if (!isFormato(formato)) return { error: await tr('Formato non valido.') }
+  const modulo = moduloPer(formato, str(formData, 'modulo'))
+  await sanity.patch(legaId).set({ formato, modulo }).commit()
+  revalidatePath('/', 'layout')
+  return {}
+}
+
+// Club: la formazione titolare della partita, con il modulo scelto. In ogni posto uno di quelli in lista
+// (ognuno una volta sola); chi non è in campo è in panchina.
+export async function salvaFormazioneTitolare(matchId: string, _prev: FormState, formData: FormData): Promise<FormState> {
+  await requireForDoc(matchId, 'organizzatore')
+  const match = await getMatch(matchId)
+  if (!match || !match.club || match.tipo === 'allenamento' || match.torneo) return { error: await tr('Partita non trovata.') }
+  if (match.stato === 'annullata') return { error: await tr('La partita è annullata.') }
+  const formato = isFormato(match.formato) ? match.formato : 11
+  const modulo = str(formData, 'modulo')
+  if (!moduloValido(formato, modulo)) return { error: await tr('Modulo non valido.') }
+  const inLista = new Set(presenti(match).map((c) => c.giocatore._id))
+  const visti = new Set<string>()
+  const scelti = []
+  for (const p of postiModulo(modulo)) {
+    const id = str(formData, `posto-${p.indice}`)
+    if (!id) continue
+    if (!inLista.has(id)) return { error: await tr('In campo può andare solo chi è in lista.') }
+    if (visti.has(id)) return { error: await tr('Un giocatore è in due posti.') }
+    visti.add(id)
+    scelti.push({ _key: `p${p.indice}`, posto: p.indice, giocatore: { _type: 'reference', _ref: id } })
+  }
+  await sanity.patch(matchId).set({ formazione: { modulo, posti: scelti } }).commit()
+  revalidatePath('/', 'layout')
+  redirect(`/partite/${matchId}`)
 }
 
 const MOTIVI: MotivoIndisponibile[] = ['infortunio', 'squalifica', 'altro']

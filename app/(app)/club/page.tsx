@@ -29,9 +29,10 @@ async function Vetrina({ searchParams }: { searchParams: PageProps<'/club'>['sea
     ['🚑', t('Infortunati e squalificati'), t('Con la data di rientro: non si possono convocare.')],
     ['📝', t('Pagelle a fine partita'), t('Voto e nota a ogni giocatore, con la media nel profilo.')],
     ['⚙️', t('Regole della squadra'), t('Scegli tu se i giocatori possono convocarsi da soli.')],
+    ['🧢', t('Formazione con modulo e ruoli'), t('Dal calcio a 5 al calcio a 11: 4-4-2, 3-5-2, 4-3-3 e gli altri, con i titolari proposti.')],
     ['⭐', t('Tutto il Pro incluso'), t('Tornei, forma dei giocatori e statistiche dei km.')],
   ]
-  const presto = [t('Presenze agli allenamenti'), t('Formazione con modulo e ruoli'), t('Staff: vice, preparatore, dirigente'), t('Dati dalle telecamere Veo')]
+  const presto = [t('Staff: vice, preparatore, dirigente'), t('Dati dalle telecamere Veo')]
 
   return (
     <div className="space-y-4">

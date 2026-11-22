@@ -27,6 +27,11 @@ export type Match = {
   squadra?: boolean
   /** Leghe "Squadra" con le pagelle: a fine partita l'allenatore dà voto e nota a chi era in lista. */
   pagelleAttive?: boolean
+  /** Lega Club: formato e modulo preferito della lega, e la formazione titolare della partita. */
+  club?: boolean
+  formato?: number
+  moduloLega?: string
+  formazione?: { modulo: string; posti: { posto: number; id: string }[] }
   pagelle: Pagella[]
   /** Convocati scelti dall'allenatore (id dei giocatori): solo loro possono rispondere. */
   convocati?: string[]
@@ -93,7 +98,7 @@ export const allenamentoFinito = (m: Pick<Match, 'tipo' | 'data' | 'durataMinuti
 export type Pagamento = { giocatoreId: string; stato: 'dichiarato' | 'confermato'; metodo?: 'satispay' | 'contanti'; il?: string }
 
 const matchFields = `
-  _id, _rev, "legaId": lega._ref, tipo, "squadra": lega->club == true && lega->tipo == "squadra" && lega->autoconvocazione != true, "pagelleAttive": lega->club == true && lega->tipo == "squadra" && lega->pagelle != false, "pagelle": coalesce(pagelle[]{"giocatoreId": giocatore._ref, voto, nota}, []), "convocati": convocati[]._ref, data, luogo, postiDisponibili, postiAutomatici, quota, note, aperturaConvocazioni, chiusuraConvocazioni, durataFinestraMinuti, "serieId": serie._ref, notificaInviataIl,
+  _id, _rev, "legaId": lega._ref, tipo, "squadra": lega->club == true && lega->tipo == "squadra" && lega->autoconvocazione != true, "pagelleAttive": lega->club == true && lega->tipo == "squadra" && lega->pagelle != false, "club": lega->club == true && lega->tipo == "squadra", "formato": lega->formato, "moduloLega": lega->modulo, "formazione": formazione{modulo, "posti": posti[]{posto, "id": giocatore._ref}}, "pagelle": coalesce(pagelle[]{"giocatoreId": giocatore._ref, voto, nota}, []), "convocati": convocati[]._ref, data, luogo, postiDisponibili, postiAutomatici, quota, note, aperturaConvocazioni, chiusuraConvocazioni, durataFinestraMinuti, "serieId": serie._ref, notificaInviataIl,
   "stato": coalesce(stato, "aperta"),
   "convocazioni": coalesce(convocazioni[]{_key, risposta, rispostoIl, aggiunto, "giocatore": giocatore->{${playerFields}}}, []),
   "squadraA": coalesce(squadraA[]->{${playerFields}}, []),
