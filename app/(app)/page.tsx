@@ -9,6 +9,8 @@ import { finestra, formatoInCorso, getPastMatches, isAllenamento, getPlayers, ge
 import { getT } from '@/lib/lingua'
 import type { T } from '@/lib/i18n'
 import { nomeSquadra } from '@/lib/teams'
+import { indisponibileIl } from '@/lib/roster'
+import { isoToRomeLocal } from '@/lib/dates'
 import { assicuraRicorrenze } from '@/lib/series'
 import { Card, Loading, StatoBadge } from '@/components/ui'
 import { PillNuovaPartita } from '@/components/pill-nuova-partita'
@@ -283,7 +285,7 @@ function ProssimaPartita({
           )}
         </div>
 
-        {!player.ospite && <RispostaButtons match={match} playerId={player._id} />}
+        {!player.ospite && <RispostaButtons match={match} playerId={player._id} indisponibile={indisponibileIl(player, isoToRomeLocal(match.data).slice(0, 10))} />}
 
         <Link href={`/partite/${match._id}`} className="block text-center text-sm text-green-700 hover:underline dark:text-green-400">
           {t('Lista, squadre e dettagli →')}

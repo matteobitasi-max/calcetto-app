@@ -45,7 +45,14 @@ export type CategoriaNotifica = keyof typeof CATEGORIE_NOTIFICHE
 
 export type SanityImage = { asset?: { _ref: string }; hotspot?: unknown; crop?: unknown }
 
-export type Lega = { _id: string; nome: string; logo?: SanityImage; codiceInvito?: string; satispayLink?: string; satispayQr?: SanityImage; fotoSorprese: (SanityImage & { _key: string })[]; citta?: { nome: string; lat: number; lon: number }; playlistInterviste?: string }
+export type Lega = {
+  _id: string
+  nome: string
+  /** Club attivo (per ora lo accende il titolare): sblocca il tipo "Squadra". */
+  club?: boolean
+  /** Squadra con allenatore: convocati scelti dall'allenatore, indisponibili. Senza: lega tra amici. */
+  tipo?: 'squadra'
+} & { logo?: SanityImage; codiceInvito?: string; satispayLink?: string; satispayQr?: SanityImage; fotoSorprese: (SanityImage & { _key: string })[]; citta?: { nome: string; lat: number; lon: number }; playlistInterviste?: string }
 
 export type Player = {
   _id: string
@@ -68,6 +75,8 @@ export type Player = {
   isAdmin?: boolean
   puoInserireRisultati?: boolean
   attivo?: boolean
+  /** Leghe "Squadra": infortunato, squalificato o indisponibile (fino a una data compresa, o finché non si toglie). */
+  indisponibile?: Indisponibilita
   /** Ha l'abbonamento Pro (C con la scritta PRO accanto al nome). */
   pro?: boolean
   /** Pro: data dell'ultima partita già valutata per aggiornare le caratteristiche. */
@@ -81,9 +90,19 @@ export type Player = {
   caratteristicheBase?: Partial<Record<Skill, number>>
 }
 
-export const playerFields = `_id, _rev, "legaId": lega._ref, nome, cognome, soprannome, email, telefono, dataNascita, foto, ruolo, piede, badge, notifiche, isAdmin, puoInserireRisultati, attivo, revisioneIl, "rimosso": defined(rimossoIl), "collegato": defined(clerkUserId), caratteristiche, caratteristicheBase,
+export const playerFields = `_id, _rev, "legaId": lega._ref, nome, cognome, soprannome, email, telefono, dataNascita, foto, ruolo, piede, badge, notifiche, isAdmin, puoInserireRisultati, attivo, indisponibile, revisioneIl, "rimosso": defined(rimossoIl), "collegato": defined(clerkUserId), caratteristiche, caratteristicheBase,
   "pro": defined(clerkUserId) && count(*[_type == "abbonamento" && clerkUserId == ^.clerkUserId && attivo != false && (!defined(scadenza) || scadenza > now())]) > 0`
 
+
+export type MotivoIndisponibile = 'infortunio' | 'squalifica' | 'altro'
+export type Indisponibilita = { motivo: MotivoIndisponibile; fino?: string; nota?: string }
+export const MOTIVI_INDISPONIBILE: Record<MotivoIndisponibile, { emoji: string; label: string }> = {
+  infortunio: { emoji: '🚑', label: 'Infortunato' },
+  squalifica: { emoji: '🟥', label: 'Squalificato' },
+  altro: { emoji: '⛔', label: 'Indisponibile' },
+}
+// Indisponibile in quel giorno (AAAA-MM-GG, ora italiana): senza data di fine, finché l'allenatore non lo toglie.
+export const indisponibileIl = (p: Pick<Player, 'indisponibile'>, giorno: string) => !!p.indisponibile && (!p.indisponibile.fino || p.indisponibile.fino >= giorno)
 
 // Chi può segnare risultato, marcatori e MVP.
 export const canEnterResults = (p: Pick<Player, 'isAdmin' | 'puoInserireRisultati'>) => !!(p.isAdmin || p.puoInserireRisultati)

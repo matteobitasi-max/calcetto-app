@@ -2,8 +2,10 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { Suspense } from 'react'
 import { canEnterResults, displayName, getCurrentPlayer, getUtente, membroDi, mioInCima, type Membro, type Player } from '@/lib/player'
+import { indisponibileIl } from '@/lib/roster'
+import { isoToRomeLocal } from '@/lib/dates'
 import { forza, nomeSquadra, numeroSquadra } from '@/lib/teams'
-import { finestra, formatoInCorso, getMatch, isAllenamento, getPlayers, orarioPartita, ordinati, presenti, risultatoDa, type Match, type Risposta } from '@/lib/matches'
+import { conSelezione, finestra, formatoInCorso, getMatch, isAllenamento, getPlayers, orarioPartita, ordinati, presenti, risultatoDa, type Match, type Risposta } from '@/lib/matches'
 import { getCollegamento, stravaConfigurato } from '@/lib/strava'
 import { CampoFormazioni } from '@/components/campo-formazioni'
 import { conConvocazioniAggiornate } from '@/lib/chiusura'
@@ -52,7 +54,14 @@ async function MatchDetail({ params }: { params: Promise<{ id: string }> }) {
   const risposto = new Set(match.convocazioni.map((c) => c.giocatore?._id))
   // L'organizzatore può convocare chi manca con uno swipe a destra (anche a convocazioni chiuse).
   const convoca = gestisci && !match.torneo
-  const mancanti = finestra(match) === 'aperta' || convoca ? rosa.filter((p) => p.attivo !== false && !risposto.has(p._id)) : []
+  // leghe "Squadra": l'allenatore sceglie i convocati; tra chi non ha risposto contano solo loro
+  const selezione = conSelezione(match)
+  const convocati = new Set(match.convocati ?? [])
+  const giornoPartita = isoToRomeLocal(match.data).slice(0, 10)
+  const mancanti =
+    finestra(match) === 'aperta' || convoca
+      ? rosa.filter((p) => p.attivo !== false && !risposto.has(p._id) && (!selezione || convocati.has(p._id)) && !indisponibileIl(p, giornoPartita))
+      : []
 
   return (
     <div className="space-y-4">
@@ -113,10 +122,22 @@ async function MatchDetail({ params }: { params: Promise<{ id: string }> }) {
             )}
           </p>
         )}
+        {selezione && (
+          <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-zinc-50 p-2 text-sm dark:bg-zinc-950">
+            <span>
+              📋 {convocati.size ? t('{n} convocati dall’allenatore', { n: convocati.size }) : t('L’allenatore non ha ancora scelto i convocati')}
+            </span>
+            {gestisci && (
+              <ButtonLink href={`/partite/${match._id}/convocati`} variant={convocati.size ? 'secondary' : 'primary'}>
+                {convocati.size ? t('Modifica convocati') : t('Scegli i convocati')}
+              </ButtonLink>
+            )}
+          </div>
+        )}
         {match.stato === 'giocata' && match.risultato?.golA != null && <Tabellino match={match} />}
         {canEnterResults(player) && <RisultatoAzione match={match} t={t} />}
         <div className="border-t border-zinc-200 pt-3 empty:hidden dark:border-zinc-800">
-          {!player.ospite && <RispostaButtons match={match} playerId={player._id} />}
+          {!player.ospite && <RispostaButtons match={match} playerId={player._id} indisponibile={indisponibileIl(player, giornoPartita)} />}
         </div>
       </Card>
 

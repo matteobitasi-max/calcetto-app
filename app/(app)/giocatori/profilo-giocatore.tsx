@@ -19,6 +19,7 @@ import { AvatarUpload } from '@/components/avatar-upload'
 import { NotificheToggle } from '@/components/notifiche-toggle'
 import { PreferenzeNotifiche } from '@/components/preferenze-notifiche'
 import { IntervisteLega } from '@/components/interviste-lega'
+import { Indisponibilita } from '@/components/indisponibilita'
 import { Avatar, Card, Overall, PlayerBadge, SkillBars, buttonClass } from '@/components/ui'
 
 // Il profilo di un giocatore: usato sia per /giocatori/[id] sia per il mio /profilo.
@@ -104,6 +105,9 @@ export async function ProfiloGiocatore({ id }: { id: string }) {
           </Link>
         )}
       </Card>
+
+      {/* leghe "Squadra": infortunato, squalificato o indisponibile */}
+      {me.lega.club && me.lega.tipo === 'squadra' && <Indisponibilita player={player} modifica={canEdit} />}
 
       <Statistiche stats={stats} km={kmTotali.get(id)} kmPro={pro} t={t} />
 

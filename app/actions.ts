@@ -6,7 +6,7 @@ import { refresh, revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { sanity } from '@/lib/sanity'
 import { BADGE, CATEGORIE_NOTIFICHE, COOKIE_LEGA, eta, normalizzaTelefono, PIEDI, RUOLI, SKILLS, displayName, requirePlayer, getUtente, getMemberships, isTitolare, membroDi, soloGiocatore, requireAdmin, requireForDoc, requireIn, type Player, type Skill } from '@/lib/player'
-import { assegnaPosti, finestra, getMatch, getPartiteTorneo, orarioPartita, presenti, risultatoDa, type FonteKm, type Match, type Risposta, type Stato } from '@/lib/matches'
+import { assegnaPosti, conSelezione, finestra, getMatch, getPartiteTorneo, getPlayers, orarioPartita, presenti, risultatoDa, type FonteKm, type Match, type Risposta, type Stato } from '@/lib/matches'
 import { idPlaylist, intervisteDellaPlaylist } from '@/lib/interviste'
 import { kmStrava, scollega, stravaConfigurato, urlCollegamento } from '@/lib/strava'
 import { SITO, baseUrl } from '@/lib/url'
@@ -25,6 +25,7 @@ import { daCreare, primoTurnoTeste, primoTurnoValido, tabellone } from '@/lib/ta
 import { nomeSquadra } from '@/lib/teams'
 import { formaDellaLega, ioPro, legaPro, organizzatoriPro } from '@/lib/pro'
 import { sincronizzaAbbonamento } from '@/lib/abbonamenti'
+import { indisponibileIl, type MotivoIndisponibile } from '@/lib/roster'
 import { COOKIE_LINGUA, isLingua, type T } from '@/lib/i18n'
 import { getLingua, getT } from '@/lib/lingua'
 
@@ -53,15 +54,22 @@ export async function rispondi(matchId: string, risposta: 'presente' | 'assente'
   // rispondono nello stesso istante, il secondo riprova sui dati aggiornati.
   for (let attempt = 0; attempt < 3; attempt++) {
     const doc = await sanity.fetch<
-      (Pick<Match, '_rev' | 'stato' | 'aperturaConvocazioni' | 'chiusuraConvocazioni' | 'postiDisponibili'> & {
+      (Pick<Match, '_rev' | 'stato' | 'aperturaConvocazioni' | 'chiusuraConvocazioni' | 'postiDisponibili' | 'data' | 'tipo' | 'squadra' | 'convocati'> & {
         convocazioni?: RawConvocazione[]
+        torneo?: Match['torneo']
       }) | null
     >(
-      `*[_type == "match" && _id == $id][0]{_rev, stato, aperturaConvocazioni, chiusuraConvocazioni, postiDisponibili, convocazioni}`,
+      `*[_type == "match" && _id == $id][0]{_rev, stato, aperturaConvocazioni, chiusuraConvocazioni, postiDisponibili, convocazioni, data, tipo, torneo,
+        "squadra": lega->club == true && lega->tipo == "squadra", "convocati": convocati[]._ref}`,
       { id: matchId },
     )
     if (!doc) throw new Error('Partita non trovata')
     if (finestra(doc) !== 'aperta') throw new Error('Le convocazioni non sono aperte')
+    // leghe "Squadra": rispondono solo i convocati dall'allenatore, e chi è indisponibile non può dire "ci sono"
+    if (risposta === 'presente') {
+      if (conSelezione(doc) && !(doc.convocati ?? []).includes(player._id)) throw new Error('Non sei tra i convocati di questa partita')
+      if (indisponibileIl(player, isoToRomeLocal(doc.data).slice(0, 10))) throw new Error('Sei segnato come indisponibile')
+    }
 
     const list = [...(doc.convocazioni ?? [])]
     const mine = list.findIndex((c) => c.giocatore?._ref === player._id)
@@ -149,20 +157,27 @@ export async function scambiaConAttesa(matchId: string, entra: string, esce: str
 // e lo mette sempre in lista (scelto a mano, non va in lista d'attesa): se la lista è piena, i posti salgono di uno.
 export async function convocaGiocatore(matchId: string, giocatoreId: string) {
   const admin = await requireForDoc(matchId, 'organizzatore')
-  const giocatore = await sanity.fetch<{ legaId: string; attivo?: boolean } | null>(`*[_type == "player" && _id == $id][0]{"legaId": lega._ref, attivo}`, {
-    id: giocatoreId,
-  })
+  const giocatore = await sanity.fetch<{ legaId: string; attivo?: boolean; indisponibile?: Player['indisponibile'] } | null>(
+    `*[_type == "player" && _id == $id][0]{"legaId": lega._ref, attivo, indisponibile}`,
+    { id: giocatoreId },
+  )
   if (!giocatore || giocatore.legaId !== admin.lega._id || giocatore.attivo === false) throw new Error('Il giocatore non è nella rosa')
   for (let attempt = 0; attempt < 3; attempt++) {
-    const doc = await sanity.fetch<{ _rev: string; stato: Stato; torneo?: unknown; postiDisponibili: number; convocazioni?: RawConvocazione[] } | null>(
-      `*[_type == "match" && _id == $id][0]{_rev, stato, torneo, postiDisponibili, convocazioni}`,
+    const doc = await sanity.fetch<
+      { _rev: string; stato: Stato; torneo?: Match['torneo']; postiDisponibili: number; convocazioni?: RawConvocazione[]; data: string; tipo?: Match['tipo']; squadra?: boolean; convocati?: string[] } | null
+    >(
+      `*[_type == "match" && _id == $id][0]{_rev, stato, torneo, postiDisponibili, convocazioni, data, tipo,
+        "squadra": lega->club == true && lega->tipo == "squadra", "convocati": convocati[]._ref}`,
       { id: matchId },
     )
     if (!doc) throw new Error('Partita non trovata')
     if ((doc.stato !== 'aperta' && doc.stato !== 'chiusa') || doc.torneo) throw new Error('In questa partita non si può convocare')
+    if (indisponibileIl(giocatore, isoToRomeLocal(doc.data).slice(0, 10))) throw new Error('Il giocatore è indisponibile')
     const list = [...(doc.convocazioni ?? [])]
     const i = list.findIndex((c) => c.giocatore?._ref === giocatoreId)
     if (i >= 0 && list[i].risposta !== 'assente') return
+    // leghe "Squadra": chi viene convocato entra anche tra i convocati dell'allenatore
+    const selezione = conSelezione(doc) && !(doc.convocati ?? []).includes(giocatoreId) ? [...(doc.convocati ?? []), giocatoreId] : null
     const entry = {
       _key: i >= 0 ? list[i]._key : randomUUID(),
       _type: 'convocazione',
@@ -176,12 +191,68 @@ export async function convocaGiocatore(matchId: string, giocatoreId: string) {
     if (i >= 0) list[i] = { ...list[i], ...entry }
     else list.push(entry)
     try {
-      await sanity.patch(matchId).ifRevisionId(doc._rev).set({ postiDisponibili: posti, convocazioni: assegnaPosti(list, posti) }).commit()
+      await sanity
+        .patch(matchId)
+        .ifRevisionId(doc._rev)
+        .set({ postiDisponibili: posti, convocazioni: assegnaPosti(list, posti), ...(selezione && { convocati: selezione.map(ref) }) })
+        .commit()
       refresh()
       return
     } catch (err) {
       if (attempt === 2) throw err
     }
+  }
+}
+
+// Leghe "Squadra": l'allenatore sceglie i convocati della partita. Solo loro possono rispondere; chi viene tolto
+// esce dalla lista. I posti diventano quanti sono i convocati (niente lista d'attesa) e i nuovi ricevono l'avviso.
+export async function salvaConvocati(matchId: string, _prev: FormState, formData: FormData): Promise<FormState> {
+  const admin = await requireForDoc(matchId, 'organizzatore')
+  const scelti = [...new Set(formData.getAll('giocatore').map(String))]
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const match = await getMatch(matchId)
+    if (!match || !conSelezione(match)) return { error: await tr('Partita non trovata.') }
+    if (match.stato !== 'aperta' && match.stato !== 'chiusa') return { error: await tr('La partita è già giocata o annullata.') }
+    const giorno = isoToRomeLocal(match.data).slice(0, 10)
+    const rosa = await getPlayers(admin.lega._id)
+    const validi = new Set(rosa.filter((p) => p.attivo !== false && !indisponibileIl(p, giorno)).map((p) => p._id))
+    const elenco = scelti.filter((id) => validi.has(id))
+    if (elenco.length < 1) return { error: await tr('Scegli almeno un giocatore.') }
+    const prima = new Set(match.convocati ?? [])
+    const nuovi = elenco.filter((id) => !prima.has(id))
+    const dentro = new Set(elenco)
+    // chi non è più convocato esce dalla lista; gli altri tengono la loro risposta
+    const lista = match.convocazioni
+      .filter((c) => dentro.has(c.giocatore._id))
+      .map((c) => ({ _key: c._key, _type: 'convocazione', giocatore: { _type: 'reference', _ref: c.giocatore._id }, risposta: c.risposta, rispostoIl: c.rispostoIl, aggiunto: c.aggiunto }))
+    try {
+      await sanity
+        .patch(matchId)
+        .ifRevisionId(match._rev)
+        .set({ convocati: elenco.map(ref), postiDisponibili: elenco.length, postiAutomatici: false, convocazioni: assegnaPosti(lista as RawConvocazione[], elenco.length) })
+        .commit()
+    } catch (err) {
+      if (attempt === 2) throw err
+      continue
+    }
+    if (nuovi.length) {
+      const breve = { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' } as const
+      const aperta = finestra(match) === 'aperta'
+      await inviaAGiocatori(
+        nuovi,
+        (t) => ({
+          title: `📋 ${t('Sei convocato!')}`,
+          body: `${admin.lega.nome} · ${t.data(match.data, breve)} · ${match.luogo}\n${
+            aperta ? t('Conferma entro {data}', { data: t.data(match.chiusuraConvocazioni, breve) }) : t('Potrai confermare dal {data}', { data: t.data(match.aperturaConvocazioni, breve) })
+          }`,
+          url: `/partite/${matchId}`,
+          tag: matchId,
+        }),
+        'convocazioni',
+      ).catch(() => undefined)
+    }
+    revalidatePath('/', 'layout')
+    redirect(`/partite/${matchId}`)
   }
 }
 
@@ -976,9 +1047,7 @@ export async function apriConvocazioni(matchId: string): Promise<AvvisoState> {
   const breve = { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' } as const
   const chiusura = stato === 'non_ancora' ? fine : match.chiusuraConvocazioni
   // Prima volta: "Convocazioni aperte" con i dettagli; con le convocazioni già aperte ("Avvisa di nuovo"): il sollecito.
-  const risultato = await inviaATutti(
-    match.legaId,
-    (t) =>
+  const messaggio = (t: T) =>
       stato === 'aperta'
         ? {
             title: `📣 ${t('SOLLECITO CONVOCAZIONI')} – ${convocati(match, t)}`,
@@ -993,9 +1062,11 @@ export async function apriConvocazioni(matchId: string): Promise<AvvisoState> {
             }`,
             url: `/partite/${matchId}`,
             tag: matchId,
-          },
-    'convocazioni',
-  )
+          }
+  // leghe "Squadra": l'avviso va solo ai convocati dall'allenatore, non a tutta la rosa
+  const risultato = conSelezione(match)
+    ? await inviaAGiocatori(match.convocati ?? [], messaggio, 'convocazioni')
+    : await inviaATutti(match.legaId, messaggio, 'convocazioni')
   refresh()
   return risultato
 }
@@ -1166,6 +1237,51 @@ export async function scegliLega(legaId: string, vai = '/') {
   if (!(await membroDi(legaId))) throw new Error('Non fai parte di questa lega')
   await attivaLega(legaId)
   redirect(vai.startsWith('/') ? vai : '/')
+}
+
+// ---------- Club: leghe "Squadra" con allenatore ----------
+
+// Per ora il Club lo accende il titolare dell'app, lega per lega (l'abbonamento negli store arriverà dopo).
+export async function attivaClub(legaId: string, attivo: boolean) {
+  if (!(await isTitolare())) throw new Error('Solo il titolare dell’app')
+  const p = sanity.patch(legaId)
+  await (attivo ? p.set({ club: true }) : p.unset(['club', 'tipo'])).commit()
+  revalidatePath('/', 'layout')
+}
+
+// Tipo di lega: tra amici (chi risponde per primo gioca) o squadra con allenatore (convocati scelti, indisponibili).
+export async function salvaTipoLega(legaId: string, tipo: 'amici' | 'squadra') {
+  await requireIn(legaId, 'organizzatore')
+  if (tipo === 'squadra') {
+    const club = await sanity.fetch<boolean>(`*[_type == "league" && _id == $id][0].club == true`, { id: legaId })
+    if (!club) throw new Error('Serve il Club')
+    await sanity.patch(legaId).set({ tipo: 'squadra' }).commit()
+  } else {
+    await sanity.patch(legaId).unset(['tipo']).commit()
+  }
+  revalidatePath('/', 'layout')
+}
+
+const MOTIVI: MotivoIndisponibile[] = ['infortunio', 'squalifica', 'altro']
+
+// L'allenatore segna un giocatore come infortunato, squalificato o indisponibile (fino a una data, facoltativa).
+export async function salvaIndisponibilita(playerId: string, _prev: FormState, formData: FormData): Promise<FormState> {
+  const lega = await sanity.fetch<string | null>(`*[_type == "player" && _id == $id][0].lega._ref`, { id: playerId })
+  if (!lega) return { error: await tr('Giocatore non trovato.') }
+  await requireIn(lega, 'organizzatore')
+  const motivo = str(formData, 'motivo') as MotivoIndisponibile
+  if (!MOTIVI.includes(motivo)) {
+    await sanity.patch(playerId).unset(['indisponibile']).commit()
+  } else {
+    const fino = str(formData, 'fino')
+    const nota = str(formData, 'nota').slice(0, 120)
+    if (fino && !/^\d{4}-\d{2}-\d{2}$/.test(fino)) return { error: await tr('Data non valida.') }
+    await sanity
+      .patch(playerId)
+      .set({ indisponibile: { motivo, ...(fino && { fino }), ...(nota && { nota }) } })
+      .commit()
+  }
+  revalidatePath('/', 'layout')
 }
 
 export async function salvaLega(legaId: string, _prev: FormState, formData: FormData): Promise<FormState> {

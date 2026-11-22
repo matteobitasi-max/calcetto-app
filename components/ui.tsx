@@ -3,7 +3,8 @@ import Link from 'next/link'
 import type { ComponentProps, ReactNode } from 'react'
 import { PallinoAdmin } from './pallino-admin'
 import { EtichettaPro, MarchioPro } from './logo-c'
-import { BADGE, SKILLS, displayName, iniziali, overall, type Badge, type Player, type Skill } from '@/lib/roster'
+import { BADGE, MOTIVI_INDISPONIBILE, SKILLS, displayName, indisponibileIl, iniziali, overall, type Badge, type Player, type Skill } from '@/lib/roster'
+import { isoToRomeLocal } from '@/lib/dates'
 import type { Risposta, Stato } from '@/lib/matches'
 import { finestra } from '@/lib/finestra'
 import { avatarUrl, immagineUrl } from '@/lib/image'
@@ -190,6 +191,11 @@ export async function PlayerBadge({ badge }: { badge?: Badge }) {
 
 // mostraAccesso: nella rosa segnala chi non ha ancora fatto l'accesso all'app.
 // `prima`: accanto al voto, a sinistra (es. gol e MVP), così i voti restano allineati a destra.
+// Indisponibile oggi (leghe "Squadra"): un segno accanto al nome.
+function indisponibileOggi(p: Player) {
+  return !!p.indisponibile && indisponibileIl(p, isoToRomeLocal(new Date().toISOString()).slice(0, 10))
+}
+
 export async function PlayerRow({
   player,
   prima,
@@ -218,6 +224,11 @@ export async function PlayerRow({
         <div className="flex min-w-0 items-center gap-1.5">
           <span className={`truncate ${mio ? 'font-extrabold' : 'font-medium'}`}>{displayName(player)}</span>
           <PlayerBadge badge={player.badge} />
+          {indisponibileOggi(player) && (
+            <span title={t(MOTIVI_INDISPONIBILE[player.indisponibile!.motivo].label)} aria-label={t(MOTIVI_INDISPONIBILE[player.indisponibile!.motivo].label)}>
+              {MOTIVI_INDISPONIBILE[player.indisponibile!.motivo].emoji}
+            </span>
+          )}
         </div>
         {(player.ruolo || (mostraAccesso && player.collegato === false)) && (
           <div className="text-xs text-zinc-500">

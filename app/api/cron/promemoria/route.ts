@@ -26,9 +26,12 @@ export async function GET(request: Request) {
       _id, data, luogo, "chiusura": chiusuraConvocazioni, "lega": lega->nome,
       "convocati": count(convocazioni[risposta == "presente"]), "posti": postiDisponibili, "automatici": postiAutomatici,
       "mancanti": *[_type == "player" && lega._ref == ^.lega._ref && attivo != false
-        && !(_id in ^.convocazioni[].giocatore._ref)]._id
+        && !(_id in ^.convocazioni[].giocatore._ref)
+        && !(defined(indisponibile) && (!defined(indisponibile.fino) || indisponibile.fino >= $oggi))
+        && (!(^.lega->club == true && ^.lega->tipo == "squadra" && coalesce(^.tipo, "") != "allenamento" && !defined(^.torneo)) || _id in ^.convocati[]._ref)]._id
     }`,
-    { ora: ora.toISOString(), tra30: tra30.toISOString() },
+    // leghe "Squadra": solo i convocati dall'allenatore; mai chi è indisponibile
+    { ora: ora.toISOString(), tra30: tra30.toISOString(), oggi: ora.toISOString().slice(0, 10) },
   )
 
   // convocazioni scadute (da meno di un giorno) ancora aperte: si chiudono, con l'avviso a chi è in lista

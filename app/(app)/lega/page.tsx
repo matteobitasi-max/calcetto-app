@@ -1,5 +1,5 @@
 import { Suspense } from 'react'
-import { aggiungiFotoSorpresa, rigeneraInvito, rimuoviFotoSorpresa, salvaInterviste, salvaLega, salvaPagamentiLega } from '@/app/actions'
+import { aggiungiFotoSorpresa, attivaClub, rigeneraInvito, salvaTipoLega, rimuoviFotoSorpresa, salvaInterviste, salvaLega, salvaPagamentiLega } from '@/app/actions'
 import { linkPlaylist } from '@/lib/interviste'
 import { FotoSorpreseEditor } from '@/components/foto-sorprese'
 import { isTitolare, requireAdmin } from '@/lib/player'
@@ -42,6 +42,49 @@ async function Impostazioni() {
           </Field>
           <PillSalva label={t('Salva nome e logo')} />
         </ActionForm>
+      </Card>
+
+      {/* Club: lega tra amici o squadra con allenatore. Per ora il Club lo accende il titolare, lega per lega. */}
+      <Card className="space-y-3">
+        <h2 className="flex items-center gap-2 font-semibold">
+          🧢 {t('Tipo di lega')}
+          <span className="rounded-full bg-zinc-900 px-2 py-0.5 text-[10px] font-bold text-white dark:bg-white dark:text-zinc-900">CLUB</span>
+        </h2>
+        {lega.club ? (
+          <div className="grid gap-2">
+            {(
+              [
+                ['amici', '👥', t('Tra amici'), t('Chi risponde per primo gioca, con la lista d’attesa.')],
+                ['squadra', '🧢', t('Squadra con allenatore'), t('L’allenatore sceglie i convocati delle partite e segna infortunati e squalificati.')],
+              ] as const
+            ).map(([valore, emoji, titolo, testo]) => {
+              const scelto = (lega.tipo ?? 'amici') === valore
+              return (
+                <form key={valore} action={salvaTipoLega.bind(null, lega._id, valore)}>
+                  <SubmitButton
+                    className={`flex w-full items-start gap-3 rounded-xl border-2 p-3 text-left ${scelto ? 'border-green-600 bg-green-50 dark:bg-green-950' : 'border-zinc-200 dark:border-zinc-700'}`}
+                  >
+                    <span className="text-2xl">{emoji}</span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block font-semibold">{titolo}</span>
+                      <span className="block text-sm text-zinc-500">{testo}</span>
+                    </span>
+                    {scelto && <span className="text-green-600">✓</span>}
+                  </SubmitButton>
+                </form>
+              )
+            })}
+          </div>
+        ) : (
+          <p className="text-sm text-zinc-500">{t('Allenatori e società: convocati scelti dall’allenatore, infortunati e squalificati, formazione e dati da Veo. Il piano Club arriva presto: scrivici per provarlo.')}</p>
+        )}
+        {titolare && (
+          <form action={attivaClub.bind(null, lega._id, !lega.club)}>
+            <SubmitButton className="text-sm font-medium text-amber-700 hover:underline dark:text-amber-400">
+              {lega.club ? t('Spegni il Club in questa lega (titolare)') : t('Accendi il Club in questa lega (titolare)')}
+            </SubmitButton>
+          </form>
+        )}
       </Card>
 
       <Card className="space-y-3">
