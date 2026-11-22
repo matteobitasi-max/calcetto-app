@@ -29,6 +29,7 @@ export async function GET(request: Request) {
     ['Email *', 30],
     ['Telefono', 16],
     ['Soprannome', 16],
+    ['Numero maglia', 14],
     ['Ruolo', 16],
     ['Torneo', 24],
     ['Squadra', 22],
@@ -58,9 +59,22 @@ export async function GET(request: Request) {
       }
     }
   }
-  menu('F', `Elenchi!$A$1:$A$${RUOLI.length}`, 'Ruolo')
-  if (tornei.length) menu('G', `Elenchi!$B$1:$B$${tornei.length}`, 'Torneo')
-  if (squadre.length) menu('H', `Elenchi!$C$1:$C$${squadre.length}`, 'Squadra')
+  menu('G', `Elenchi!$A$1:$A$${RUOLI.length}`, 'Ruolo')
+  if (tornei.length) menu('H', `Elenchi!$B$1:$B$${tornei.length}`, 'Torneo')
+  if (squadre.length) menu('I', `Elenchi!$C$1:$C$${squadre.length}`, 'Squadra')
+  // numero di maglia: intero da 0 a 99
+  for (let riga = 2; riga <= 301; riga++) {
+    foglio.getCell(`F${riga}`).dataValidation = {
+      type: 'whole',
+      operator: 'between',
+      allowBlank: true,
+      formulae: [0, 99],
+      showErrorMessage: true,
+      errorStyle: 'warning',
+      errorTitle: 'Numero maglia',
+      error: 'Scrivi un numero da 0 a 99.',
+    }
+  }
 
   const istruzioni = libro.addWorksheet('Istruzioni')
   istruzioni.getColumn(1).width = 110
@@ -68,7 +82,8 @@ export async function GET(request: Request) {
     `Modello per importare giocatori in "${lega.nome}" (The Cap).`,
     '',
     'Obbligatorio: almeno uno tra Nome ed Email (senza nome si usa la prima parte dell’email).',
-    'Facoltativi: Cognome, Telefono, Soprannome, Ruolo (menu), Torneo e Squadra (menu).',
+    'Facoltativi: Cognome, Telefono, Soprannome, Numero maglia (0-99), Ruolo (menu), Torneo e Squadra (menu).',
+    'Numero maglia: se il giocatore è già in rosa, gli viene aggiornato il numero.',
     'Torneo e Squadra: il giocatore entra in quella squadra di quel torneo. Se lasci vuoto il torneo vale quello scelto nella pagina di importazione.',
     tornei.length ? `Tornei disponibili: ${tornei.join(', ')}.` : 'In questa lega non ci sono tornei in corso.',
     '',

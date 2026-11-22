@@ -43,9 +43,14 @@ export async function PlayerForm({
             <input name="cognome" defaultValue={player?.cognome} className={inputClass} />
           </Field>
         </div>
-        <Field label={t('Soprannome')}>
-          <input name="soprannome" defaultValue={player?.soprannome} className={inputClass} />
-        </Field>
+        <div className="grid grid-cols-[1fr_7rem] gap-4">
+          <Field label={t('Soprannome')}>
+            <input name="soprannome" defaultValue={player?.soprannome} className={inputClass} />
+          </Field>
+          <Field label={t('Numero di maglia')}>
+            <input name="numero" type="number" inputMode="numeric" min={0} max={99} step={1} defaultValue={player?.numero} placeholder="10" className={inputClass} />
+          </Field>
+        </div>
         <div className="space-y-1">
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label="Email">

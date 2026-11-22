@@ -944,7 +944,19 @@ export async function salvaGiocatore(playerId: string | null, _prev: FormState, 
 
   const ruolo = str(formData, 'ruolo')
   const piede = str(formData, 'piede')
+  // numero di maglia: facoltativo, da 0 a 99, unico tra i giocatori attivi della lega
+  const numeroTesto = str(formData, 'numero')
+  const numero = numeroTesto === '' ? undefined : Number(numeroTesto)
+  if (numero !== undefined && (!Number.isInteger(numero) || numero < 0 || numero > 99)) return { error: await tr('Il numero di maglia va da 0 a 99.') }
+  if (numero !== undefined) {
+    const gia = await sanity.fetch<string | null>(
+      `*[_type == "player" && lega._ref == $lega && _id != $id && attivo != false && numero == $numero][0].nome`,
+      { lega: admin.lega._id, id: playerId ?? '', numero },
+    )
+    if (gia) return { error: await tr('Il numero {n} è già di {nome}.', { n: numero, nome: gia }) }
+  }
   const optional = {
+    numero,
     email: email || undefined,
     telefono: telefono || undefined,
     cognome: str(formData, 'cognome') || undefined,
@@ -1705,7 +1717,7 @@ export async function unisciSchede(tieniId: string, togliId: string) {
 
   // Dati che mancano alla scheda giusta: si prendono dal doppione.
   const completa = Object.fromEntries(
-    (['clerkUserId', 'cognome', 'soprannome', 'foto', 'ruolo', 'piede', 'badge', 'telefono'] as const)
+    (['clerkUserId', 'cognome', 'soprannome', 'numero', 'foto', 'ruolo', 'piede', 'badge', 'telefono'] as const)
       .filter((k) => !(tieni as Record<string, unknown>)[k] && (togli as Record<string, unknown>)[k])
       .map((k) => [k, (togli as Record<string, unknown>)[k]]),
   )
@@ -1910,7 +1922,7 @@ export async function spostaGiocatore(giocatoreId: string, _prev: FormState, for
   if (gia) {
     await sanity.patch(gia).set({ attivo: true }).unset(['rimossoIl']).commit()
   } else {
-    const campi = ['nome', 'cognome', 'soprannome', 'email', 'telefono', 'dataNascita', 'foto', 'ruolo', 'piede', 'caratteristiche', 'clerkUserId'] as const
+    const campi = ['nome', 'cognome', 'soprannome', 'numero', 'email', 'telefono', 'dataNascita', 'foto', 'ruolo', 'piede', 'caratteristiche', 'clerkUserId'] as const
     await sanity.create({
       ...(g.clerkUserId && { _id: `player-${destinazione}-${g.clerkUserId}` }),
       _type: 'player',
@@ -2607,7 +2619,7 @@ export async function invitoTorneo(torneoId: string) {
 
 // ---------- Importazione da Excel ----------
 
-export type RigaImport = { nome?: string; cognome?: string; email?: string; telefono?: string; soprannome?: string; ruolo?: string; torneo?: string; squadra?: string }
+export type RigaImport = { nome?: string; cognome?: string; email?: string; telefono?: string; soprannome?: string; numero?: string; ruolo?: string; torneo?: string; squadra?: string }
 export type EsitoImport = {
   error?: string
   creati?: number
@@ -2617,6 +2629,13 @@ export type EsitoImport = {
   /** Inviti mandati per email (a chi non ha ancora un account). */
   invitati?: number
   righe?: { riga: number; esito: 'creato' | 'riattivato' | 'presente' | 'errore'; nome: string; nota?: string }[]
+}
+
+// Numero di maglia letto da un file: intero da 0 a 99 ("10", "#10", "10.0"); altrimenti niente.
+function numeroMaglia(x: unknown) {
+  const s = String(x ?? '').trim().replace(/^#/, '')
+  const n = Number(s)
+  return s !== '' && Number.isInteger(n) && n >= 0 && n <= 99 ? n : null
 }
 
 // L'organizzatore carica un elenco di giocatori (da Excel o CSV) in una sua lega, e se vuole li mette in una
@@ -2640,13 +2659,15 @@ export async function importaGiocatori(
     email: testo(r.email, 120).toLowerCase(),
     telefono: testo(r.telefono, 30),
     soprannome: testo(r.soprannome, 30),
+    // numero di maglia: solo un intero da 0 a 99 (es. "10", "#10", "10.0" da Excel)
+    numero: numeroMaglia(r.numero),
     ruolo: (RUOLI as readonly string[]).includes(testo(r.ruolo, 20).toLowerCase()) ? testo(r.ruolo, 20).toLowerCase() : '',
     torneo: testo(r.torneo, 60),
     squadra: testo(r.squadra, 60),
   }))
 
-  const rosa = await sanity.fetch<{ _id: string; nome: string; cognome?: string; email?: string; attivo?: boolean }[]>(
-    `*[_type == "player" && lega._ref == $legaId]{_id, nome, cognome, email, attivo}`,
+  const rosa = await sanity.fetch<{ _id: string; nome: string; cognome?: string; email?: string; attivo?: boolean; numero?: number }[]>(
+    `*[_type == "player" && lega._ref == $legaId]{_id, nome, cognome, email, attivo, numero}`,
     { legaId },
   )
   const chiaveNome = (n: string, c: string) => `${n} ${c}`.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ').trim()
@@ -2681,11 +2702,14 @@ export async function importaGiocatori(
     if (esistente) {
       id = esistente._id
       if (visti.has(id)) continue
+      // chi è già in rosa prende il numero di maglia del file, se c'è
+      const nuovoNumero = r.numero != null && esistente.numero !== r.numero ? r.numero : null
       if (esistente.attivo === false) {
-        tx.patch(id, (p) => p.set({ attivo: true }).unset(['rimossoIl']))
+        tx.patch(id, (p) => p.set({ attivo: true, ...(nuovoNumero != null && { numero: nuovoNumero }) }).unset(['rimossoIl']))
         esiti.push({ riga, esito: 'riattivato', nome: etichetta })
       } else {
-        esiti.push({ riga, esito: 'presente', nome: etichetta })
+        if (nuovoNumero != null) tx.patch(id, (p) => p.set({ numero: nuovoNumero }))
+        esiti.push({ riga, esito: 'presente', nome: etichetta, ...(nuovoNumero != null && { nota: `#${nuovoNumero}` }) })
       }
     } else {
       id = `player-${randomUUID()}`
@@ -2696,6 +2720,7 @@ export async function importaGiocatori(
         nome,
         ...(r.cognome && { cognome: r.cognome }),
         ...(r.soprannome && { soprannome: r.soprannome }),
+        ...(r.numero != null && { numero: r.numero }),
         ...(r.email && { email: r.email }),
         ...(r.telefono && { telefono: normalizzaTelefono(r.telefono) }),
         ...(r.ruolo && { ruolo: r.ruolo }),

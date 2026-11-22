@@ -76,7 +76,10 @@ export async function ProfiloGiocatore({ id }: { id: string }) {
             <Avatar player={player} size={72} />
           )}
           <div className="min-w-0 flex-1 space-y-1">
-            <h1 className="break-words text-xl font-bold leading-tight">{displayName(player)}</h1>
+            <h1 className="break-words text-xl font-bold leading-tight">
+              {player.numero != null && <span className="mr-1.5 tabular-nums text-zinc-400">#{player.numero}</span>}
+              {displayName(player)}
+            </h1>
             {player.soprannome && <p className="text-sm text-zinc-500">{fullName}</p>}
             <PlayerBadge badge={player.badge} />
             <p className="text-sm leading-snug text-zinc-500 first-letter:uppercase">

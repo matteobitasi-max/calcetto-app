@@ -222,6 +222,7 @@ export async function PlayerRow({
       <Avatar player={player} />
       <Link href={`/giocatori/${player._id}`} className="min-w-0 flex-1 hover:underline">
         <div className="flex min-w-0 items-center gap-1.5">
+          {player.numero != null && <span className="shrink-0 text-xs font-semibold tabular-nums text-zinc-400">#{player.numero}</span>}
           <span className={`truncate ${mio ? 'font-extrabold' : 'font-medium'}`}>{displayName(player)}</span>
           <PlayerBadge badge={player.badge} />
           {indisponibileOggi(player) && (

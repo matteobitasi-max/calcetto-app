@@ -66,6 +66,8 @@ export type Player = {
   nome: string
   cognome?: string
   soprannome?: string
+  /** Numero di maglia (0-99): unico tra i giocatori attivi della lega; serve anche per i dati di Veo. */
+  numero?: number
   email?: string
   /** Formato internazionale, es. +393331234567. */
   telefono?: string
@@ -94,7 +96,7 @@ export type Player = {
   caratteristicheBase?: Partial<Record<Skill, number>>
 }
 
-export const playerFields = `_id, _rev, "legaId": lega._ref, nome, cognome, soprannome, email, telefono, dataNascita, foto, ruolo, piede, badge, notifiche, isAdmin, puoInserireRisultati, attivo, indisponibile, revisioneIl, "rimosso": defined(rimossoIl), "collegato": defined(clerkUserId), caratteristiche, caratteristicheBase,
+export const playerFields = `_id, _rev, "legaId": lega._ref, nome, cognome, soprannome, numero, email, telefono, dataNascita, foto, ruolo, piede, badge, notifiche, isAdmin, puoInserireRisultati, attivo, indisponibile, revisioneIl, "rimosso": defined(rimossoIl), "collegato": defined(clerkUserId), caratteristiche, caratteristicheBase,
   "pro": defined(clerkUserId) && count(*[_type == "abbonamento" && clerkUserId == ^.clerkUserId && attivo != false && (!defined(scadenza) || scadenza > now())]) > 0`
 
 

@@ -110,4 +110,8 @@ export const giocatori: Record<string, string> = {
   "Scarica il modello Excel di {lega}": "Download the Excel template for {lega}",
   "Torneo “{torneo}” non trovato": "Tournament “{torneo}” not found",
   "Squadra “{squadra}” non trovata in {torneo}": "Team “{squadra}” not found in {torneo}",
+  "Numero di maglia": "Shirt number",
+  "Il numero di maglia va da 0 a 99.": "The shirt number goes from 0 to 99.",
+  "Il numero {n} è già di {nome}.": "Number {n} already belongs to {nome}.",
+  "Cognome, Telefono, Soprannome, Numero di maglia": "Surname, Phone, Nickname, Shirt number",
 }

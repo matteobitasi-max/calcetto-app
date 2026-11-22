@@ -28,6 +28,9 @@ const COLONNE: Record<string, keyof RigaImport | 'nomeCompleto'> = {
   email: 'email', 'e-mail': 'email', mail: 'email', 'indirizzo email': 'email',
   telefono: 'telefono', tel: 'telefono', cellulare: 'telefono', phone: 'telefono', mobile: 'telefono',
   soprannome: 'soprannome', nickname: 'soprannome',
+  numero: 'numero', 'numero maglia': 'numero', 'numero di maglia': 'numero', maglia: 'numero', '#': 'numero', 'n.': 'numero', n: 'numero',
+  number: 'numero', 'shirt number': 'numero', 'jersey number': 'numero', jersey: 'numero', dorsal: 'numero', dorsale: 'numero',
+  nummer: 'numero', trikotnummer: 'numero', 'numero de maillot': 'numero', maillot: 'numero',
   ruolo: 'ruolo', role: 'ruolo',
   torneo: 'torneo', tournament: 'torneo',
   squadra: 'squadra', team: 'squadra',
@@ -228,7 +231,7 @@ export function ImportaGiocatori({ leghe }: { leghe: LegaImport[] }) {
               <b>{t('Obbligatorio')}</b>: {t('almeno uno tra')} <b>{t('Nome')}</b> {t('ed')} <b>Email</b> {t('(senza nome si usa la prima parte dell’email).')}
             </p>
             <p>
-              <b>{t('Facoltativi')}</b>: {t('Cognome, Telefono, Soprannome')} · <b>{t('Ruolo')}</b> ({RUOLI.join(', ')}) · <b>{t('Torneo')}</b> {t('e')}{' '}
+              <b>{t('Facoltativi')}</b>: {t('Cognome, Telefono, Soprannome, Numero di maglia')} · <b>{t('Ruolo')}</b> ({RUOLI.join(', ')}) · <b>{t('Torneo')}</b> {t('e')}{' '}
               <b>{t('Squadra')}</b> {t('(nel modello Excel li scegli dal menu a tendina; se il torneo è vuoto vale quello scelto qui sopra).')}
             </p>
             <p>{t('La prima riga è l’intestazione: le colonne possono essere in qualsiasi ordine.')}</p>
