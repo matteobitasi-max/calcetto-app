@@ -3,6 +3,7 @@ import type { ReactNode } from 'react'
 import { MarchioPro } from '@/components/logo-c'
 import { BarraPro, LinkPrezzi } from '@/components/barra-pro'
 import { ButtonLink, Card } from '@/components/ui'
+import { EtichettaClub } from '@/components/pill-scelta'
 import type { T } from '@/lib/i18n'
 import { MAX_LEGHE_PRO } from '@/lib/pro'
 
@@ -210,41 +211,96 @@ function Bilancia() {
 }
 
 // Gratis e Pro a confronto: si vede subito cosa c'è in più.
+// Confronto tra i tre piani: Gratis, Pro e Club PRO (che include tutto il Pro).
+// livello: 0 = in tutti, 1 = da Pro in su, 2 = solo Club; "presto" = in arrivo nel Club.
 export function Confronto({ t }: { t: T }) {
-  const righe: [string, boolean][] = [
-    [t('Convocazioni, promemoria e lista d’attesa'), true],
-    [t('Squadre automatiche dai voti, in campo'), true],
-    [t('Risultati, gol, MVP e classifiche'), true],
-    [t('I tuoi km di ogni partita da Apple Health, Health Connect o Strava'), true],
-    [t('Tornei con gironi e tabellone'), false],
-    [t('Forma dei giocatori a ogni partita'), false],
-    [t('Squadre equilibrate anche sulla forma'), false],
-    [t('Classifica km, record e km nel profilo'), false],
-    [t('Voti aggiornati con le proposte automatiche'), false],
-    [t('Marchio PRO accanto al tuo nome'), false],
+  const righe: [string, 0 | 1 | 2, boolean?][] = [
+    [t('Convocazioni, promemoria e lista d’attesa'), 0],
+    [t('Squadre automatiche dai voti, in campo'), 0],
+    [t('Risultati, gol, MVP e classifiche'), 0],
+    [t('I tuoi km di ogni partita da Apple Health, Health Connect o Strava'), 0],
+    [t('Tornei con gironi e tabellone'), 1],
+    [t('Forma dei giocatori a ogni partita'), 1],
+    [t('Squadre equilibrate anche sulla forma'), 1],
+    [t('Classifica km, record e km nel profilo'), 1],
+    [t('Voti aggiornati con le proposte automatiche'), 1],
+    [t('Marchio PRO accanto al tuo nome'), 1],
+    [t('Convocati scelti dall’allenatore'), 2],
+    [t('Infortunati e squalificati'), 2],
+    [t('Pagelle a fine partita, con note'), 2],
+    [t('Presenze agli allenamenti'), 2],
+    [t('Regole della squadra'), 2],
+    [t('Formazione con modulo e ruoli'), 2, true],
+    [t('Staff: vice, preparatore, dirigente'), 2, true],
+    [t('Dati dalle telecamere Veo'), 2, true],
   ]
+  const si = <span className="font-bold text-green-600">✓</span>
+  const no = <span className="text-zinc-300 dark:text-zinc-600">—</span>
   return (
     <Card className="overflow-hidden p-0">
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b border-zinc-200 dark:border-zinc-800">
             <th className="p-3 text-left font-semibold">{t('Cosa ottieni')}</th>
-            <th className="w-16 p-3 text-center font-semibold text-zinc-500">{t('Gratis')}</th>
-            <th className="w-16 bg-amber-50 p-3 text-center dark:bg-amber-950/40">
-              <span className="rounded-full bg-amber-400 px-2 py-0.5 text-xs font-bold text-zinc-900">PRO</span>
+            <th className="w-12 p-2 text-center text-xs font-semibold text-zinc-500">{t('Gratis')}</th>
+            <th className="w-12 bg-amber-50 p-2 text-center dark:bg-amber-950/40">
+              <span className="rounded-full bg-amber-400 px-1.5 py-0.5 text-[10px] font-bold text-zinc-900">PRO</span>
+            </th>
+            <th className="w-20 bg-zinc-100 p-2 text-center dark:bg-zinc-800/60">
+              <EtichettaClub />
             </th>
           </tr>
         </thead>
         <tbody>
-          {righe.map(([voce, gratis]) => (
+          {righe.map(([voce, livello, presto]) => (
             <tr key={voce} className="border-b border-zinc-100 last:border-0 dark:border-zinc-800">
-              <td className={`p-3 ${gratis ? 'text-zinc-600 dark:text-zinc-300' : 'font-medium'}`}>{voce}</td>
-              <td className="p-3 text-center">{gratis ? <span className="text-green-600">✓</span> : <span className="text-zinc-300 dark:text-zinc-600">—</span>}</td>
-              <td className="bg-amber-50 p-3 text-center font-bold text-green-600 dark:bg-amber-950/40">✓</td>
+              <td className={`p-3 ${livello === 0 ? 'text-zinc-600 dark:text-zinc-300' : 'font-medium'}`}>{voce}</td>
+              <td className="p-2 text-center">{livello === 0 ? si : no}</td>
+              <td className="bg-amber-50 p-2 text-center dark:bg-amber-950/40">{livello <= 1 ? si : no}</td>
+              <td className="bg-zinc-100 p-2 text-center dark:bg-zinc-800/60">
+                {presto ? <span className="text-[10px] font-semibold uppercase text-zinc-500">{t('presto')}</span> : si}
+              </td>
             </tr>
           ))}
         </tbody>
       </table>
+    </Card>
+  )
+}
+
+// Club PRO: cosa c'è in più rispetto al Pro, per chi allena una squadra. Porta alla pagina del Club.
+export function SezioneClub({ t, legaId }: { t: T; legaId?: string }) {
+  const voci: [string, string, string][] = [
+    ['📋', t('Convocati scelti dall’allenatore'), t('Solo loro ricevono l’avviso e possono confermare.')],
+    ['🚑', t('Infortunati e squalificati'), t('Con la data di rientro: non si possono convocare.')],
+    ['📝', t('Pagelle a fine partita'), t('Voto e nota a ogni giocatore, con la media nel profilo.')],
+    ['🏃', t('Presenze agli allenamenti'), t('Quante volte ognuno si è allenato, in percentuale.')],
+    ['⚙️', t('Regole della squadra'), t('Scegli tu se i giocatori possono convocarsi da soli.')],
+  ]
+  return (
+    <Card className="space-y-4 border-2 border-zinc-900 dark:border-white">
+      <div className="flex items-center justify-between gap-2">
+        <h2 className="text-lg font-bold">🧢 {t('Club PRO')}</h2>
+        <EtichettaClub />
+      </div>
+      <p className="text-sm text-zinc-500">{t('Per squadre con allenatore e società: tutto il Pro, più gli strumenti per decidere chi convocare e seguire ogni giocatore.')}</p>
+      <ul className="space-y-3">
+        {voci.map(([emoji, titolo, testo]) => (
+          <li key={titolo} className="flex gap-3">
+            <span className="text-xl">{emoji}</span>
+            <span>
+              <span className="block text-sm font-semibold">{titolo}</span>
+              <span className="block text-xs text-zinc-500">{testo}</span>
+            </span>
+          </li>
+        ))}
+      </ul>
+      <p className="text-xs text-zinc-500">
+        <b>{t('In arrivo nel Club')}:</b> {[t('Formazione con modulo e ruoli'), t('Staff: vice, preparatore, dirigente'), t('Dati dalle telecamere Veo')].join(' · ')}
+      </p>
+      <Link href={`/club${legaId ? `?lega=${legaId}` : ''}`} className="block rounded-xl bg-zinc-900 py-3 text-center text-sm font-bold text-white hover:bg-zinc-800 dark:bg-white dark:text-zinc-900">
+        {t('Scopri Club PRO ›')}
+      </Link>
     </Card>
   )
 }

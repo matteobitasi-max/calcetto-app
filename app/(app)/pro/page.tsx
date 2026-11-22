@@ -3,7 +3,7 @@ import { Suspense } from 'react'
 import { getUtente, requirePlayer } from '@/lib/player'
 import { chiaviRevenueCat, mioAbbonamento, pagamentiConfigurati } from '@/lib/abbonamenti'
 import { AttivaPro } from '@/components/attiva-pro'
-import { ChiusuraPro, Confronto, Domande, Garanzie, StatoLega, Testata, Vantaggi } from '@/components/vetrina-pro'
+import { ChiusuraPro, Confronto, Domande, Garanzie, SezioneClub, StatoLega, Testata, Vantaggi } from '@/components/vetrina-pro'
 import { MAX_LEGHE_PRO, ioPro, legaPro, oltreLimitePro } from '@/lib/pro'
 import { getPlayers } from '@/lib/matches'
 import { Card, Loading } from '@/components/ui'
@@ -53,6 +53,7 @@ async function Vetrina() {
           <AttivaPro utente={utente.id} chiavi={chiaviRevenueCat()} mio={mio} giocatori={giocatori} />
         </Card>
         <Vantaggi t={t} link />
+        <SezioneClub t={t} legaId={me.isAdmin ? me.lega._id : undefined} />
       </div>
     )
   }
@@ -75,6 +76,8 @@ async function Vetrina() {
       <Vantaggi t={t} link={attiva} />
 
       <Confronto t={t} />
+
+      <SezioneClub t={t} legaId={me.isAdmin ? me.lega._id : undefined} />
 
       {vendibile && (
         <section id="prezzi" className="scroll-mt-28 space-y-3">

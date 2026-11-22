@@ -171,4 +171,8 @@ export const pro: Record<string, string> = {
   "Carichi l’Excel scaricato da Veo dopo la partita: statistiche di squadra e dei giocatori (km, sprint, velocità, passaggi, tiri) entrano nella partita e nei profili, e aggiornano le caratteristiche con le proposte di voto.": "Sube el Excel descargado de Veo después del partido: las estadísticas del equipo y de los jugadores (km, sprints, velocidad, pases, tiros) entran en el partido y en los perfiles, y actualizan las características con las propuestas de nota.",
   "In arrivo: stiamo preparando la lettura dei file di Veo.": "Próximamente: estamos preparando la lectura de los archivos de Veo.",
   "Disponibile con il Club Allenatore.": "Disponible con el Club Entrenador.",
+  "presto": "pronto",
+  "Club PRO": "Club PRO",
+  "Per squadre con allenatore e società: tutto il Pro, più gli strumenti per decidere chi convocare e seguire ogni giocatore.": "Para equipos con entrenador y clubes: todo el Pro, más las herramientas para decidir a quién convocar y seguir a cada jugador.",
+  "Scopri Club PRO ›": "Descubre Club PRO ›",
 }

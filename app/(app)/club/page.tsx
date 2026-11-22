@@ -37,7 +37,8 @@ async function Vetrina({ searchParams }: { searchParams: PageProps<'/club'>['sea
     <div className="space-y-4">
       <Card className="space-y-2 border-2 border-zinc-900 text-center dark:border-white">
         <p className="text-4xl">🧢</p>
-        <h1 className="text-2xl font-bold">{t('Club Allenatore')}</h1>
+        <h1 className="text-2xl font-bold">{t('Club PRO')}</h1>
+        <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">{t('Club Allenatore')}</p>
         <p className="text-sm text-zinc-500">{t('Per squadre con allenatore e società: decidi tu chi convocare e segui ogni giocatore.')}</p>
       </Card>
 
