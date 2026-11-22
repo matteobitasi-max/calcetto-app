@@ -25,6 +25,7 @@ import { daCreare, primoTurnoTeste, primoTurnoValido, tabellone } from '@/lib/ta
 import { nomeSquadra } from '@/lib/teams'
 import { formaDellaLega, ioPro, legaPro, organizzatoriPro } from '@/lib/pro'
 import { mioClub, sincronizzaAbbonamento } from '@/lib/abbonamenti'
+import { MAX_LEGHE_CLUB } from '@/lib/entitlement'
 import { isFormato, moduloPer, moduloValido, posti as postiModulo } from '@/lib/moduli'
 import { indisponibileIl, type MotivoIndisponibile } from '@/lib/roster'
 import { COOKIE_LINGUA, isLingua, type T } from '@/lib/i18n'
@@ -1145,6 +1146,7 @@ export async function creaLega(_prev: EsitoNuovaLega, formData: FormData): Promi
   if (str(formData, 'tipo') === 'club') {
     const [titolare, club] = await Promise.all([isTitolare(), mioClub(utente.id)])
     if (!titolare && !club) redirect(`/club?lega=${lega._id}`)
+    if (!titolare && (await legheClubOccupate(utente.id, lega._id)) >= MAX_LEGHE_CLUB) redirect(`/club?lega=${lega._id}`)
     await sanity
       .patch(lega._id)
       .set({ club: true, tipo: 'squadra', ...(titolare ? {} : { clubDi: utente.id }) })
@@ -1272,6 +1274,8 @@ export async function scegliClub(legaId: string) {
   if (!utente) redirect('/sign-in')
   const [titolare, club] = await Promise.all([isTitolare(), mioClub(utente.id)])
   if (!titolare && !club) redirect(`/club?lega=${legaId}`)
+  // il Club vale al massimo in MAX_LEGHE_CLUB leghe: oltre, la pagina del Club spiega come spostarlo
+  if (!titolare && (await legheClubOccupate(utente.id, legaId)) >= MAX_LEGHE_CLUB) redirect(`/club?lega=${legaId}`)
   await sanity
     .patch(legaId)
     .set({ club: true, tipo: 'squadra', ...(titolare ? {} : { clubDi: utente.id }) })
@@ -1290,6 +1294,9 @@ export async function aggiornaClub(legaId: string | null): Promise<FormState> {
   }
   if (legaId && (await mioClub(utente.id))) {
     await requireIn(legaId, 'organizzatore')
+    if ((await legheClubOccupate(utente.id, legaId)) >= MAX_LEGHE_CLUB) {
+      return { error: await tr('Il tuo Club PRO è già attivo in {n} leghe: rimetti una lega “tra amici” per spostarlo qui.', { n: MAX_LEGHE_CLUB }) }
+    }
     await sanity.patch(legaId).set({ club: true, tipo: 'squadra', clubDi: utente.id }).commit()
   }
   revalidatePath('/', 'layout')
@@ -1303,9 +1310,20 @@ export async function salvaTipoLega(legaId: string, tipo: 'amici' | 'squadra') {
     if (!club) throw new Error('Serve il Club')
     await sanity.patch(legaId).set({ tipo: 'squadra' }).commit()
   } else {
-    await sanity.patch(legaId).unset(['tipo']).commit()
+    // tornando "tra amici" il Club attivato con un abbonamento si spegne e libera il posto per un'altra lega
+    // (quello acceso dal titolare per provarlo resta, pronto se si torna al Club)
+    const clubDi = await sanity.fetch<string | null>(`*[_type == "league" && _id == $id][0].clubDi`, { id: legaId })
+    await sanity
+      .patch(legaId)
+      .unset(clubDi ? ['tipo', 'club', 'clubDi'] : ['tipo'])
+      .commit()
   }
   revalidatePath('/', 'layout')
+}
+
+// Quante altre leghe hanno il Club acceso con l'abbonamento di questo utente.
+function legheClubOccupate(utente: string, tranne: string) {
+  return sanity.fetch<number>(`count(*[_type == "league" && club == true && clubDi == $utente && _id != $id])`, { utente, id: tranne })
 }
 
 // Opzioni della lega "Squadra": giocatori che si convocano da soli, pagelle a fine partita.

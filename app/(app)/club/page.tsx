@@ -3,6 +3,8 @@ import { Suspense } from 'react'
 import { scegliClub } from '@/app/actions'
 import { getUtente, requireIn, requirePlayer } from '@/lib/player'
 import { chiaviRevenueCat, mioClub, pagamentiConfigurati } from '@/lib/abbonamenti'
+import { MAX_LEGHE_CLUB } from '@/lib/entitlement'
+import { sanity } from '@/lib/sanity'
 import { AttivaPro } from '@/components/attiva-pro'
 import { SubmitButton } from '@/components/submit-button'
 import { Card, Loading, buttonClass } from '@/components/ui'
@@ -23,6 +25,9 @@ async function Vetrina({ searchParams }: { searchParams: PageProps<'/club'>['sea
   // la lega in cui accendere il Club: quella indicata (se la organizzo) o quella attiva
   const legaId = typeof lega === 'string' && lega ? (await requireIn(lega, 'organizzatore')).lega._id : me.isAdmin ? me.lega._id : undefined
   const mio = utente ? await mioClub(utente.id) : null
+  // le leghe in cui il mio Club è già acceso: oltre MAX_LEGHE_CLUB non si può accendere in un'altra
+  const mieClub = mio && utente ? await sanity.fetch<{ _id: string; nome: string }[]>(`*[_type == "league" && club == true && clubDi == $u]{_id, nome}`, { u: utente.id }) : []
+  const pieno = !!legaId && !mieClub.some((l) => l._id === legaId) && mieClub.length >= MAX_LEGHE_CLUB
 
   const ora = [
     ['📋', t('Convocati scelti dall’allenatore'), t('Solo loro ricevono l’avviso e possono confermare.')],
@@ -60,7 +65,18 @@ async function Vetrina({ searchParams }: { searchParams: PageProps<'/club'>['sea
       </Card>
 
       <Card className="space-y-3 border-green-600">
-        {mio && legaId ? (
+        {pieno ? (
+          <div className="space-y-2 text-sm">
+            <p className="font-medium">✅ {t('Hai il Club Allenatore.')}</p>
+            <p>{t('Il Club PRO vale in {n} leghe ed è già attivo in:', { n: MAX_LEGHE_CLUB })}</p>
+            <ul className="list-inside list-disc font-semibold">
+              {mieClub.map((l) => (
+                <li key={l._id}>{l.nome}</li>
+              ))}
+            </ul>
+            <p className="text-zinc-500">{t('Per spostarlo qui, apri una di quelle leghe e in Impostazioni lega → Tipo di lega scegli “Tra amici”.')}</p>
+          </div>
+        ) : mio && legaId ? (
           <>
             <p className="font-medium">✅ {t('Hai il Club Allenatore.')}</p>
             <form action={scegliClub.bind(null, legaId)}>

@@ -175,4 +175,8 @@ export const pro: Record<string, string> = {
   "Club PRO": "Club PRO",
   "Per squadre con allenatore e società: tutto il Pro, più gli strumenti per decidere chi convocare e seguire ogni giocatore.": "Pour les équipes avec entraîneur et les clubs : tout le Pro, plus les outils pour choisir qui convoquer et suivre chaque joueur.",
   "Scopri Club PRO ›": "Découvre Club PRO ›",
+  "Il tuo Club PRO è già attivo in {n} leghe: rimetti una lega “tra amici” per spostarlo qui.": "Ton Club PRO est déjà actif dans {n} ligues : remets une ligue « entre amis » pour le déplacer ici.",
+  "Il Club PRO vale in {n} leghe ed è già attivo in:": "Le Club PRO vaut pour {n} ligues et il est déjà actif dans :",
+  "Per spostarlo qui, apri una di quelle leghe e in Impostazioni lega → Tipo di lega scegli “Tra amici”.": "Pour le déplacer ici, ouvre une de ces ligues et choisis « Entre amis » dans Réglages de la ligue → Type de ligue.",
+  "Vale per {n} leghe (squadre).": "Vaut pour {n} ligues (équipes).",
 }

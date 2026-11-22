@@ -6,6 +6,7 @@ import { ButtonLink, Card } from '@/components/ui'
 import { EtichettaClub } from '@/components/pill-scelta'
 import type { T } from '@/lib/i18n'
 import { MAX_LEGHE_PRO } from '@/lib/pro'
+import { MAX_LEGHE_CLUB } from '@/lib/entitlement'
 
 // Le parti della pagina The Cap Pro (app/(app)/pro/page.tsx).
 
@@ -284,7 +285,10 @@ export function SezioneClub({ t, legaId }: { t: T; legaId?: string }) {
         <h2 className="text-lg font-bold">🧢 {t('Club PRO')}</h2>
         <EtichettaClub />
       </div>
-      <p className="text-sm text-zinc-500">{t('Per squadre con allenatore e società: tutto il Pro, più gli strumenti per decidere chi convocare e seguire ogni giocatore.')}</p>
+      <p className="text-sm text-zinc-500">
+        {t('Per squadre con allenatore e società: tutto il Pro, più gli strumenti per decidere chi convocare e seguire ogni giocatore.')}{' '}
+        {t('Vale per {n} leghe (squadre).', { n: MAX_LEGHE_CLUB })}
+      </p>
       <ul className="space-y-3">
         {voci.map(([emoji, titolo, testo]) => (
           <li key={titolo} className="flex gap-3">
