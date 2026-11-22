@@ -2,7 +2,7 @@
 export const SEZIONI = [
   { href: '/', label: 'Partite', prefisso: '/partite' },
   { href: '/calendario', label: 'Calendario', prefisso: '/calendario' },
-  { href: '/classifica', label: 'Classifica', prefisso: '/classifica' },
+  { href: '/classifica', label: 'Statistiche', prefisso: '/classifica' },
   { href: '/giocatori', label: 'Rosa', prefisso: '/giocatori' },
 ] as const
 

@@ -276,6 +276,34 @@ export function formatoInCorso(m: Match) {
   return { iscritti, ...formatoDaIscritti(iscritti, m.postiDisponibili) }
 }
 
+// Pagelle di tutta la lega: media e numero di voti per giocatore.
+export async function getPagelleLega(legaId: string) {
+  const voti = await sanity.fetch<{ id: string; voto: number }[]>(
+    `*[_type == "match" && lega._ref == $legaId && coalesce(stato, "aperta") != "annullata" && count(pagelle) > 0].pagelle[]{"id": giocatore._ref, voto}`,
+    { legaId },
+  )
+  const per = new Map<string, { somma: number; n: number }>()
+  for (const v of voti) {
+    if (typeof v.voto !== 'number') continue
+    const x = per.get(v.id) ?? { somma: 0, n: 0 }
+    per.set(v.id, { somma: x.somma + v.voto, n: x.n + 1 })
+  }
+  return new Map([...per].map(([id, x]) => [id, { media: x.somma / x.n, n: x.n }]))
+}
+
+// Presenze agli allenamenti già fatti (non annullati): quanti allenamenti in tutto e quanti per giocatore (in lista).
+export async function getPresenzeAllenamenti(legaId: string) {
+  const allenamenti = await sanity.fetch<{ presenti: string[] | null }[]>(
+    `*[_type == "match" && lega._ref == $legaId && tipo == "allenamento" && coalesce(stato, "aperta") != "annullata" && data < $ora]{
+      "presenti": convocazioni[risposta == "presente"].giocatore._ref
+    }`,
+    { legaId, ora: new Date().toISOString() },
+  )
+  const per = new Map<string, number>()
+  for (const a of allenamenti) for (const id of a.presenti ?? []) per.set(id, (per.get(id) ?? 0) + 1)
+  return { totale: allenamenti.length, per }
+}
+
 // Pagelle dell'allenatore di un giocatore nella lega: media e numero di partite (le più recenti per prime).
 export async function getPagelleGiocatore(legaId: string, giocatoreId: string) {
   const voti = await sanity.fetch<{ voto: number; data: string }[]>(

@@ -1,23 +1,45 @@
 import Link from 'next/link'
 import { Suspense } from 'react'
 import { displayName, requirePlayer, type Player } from '@/lib/player'
-import { getAllStats, getKmRecord, getKmTotali, getPartitePunteggio, getPlayers, type PlayerStats } from '@/lib/matches'
+import { getAllStats, getKmRecord, getKmTotali, getPagelleLega, getPartitePunteggio, getPlayers, getPresenzeAllenamenti, type PlayerStats } from '@/lib/matches'
+import { MOTIVI_INDISPONIBILE, indisponibileIl } from '@/lib/roster'
+import { isoToRomeLocal } from '@/lib/dates'
+import { EtichettaClub, PillScelta } from '@/components/pill-scelta'
 import { legaPro } from '@/lib/pro'
 import { KmBloccati, KmPercorsi } from '@/components/km-classifica'
 import { PUNTI, classifica, type RigaClassifica } from '@/lib/punteggio'
-import { Avatar, Card, Loading, PageTitle, PlayerBadge } from '@/components/ui'
+import { Avatar, Card, Loading, PageTitle, PlayerBadge, coloreVoto } from '@/components/ui'
 import { getT } from '@/lib/lingua'
 import type { T } from '@/lib/i18n'
 
-export default async function ClassificaPage() {
+// Statistiche: due viste con la pillola in alto. Di base "Statistiche" nelle leghe Club Allenatore,
+// "Classifica" nelle leghe tra amici.
+export default async function StatistichePage({ searchParams }: PageProps<'/classifica'>) {
   const t = await getT()
   return (
     <>
-      <PageTitle>{t('Classifica')}</PageTitle>
+      <PageTitle>{t('Statistiche')}</PageTitle>
       <Suspense fallback={<Loading />}>
-        <Classifiche />
+        <Viste searchParams={searchParams} />
       </Suspense>
     </>
+  )
+}
+
+async function Viste({ searchParams }: { searchParams: PageProps<'/classifica'>['searchParams'] }) {
+  const [{ vista }, me, t] = await Promise.all([searchParams, requirePlayer(), getT()])
+  const club = !!me.lega.club && me.lega.tipo === 'squadra'
+  const statistiche = vista === 'statistiche' || (vista !== 'classifica' && club)
+  return (
+    <div className="space-y-4">
+      <PillScelta
+        voci={[
+          { href: '/classifica?vista=statistiche', label: `📊 ${t('Statistiche')}`, attiva: statistiche },
+          { href: '/classifica?vista=classifica', label: `🏅 ${t('Classifica')}`, attiva: !statistiche },
+        ]}
+      />
+      {statistiche ? <Statistiche club={club} /> : <Classifiche />}
+    </div>
   )
 }
 
@@ -191,5 +213,140 @@ function Generale({ righe, giocatori, mioId, t }: { righe: RigaClassifica[]; gio
         </p>
       </details>
     </Card>
+  )
+}
+
+// Vista "Statistiche": rendimento di ogni giocatore e, con il Club Allenatore, pagelle, presenze agli
+// allenamenti, indisponibili e dati da Veo. Senza Club le parti del Club si vedono, bloccate.
+async function Statistiche({ club }: { club: boolean }) {
+  const [me, t] = await Promise.all([requirePlayer(), getT()])
+  const [players, stats, km, pagelle, allenamenti] = await Promise.all([
+    getPlayers(me.lega._id),
+    getAllStats(me.lega._id),
+    getKmTotali(me.lega._id),
+    club ? getPagelleLega(me.lega._id) : new Map<string, { media: number; n: number }>(),
+    club ? getPresenzeAllenamenti(me.lega._id) : { totale: 0, per: new Map<string, number>() },
+  ])
+  const attivi = players.filter((p) => p.attivo !== false)
+  const numero = (n: number) => t.numero(Math.round(n * 10) / 10)
+  const righe = attivi
+    .map((p) => ({ p, s: stats.get(p._id), km: km.get(p._id), pag: pagelle.get(p._id) }))
+    .filter((r) => (r.s?.giocate ?? 0) > 0 || r.pag)
+    .sort((a, b) => (b.s?.giocate ?? 0) - (a.s?.giocate ?? 0) || (b.pag?.media ?? 0) - (a.pag?.media ?? 0))
+  const oggi = isoToRomeLocal(new Date().toISOString()).slice(0, 10)
+  const fuori = attivi.filter((p) => indisponibileIl(p, oggi))
+  const bloccato = (testo: string) => (
+    <div className="space-y-1 rounded-lg bg-zinc-50 p-3 text-sm dark:bg-zinc-950">
+      <p className="text-zinc-500">🔒 {testo}</p>
+      <Link href={`/club${me.isAdmin ? `?lega=${me.lega._id}` : ''}`} className="font-semibold text-green-700 hover:underline dark:text-green-400">
+        {t('Scopri il Club Allenatore ›')}
+      </Link>
+    </div>
+  )
+
+  return (
+    <>
+      <Card className="space-y-3">
+        <h2 className="font-semibold">📊 {t('Rendimento dei giocatori')}</h2>
+        {righe.length === 0 ? (
+          <p className="text-sm text-zinc-500">{t('Le statistiche compariranno dopo la prima partita con il risultato.')}</p>
+        ) : (
+          <div className="-mx-4 overflow-x-auto px-4">
+            <table className="w-full min-w-[22rem] text-sm">
+              <thead className="text-xs text-zinc-500">
+                <tr className="text-right">
+                  <th className="py-1 text-left font-medium">{t('Giocatore')}</th>
+                  <th className="px-1 font-medium" title={t('Partite giocate')}>{t('Pres.')}</th>
+                  <th className="px-1 font-medium">⚽</th>
+                  <th className="px-1 font-medium">🫑</th>
+                  <th className="px-1 font-medium" title={t('Km a partita')}>{t('km/p')}</th>
+                  {club && <th className="pl-1 font-medium" title={t('Media pagelle')}>📝</th>}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
+                {righe.map(({ p, s, km: k, pag }) => (
+                  <tr key={p._id} className={`text-right tabular-nums ${p._id === me._id ? 'font-bold' : ''}`}>
+                    <td className="max-w-[9rem] truncate py-1.5 text-left">
+                      <Link href={`/giocatori/${p._id}`} className="hover:underline">
+                        {displayName(p)}
+                      </Link>
+                    </td>
+                    <td className="px-1">{s?.giocate ?? 0}</td>
+                    <td className="px-1">{s?.gol ?? 0}</td>
+                    <td className="px-1">{s?.mvp ?? 0}</td>
+                    <td className="px-1">{k && k.partite ? numero(k.km / k.partite) : '–'}</td>
+                    {club && (
+                      <td className="pl-1">
+                        {pag ? <span className={`rounded px-1 ${coloreVoto(pag.media)}`}>{numero(pag.media)}</span> : '–'}
+                      </td>
+                    )}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+        {!club && bloccato(t('Media delle pagelle dell’allenatore: con il Club Allenatore.'))}
+      </Card>
+
+      <Card className="space-y-3">
+        <h2 className="flex items-center gap-2 font-semibold">
+          🏃 {t('Presenze agli allenamenti')} <EtichettaClub />
+        </h2>
+        {!club ? (
+          bloccato(t('Quante volte ognuno si è allenato, in percentuale.'))
+        ) : allenamenti.totale === 0 ? (
+          <p className="text-sm text-zinc-500">{t('Ancora nessun allenamento fatto.')}</p>
+        ) : (
+          <ol className="space-y-1.5 text-sm">
+            {attivi
+              .map((p) => ({ p, n: allenamenti.per.get(p._id) ?? 0 }))
+              .sort((a, b) => b.n - a.n)
+              .map(({ p, n }) => {
+                const perc = Math.round((n / allenamenti.totale) * 100)
+                return (
+                  <li key={p._id} className="grid grid-cols-[1fr_6rem_3rem] items-center gap-2">
+                    <span className="truncate">{displayName(p)}</span>
+                    <span className="h-2 overflow-hidden rounded-full bg-zinc-100 dark:bg-zinc-800">
+                      <span className="block h-full rounded-full bg-green-600" style={{ width: `${perc}%` }} />
+                    </span>
+                    <span className="text-right tabular-nums text-zinc-500">{perc}%</span>
+                  </li>
+                )
+              })}
+            <li className="pt-1 text-xs text-zinc-500">{t('Su {n} allenamenti fatti.', { n: allenamenti.totale })}</li>
+          </ol>
+        )}
+      </Card>
+
+      {club && fuori.length > 0 && (
+        <Card className="space-y-2">
+          <h2 className="font-semibold">🩺 {t('Indisponibili oggi')}</h2>
+          <ul className="space-y-1 text-sm">
+            {fuori.map((p) => (
+              <li key={p._id} className="flex justify-between gap-2">
+                <Link href={`/giocatori/${p._id}`} className="truncate hover:underline">
+                  {MOTIVI_INDISPONIBILE[p.indisponibile!.motivo].emoji} {displayName(p)}
+                </Link>
+                <span className="shrink-0 text-zinc-500">
+                  {p.indisponibile?.fino ? t('fino al {data}', { data: t.data(`${p.indisponibile.fino}T12:00:00Z`, { day: 'numeric', month: 'short' }) }) : t(MOTIVI_INDISPONIBILE[p.indisponibile!.motivo].label)}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </Card>
+      )}
+
+      <Card className="space-y-3">
+        <h2 className="flex items-center gap-2 font-semibold">
+          🎥 {t('Dati da Veo')} <EtichettaClub />
+        </h2>
+        {club ? (
+          <p className="text-sm text-zinc-500">⏳ {t('In arrivo: km, sprint, velocità, passaggi e tiri di ogni partita registrata con Veo.')}</p>
+        ) : (
+          bloccato(t('Le statistiche delle partite registrate con le telecamere Veo.'))
+        )}
+      </Card>
+    </>
   )
 }
