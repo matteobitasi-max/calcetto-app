@@ -288,7 +288,7 @@ function ScenePartita({ t, tempo: { passo, ms } }: Demo) {
 const DURATE_TORNEO = [1800, 4200, 3600, 3000] as const
 const FORMATI = ['Girone all’italiana', 'Eliminazione diretta', 'Gironi'] as const
 function SceneTorneo({ t, tempo: { passo, ms } }: Demo) {
-  const nome = t('Es. Torneo d’autunno').replace(/^[^ ]+ /, '')
+  const nome = t('Torneo d’autunno')
   const formato = passo === 1 ? Math.min(2, Math.floor(Math.max(0, ms - 2200) / 700)) : 0
   const bilanciato = passo === 2 && ms > 1400
   const squadre = [

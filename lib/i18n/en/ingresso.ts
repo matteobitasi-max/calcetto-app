@@ -151,4 +151,5 @@ export const ingresso: Record<string, string> = {
   "A fine partita dai un voto e una nota a chi ha giocato": "After the match, give a rating and a note to whoever played",
   "Ogni giocatore vede il suo voto e la nota, solo per lui": "Each player sees their rating and note, just for them",
   "Nelle Statistiche: presenze agli allenamenti e media delle pagelle": "In Stats: training attendance and average ratings",
+  "Torneo d’autunno": "Autumn Cup",
 }
