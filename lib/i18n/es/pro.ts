@@ -185,4 +185,11 @@ export const pro: Record<string, string> = {
   "Tutto il Pro, più:": "Todo el Pro, más:",
   "Le differenze": "Las diferencias",
   "Le funzioni nel dettaglio": "Las funciones en detalle",
+  "Statistiche dell’allenatore": "Estadísticas del entrenador",
+  "Le statistiche sono una funzione del Club Allenatore. Dentro trovi:": "Las estadísticas son una función del Club Entrenador. Dentro encuentras:",
+  "Rendimento di ogni giocatore: presenze, gol, MVP e km a partita": "Rendimiento de cada jugador: partidos, goles, MVP y km por partido",
+  "Media delle pagelle dell’allenatore": "Media de las notas del entrenador",
+  "Presenze agli allenamenti, in percentuale": "Asistencia a los entrenamientos, en porcentaje",
+  "Chi è infortunato o squalificato e fino a quando": "Quién está lesionado o sancionado y hasta cuándo",
+  "Dati dalle telecamere Veo (in arrivo)": "Datos de las cámaras Veo (próximamente)",
 }

@@ -34,8 +34,8 @@ async function Viste({ searchParams }: { searchParams: PageProps<'/classifica'>[
     <div className="space-y-4">
       <PillScelta
         voci={[
-          { href: '/classifica?vista=statistiche', label: `📊 ${t('Statistiche')}`, attiva: statistiche },
           { href: '/classifica?vista=classifica', label: `🏅 ${t('Classifica')}`, attiva: !statistiche },
+          { href: '/classifica?vista=statistiche', label: `📊 ${t('Statistiche')}`, attiva: statistiche },
         ]}
       />
       {statistiche ? <Statistiche club={club} /> : <Classifiche />}
@@ -220,6 +220,7 @@ function Generale({ righe, giocatori, mioId, t }: { righe: RigaClassifica[]; gio
 // allenamenti, indisponibili e dati da Veo. Senza Club le parti del Club si vedono, bloccate.
 async function Statistiche({ club }: { club: boolean }) {
   const [me, t] = await Promise.all([requirePlayer(), getT()])
+  if (!club) return <StatisticheBloccate legaId={me.isAdmin ? me.lega._id : undefined} t={t} />
   const [players, stats, km, pagelle, allenamenti] = await Promise.all([
     getPlayers(me.lega._id),
     getAllStats(me.lega._id),
@@ -348,5 +349,36 @@ async function Statistiche({ club }: { club: boolean }) {
         )}
       </Card>
     </>
+  )
+}
+
+// Senza Club: le Statistiche si vedono solo con il Club Allenatore. Cosa contengono e il link per attivarlo.
+function StatisticheBloccate({ legaId, t }: { legaId?: string; t: T }) {
+  const voci = [
+    t('Rendimento di ogni giocatore: presenze, gol, MVP e km a partita'),
+    t('Media delle pagelle dell’allenatore'),
+    t('Presenze agli allenamenti, in percentuale'),
+    t('Chi è infortunato o squalificato e fino a quando'),
+    t('Dati dalle telecamere Veo (in arrivo)'),
+  ]
+  return (
+    <Card className="space-y-4 border-2 border-zinc-900 dark:border-white">
+      <div className="flex items-center justify-between gap-2">
+        <h2 className="font-semibold">🔒 {t('Statistiche dell’allenatore')}</h2>
+        <EtichettaClub />
+      </div>
+      <p className="text-sm text-zinc-500">{t('Le statistiche sono una funzione del Club Allenatore. Dentro trovi:')}</p>
+      <ul className="space-y-1.5 text-sm">
+        {voci.map((v) => (
+          <li key={v} className="flex gap-2">
+            <span className="font-bold text-green-600">✓</span>
+            <span>{v}</span>
+          </li>
+        ))}
+      </ul>
+      <Link href={`/club${legaId ? `?lega=${legaId}` : ''}`} className="block rounded-xl bg-zinc-900 py-3 text-center text-sm font-bold text-white hover:bg-zinc-800 dark:bg-white dark:text-zinc-900">
+        {t('Scopri Club PRO ›')}
+      </Link>
+    </Card>
   )
 }
