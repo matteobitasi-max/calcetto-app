@@ -478,7 +478,7 @@ function SceneConvocati({ t, tempo: { passo, ms } }: Demo) {
             const fuori = 'fuori' in g
             const preso = !fuori && i < spuntati
             return (
-              <div key={g.n} className={`flex items-center gap-2 rounded-md border border-zinc-200 bg-white px-2 py-1 dark:border-zinc-800 dark:bg-zinc-900 ${fuori ? 'opacity-50' : ''}`}>
+              <div key={g.n} className={`flex items-center gap-2 rounded-md border border-zinc-200 bg-white px-2 py-0.5 dark:border-zinc-800 dark:bg-zinc-900 ${fuori ? 'opacity-50' : ''}`}>
                 <span className={`flex h-3.5 w-3.5 items-center justify-center rounded border text-[9px] text-white ${preso ? 'border-green-600 bg-green-600' : 'border-zinc-400'}`}>{preso ? '✓' : ''}</span>
                 <span className="w-4 text-right font-semibold tabular-nums text-zinc-400">{g.n}</span>
                 <span className="flex-1">{g.nome}</span>
