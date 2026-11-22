@@ -20,13 +20,13 @@ async function Form({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const player = await getPlayer(id)
   if (!player) notFound()
-  const [, t] = await Promise.all([requireIn(player.legaId, 'organizzatore'), getT()])
+  const [me, t] = await Promise.all([requireIn(player.legaId, 'organizzatore'), getT()])
   return (
     <>
       <PageTitle>{t('Modifica {nome}', { nome: displayName(player) })}</PageTitle>
       <AggiornaAllApertura />
       {/* key: con dati più nuovi (altra revisione) il modulo riparte da quelli */}
-      <PlayerForm key={player._rev} action={salvaGiocatore.bind(null, player._id)} player={player} submitLabel={t('Salva')} />
+      <PlayerForm key={player._rev} action={salvaGiocatore.bind(null, player._id)} player={player} submitLabel={t('Salva')} club={!!me.lega.club} />
     </>
   )
 }

@@ -78,6 +78,7 @@ async function Importa({ searchParams }: { searchParams: PageProps<'/giocatori/i
       return {
         id: lega._id,
         nome: lega.nome,
+        club: !!lega.club,
         modello: percorsoModello(lega._id),
         rosa,
         // tornei non ancora finiti, con le loro squadre (solo se la lega può usare i tornei)

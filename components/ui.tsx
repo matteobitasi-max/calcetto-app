@@ -3,7 +3,7 @@ import Link from 'next/link'
 import type { ComponentProps, ReactNode } from 'react'
 import { PallinoAdmin } from './pallino-admin'
 import { EtichettaPro, MarchioPro } from './logo-c'
-import { BADGE, MOTIVI_INDISPONIBILE, SKILLS, displayName, indisponibileIl, iniziali, overall, type Badge, type Player, type Skill } from '@/lib/roster'
+import { BADGE, MOTIVI_INDISPONIBILE, SKILLS, displayName, indisponibileIl, iniziali, isAllenatore, overall, type Badge, type Player, type Skill } from '@/lib/roster'
 import { isoToRomeLocal } from '@/lib/dates'
 import type { Risposta, Stato } from '@/lib/matches'
 import { finestra } from '@/lib/finestra'
@@ -243,7 +243,7 @@ export async function PlayerRow({
       {organizzatore ? <IconaOrganizzatore pro={!!player.pro} /> : player.pro && <MarchioPro />}
       {prima}
       {forma != null && <FrecciaForma forma={forma} />}
-      <Overall player={player} />
+      {isAllenatore(player) ? <span className="w-10 text-center text-xl" title={t('allenatore')}>🧑‍🏫</span> : <Overall player={player} />}
       {right}
     </div>
   )

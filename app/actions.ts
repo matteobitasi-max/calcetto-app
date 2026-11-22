@@ -5,7 +5,7 @@ import { cookies } from 'next/headers'
 import { refresh, revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { sanity } from '@/lib/sanity'
-import { BADGE, CATEGORIE_NOTIFICHE, COOKIE_LEGA, eta, normalizzaTelefono, PIEDI, RUOLI, SKILLS, displayName, requirePlayer, getUtente, getMemberships, isTitolare, membroDi, soloGiocatore, requireAdmin, requireForDoc, requireIn, type Player, type Skill } from '@/lib/player'
+import { BADGE, CATEGORIE_NOTIFICHE, COOKIE_LEGA, eta, leggiRuolo, normalizzaTelefono, PIEDI, RUOLI, SKILLS, displayName, requirePlayer, getUtente, getMemberships, isTitolare, membroDi, soloGiocatore, requireAdmin, requireForDoc, requireIn, type Player, type Skill } from '@/lib/player'
 import { assegnaPosti, conSelezione, finestra, getMatch, getPartiteTorneo, getPlayers, orarioPartita, presenti, risultatoDa, type FonteKm, type Match, type Risposta, type Stato } from '@/lib/matches'
 import { idPlaylist, intervisteDellaPlaylist } from '@/lib/interviste'
 import { kmStrava, scollega, stravaConfigurato, urlCollegamento } from '@/lib/strava'
@@ -963,7 +963,7 @@ export async function salvaGiocatore(playerId: string | null, _prev: FormState, 
     telefono: telefono || undefined,
     cognome: str(formData, 'cognome') || undefined,
     soprannome: str(formData, 'soprannome') || undefined,
-    ruolo: (RUOLI as readonly string[]).includes(ruolo) ? ruolo : undefined,
+    ruolo: leggiRuolo(ruolo, admin.lega.club) || undefined,
     piede: (PIEDI as readonly string[]).includes(piede) ? piede : undefined,
     badge: badgeFromForm(formData),
     foto: fotoField,
@@ -1852,7 +1852,10 @@ export async function salvaAccount(_prev: FormState, formData: FormData): Promis
     },
   })
 
-  const schede = await sanity.fetch<string[]>(`*[_type == "player" && clerkUserId == $id]._id`, { id: utente.id })
+  const mieSchede = await sanity.fetch<{ _id: string; ruolo?: string }[]>(`*[_type == "player" && clerkUserId == $id]{_id, ruolo}`, { id: utente.id })
+  const schede = mieSchede.map((s) => s._id)
+  // nelle leghe Club il ruolo preciso (es. terzino destro, allenatore) lo decide l'allenatore: il profilo non lo cambia
+  const ruoloClub = new Set(mieSchede.filter((s) => s.ruolo && !(RUOLI as readonly string[]).includes(s.ruolo)).map((s) => s._id))
   // foto nuova: quelle di prima (profilo e schede) si cancellano dopo il salvataggio, se non servono più
   const fotoPrima = upload
     ? [utente.fotoAsset, ...(await sanity.fetch<string[]>(`*[_id in $schede].foto.asset._ref`, { schede }))]
@@ -1861,15 +1864,16 @@ export async function salvaAccount(_prev: FormState, formData: FormData): Promis
     const valori = { cognome, telefono, ruolo, piede, dataNascita }
     const tx = sanity.transaction()
     for (const id of schede) {
+      const campi = Object.entries(valori).filter(([k]) => !(k === 'ruolo' && ruoloClub.has(id)))
       tx.patch(id, (p) =>
         p
           .set({
             nome,
             ...(upload && { foto: upload.foto }),
             ...(consensi.immagini && { consensoImmagini: consensi.immagini.si }),
-            ...Object.fromEntries(Object.entries(valori).filter(([, v]) => v)),
+            ...Object.fromEntries(campi.filter(([, v]) => v)),
           })
-          .unset(Object.entries(valori).filter(([, v]) => !v).map(([k]) => k)),
+          .unset(campi.filter(([, v]) => !v).map(([k]) => k)),
       )
     }
     await tx.commit()
@@ -2715,7 +2719,7 @@ export async function importaGiocatori(
   righe: RigaImport[],
   invita = false,
 ): Promise<EsitoImport> {
-  await requireIn(legaId, 'organizzatore')
+  const { lega } = await requireIn(legaId, 'organizzatore')
   if (!Array.isArray(righe) || righe.length === 0) return { error: await tr('Il file non contiene giocatori.') }
   if (righe.length > 300) return { error: await tr('Al massimo 300 giocatori per volta.') }
   const testo = (x: unknown, max: number) => (typeof x === 'string' ? x.trim().slice(0, max) : '')
@@ -2727,7 +2731,7 @@ export async function importaGiocatori(
     soprannome: testo(r.soprannome, 30),
     // numero di maglia: solo un intero da 0 a 99 (es. "10", "#10", "10.0" da Excel)
     numero: numeroMaglia(r.numero),
-    ruolo: (RUOLI as readonly string[]).includes(testo(r.ruolo, 20).toLowerCase()) ? testo(r.ruolo, 20).toLowerCase() : '',
+    ruolo: leggiRuolo(testo(r.ruolo, 30), lega.club),
     torneo: testo(r.torneo, 60),
     squadra: testo(r.squadra, 60),
   }))

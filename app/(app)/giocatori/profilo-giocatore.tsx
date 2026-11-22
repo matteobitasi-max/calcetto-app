@@ -2,7 +2,7 @@ import { Suspense } from 'react'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { SignOutButton } from '@clerk/nextjs'
-import { displayName, eta, getMemberships, isTitolare, membroDi } from '@/lib/player'
+import { displayName, eta, getMemberships, isAllenatore, isTitolare, membroDi } from '@/lib/player'
 import { getKmTotali, getPagelleGiocatore, getPartitePunteggio, getPlayer, getPlayerStats, getStorico, type PartitaGiocata, type PlayerStats } from '@/lib/matches'
 import { classifica } from '@/lib/punteggio'
 import { TROFEI, trofeiLega, type IdTrofeo } from '@/lib/trofei'
@@ -49,6 +49,7 @@ export async function ProfiloGiocatore({ id }: { id: string }) {
   const cambiaFoto = canEdit || mio
   // le altre leghe che organizzo: lì posso portare il giocatore
   const altreLeghe = canEdit ? mie.filter((m) => m.isAdmin && m.lega._id !== me.lega._id).map((m) => ({ id: m.lega._id, nome: m.lega.nome })) : []
+  const allenatore = isAllenatore(player)
   const ruoli = [
     player.isAdmin && t('organizzatore'),
     !player.isAdmin && player.puoInserireRisultati && t('refertatore'),
@@ -89,6 +90,11 @@ export async function ProfiloGiocatore({ id }: { id: string }) {
             </p>
             {player.collegato === false && <p className="text-xs text-amber-700 dark:text-amber-400">⏳ {t('non ha ancora fatto l’accesso')}</p>}
           </div>
+          {allenatore ? (
+            <span className="shrink-0 pt-6 text-4xl" aria-hidden>
+              🧑‍🏫
+            </span>
+          ) : (
           <div className="flex shrink-0 flex-col items-center gap-1 pt-6">
             <Overall player={player} grande />
             {inClassifica ? (
@@ -101,6 +107,7 @@ export async function ProfiloGiocatore({ id }: { id: string }) {
               <p className="text-xs text-zinc-400">{t('voto')}</p>
             )}
           </div>
+          )}
         </div>
         {me.isAdmin && (
           <Link href={`/giocatori/${player._id}/unisci`} className="mt-3 block text-right text-xs text-zinc-500 hover:underline">
@@ -109,6 +116,9 @@ export async function ProfiloGiocatore({ id }: { id: string }) {
         )}
       </Card>
 
+      {/* l'allenatore non gioca: niente indisponibilità, pagelle, statistiche, trofei né caratteristiche */}
+      {!allenatore && (
+        <>
       {/* leghe "Squadra": infortunato, squalificato o indisponibile */}
       {me.lega.club && me.lega.tipo === 'squadra' && <Indisponibilita player={player} modifica={canEdit} />}
       {me.lega.club && me.lega.tipo === 'squadra' && me.lega.pagelle !== false && <MediaPagelle legaId={me.lega._id} giocatoreId={player._id} t={t} />}
@@ -131,6 +141,8 @@ export async function ProfiloGiocatore({ id }: { id: string }) {
         <h2 className="mb-3 font-semibold">{t('Caratteristiche')}</h2>
         <SkillBars player={player} />
       </Card>
+        </>
+      )}
 
       <Suspense>
         <IntervisteLega legaId={me.lega._id} playlist={me.lega.playlistInterviste} giocatore={player._id} />

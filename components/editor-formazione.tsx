@@ -3,6 +3,7 @@
 import { useActionState, useState } from 'react'
 import type { FormState } from '@/app/actions'
 import { MODULI, SIGLA, posti, proponi, type Formato } from '@/lib/moduli'
+import { siglaRuolo } from '@/lib/roster'
 import { CampoTitolari, type Pedina } from './campo-titolari'
 import { useT } from './lingua'
 import { buttonClass, inputClass } from './ui-classes'
@@ -102,7 +103,7 @@ export function EditorFormazione({
                   >
                     {c.numero != null && `${c.numero} `}
                     {c.nome}
-                    {c.ruolo && <span className="opacity-60"> · {c.ruolo.slice(0, 3)}</span>}
+                    {c.ruolo && <span className="opacity-60"> · {siglaRuolo(c.ruolo)}</span>}
                   </button>
                 ))}
                 {scelti[attivo] && (
@@ -141,7 +142,7 @@ export function EditorFormazione({
                 >
                   <span className="w-5 text-right text-xs font-semibold tabular-nums text-zinc-400">{c.numero ?? ''}</span>
                   <span className="flex-1 truncate">{c.nome}</span>
-                  {c.ruolo && <span className="text-[10px] text-zinc-500">{c.ruolo.slice(0, 3)}</span>}
+                  {c.ruolo && <span className="text-[10px] text-zinc-500">{siglaRuolo(c.ruolo)}</span>}
                 </li>
               ))}
             </ul>

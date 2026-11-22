@@ -1,6 +1,6 @@
 import 'server-only'
 import { getAllStats, getPagelleLega, getPlayers } from './matches'
-import { SKILLS, displayName, indisponibileIl, overall, type Player, type Skill } from './roster'
+import { SKILLS, displayName, indisponibileIl, isAllenatore, overall, type Player, type Skill } from './roster'
 import { isoToRomeLocal } from './dates'
 
 // La rosa come tabella (vista da computer ed esportazione): una riga per giocatore attivo.
@@ -46,7 +46,10 @@ export async function righeRosa(legaId: string, club: boolean, ordine: Ordine = 
   const valore = (r: RigaRosa): number | string =>
     ordine === 'nome' ? r.nome.toLowerCase() : ordine === 'ruolo' ? (r.ruolo ?? '~') : ordine === 'numero' ? (r.numero ?? 999) : ordine in r.skill ? r.skill[ordine as Skill] : ((r[ordine as keyof RigaRosa] as number | null) ?? -1)
   const crescente = ordine === 'nome' || ordine === 'ruolo' || ordine === 'numero'
+  // gli allenatori in fondo, poi l'ordine scelto
   return righe.sort((a, b) => {
+    const staff = Number(isAllenatore(a.player)) - Number(isAllenatore(b.player))
+    if (staff) return staff
     const x = valore(a)
     const y = valore(b)
     const d = typeof x === 'string' ? x.localeCompare(String(y)) : (x as number) - (y as number)

@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { Suspense } from 'react'
 import { salvaSquadreTorneo } from '@/app/actions'
-import { displayName, requireIn } from '@/lib/player'
+import { displayName, isAllenatore, requireIn } from '@/lib/player'
 import { getPlayers } from '@/lib/matches'
 import { forza } from '@/lib/teams'
 import { avatarUrl } from '@/lib/image'
@@ -35,7 +35,7 @@ async function Editor({ params }: { params: Promise<{ id: string }> }) {
 
   const nelTorneo = new Set(torneo.squadre.flatMap((s) => s.giocatori.map((g) => g._id)))
   const rosa = (await getPlayers(torneo.legaId))
-    .filter((p) => p.attivo !== false || nelTorneo.has(p._id))
+    .filter((p) => (p.attivo !== false && !isAllenatore(p)) || nelTorneo.has(p._id))
     .map((p) => ({ id: p._id, nome: displayName(p), forza: forza(p), ruolo: p.ruolo }))
   const squadraIniziale = Object.fromEntries(torneo.squadre.flatMap((s, i) => s.giocatori.map((g) => [g._id, String(i)])))
 

@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { Suspense } from 'react'
 import { salvaConvocati } from '@/app/actions'
-import { displayName, requireIn } from '@/lib/player'
+import { displayName, isAllenatore, requireIn } from '@/lib/player'
 import { conSelezione, getMatch, getPlayers } from '@/lib/matches'
 import { MOTIVI_INDISPONIBILE, indisponibileIl } from '@/lib/roster'
 import { isoToRomeLocal } from '@/lib/dates'
@@ -28,7 +28,7 @@ async function Elenco({ params }: { params: Promise<{ id: string }> }) {
   const match = await getMatch(id)
   if (!match || !conSelezione(match)) notFound()
   const [admin, t] = await Promise.all([requireIn(match.legaId, 'organizzatore'), getT()])
-  const rosa = (await getPlayers(admin.lega._id)).filter((p) => p.attivo !== false)
+  const rosa = (await getPlayers(admin.lega._id)).filter((p) => p.attivo !== false && !isAllenatore(p))
   const giorno = isoToRomeLocal(match.data).slice(0, 10)
   const risposte = new Map(match.convocazioni.map((c) => [c.giocatore._id, c.risposta]))
   const candidati: Candidato[] = rosa

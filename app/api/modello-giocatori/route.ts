@@ -1,7 +1,7 @@
 import ExcelJS from 'exceljs'
 import { sanity } from '@/lib/sanity'
 import { modelloValido } from '@/lib/modello'
-import { RUOLI } from '@/lib/roster'
+import { ruoliValidi } from '@/lib/roster'
 
 // Il modello Excel per importare i giocatori in una lega: colonne pronte e menu a tendina per Ruolo,
 // Torneo (i tornei non ancora finiti della lega) e Squadra (le squadre di quei tornei).
@@ -11,8 +11,8 @@ export async function GET(request: Request) {
   if (!modelloValido(legaId, Number(url.searchParams.get('scade')), url.searchParams.get('firma') ?? '')) {
     return new Response('Link scaduto: scaricalo di nuovo dalla pagina Importa giocatori.', { status: 403 })
   }
-  const lega = await sanity.fetch<{ nome: string; tornei: { nome: string; squadre: string[] }[] } | null>(
-    `*[_type == "league" && _id == $legaId][0]{nome,
+  const lega = await sanity.fetch<{ nome: string; club?: boolean; tornei: { nome: string; squadre: string[] }[] } | null>(
+    `*[_type == "league" && _id == $legaId][0]{nome, club,
       "tornei": *[_type == "tournament" && lega._ref == ^._id
         && (count(*[_type == "match" && torneo._ref == ^._id]) == 0 || count(*[_type == "match" && torneo._ref == ^._id && stato != "giocata"]) > 0)]
         | order(_createdAt desc){nome, "squadre": coalesce(squadre[].nome, [])}}`,
@@ -39,6 +39,8 @@ export async function GET(request: Request) {
   intestazione.font = { bold: true, color: { argb: 'FFFFFFFF' } }
   intestazione.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF16A34A' } }
 
+  // Club PRO: i ruoli precisi e l'allenatore
+  const RUOLI = ruoliValidi(lega.club)
   // elenchi per i menu a tendina, in un foglio nascosto
   const elenchi = libro.addWorksheet('Elenchi', { state: 'veryHidden' })
   const tornei = lega.tornei.map((t) => t.nome)

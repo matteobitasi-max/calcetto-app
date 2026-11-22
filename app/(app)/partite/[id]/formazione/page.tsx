@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { Suspense } from 'react'
 import { salvaFormazioneTitolare } from '@/app/actions'
-import { displayName, requireIn } from '@/lib/player'
+import { displayName, isAllenatore, requireIn } from '@/lib/player'
 import { getMatch, presenti } from '@/lib/matches'
 import { isFormato, moduloPer, posti, proponi } from '@/lib/moduli'
 import { forza } from '@/lib/teams'
@@ -35,7 +35,7 @@ async function Editor({ params }: { params: Promise<{ id: string }> }) {
       ← {t('Torna alla partita')}
     </Link>
   )
-  const inLista = presenti(match).map((c) => c.giocatore)
+  const inLista = presenti(match).map((c) => c.giocatore).filter((p) => !isAllenatore(p))
   if (inLista.length === 0) {
     return (
       <Card className="space-y-2">

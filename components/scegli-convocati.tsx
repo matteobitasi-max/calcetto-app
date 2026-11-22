@@ -65,7 +65,7 @@ export function ScegliConvocati({
                     className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm hover:bg-zinc-50 disabled:opacity-50 dark:hover:bg-zinc-800"
                   >
                     <span className="min-w-0 flex-1 truncate font-medium">{c.nome}</span>
-                    <span className="text-xs text-zinc-500">{c.indisponibile ?? c.ruolo ?? ''}</span>
+                    <span className="text-xs text-zinc-500">{c.indisponibile ?? (c.ruolo ? t(c.ruolo) : '')}</span>
                     {!c.indisponibile && <span className={`text-lg ${convocati ? 'text-red-500' : 'text-green-600'}`}>{convocati ? '−' : '+'}</span>}
                   </button>
                 </li>
@@ -93,7 +93,7 @@ export function ScegliConvocati({
                 <span className="min-w-0 flex-1">
                   <span className="block truncate font-medium">{c.nome}</span>
                   <span className="block text-xs text-zinc-500">
-                    {c.indisponibile ?? c.ruolo ?? ''}
+                    {c.indisponibile ?? (c.ruolo ? t(c.ruolo) : '')}
                     {!c.indisponibile && c.risposta === 'presente' && ` ${c.ruolo ? '· ' : ''}✅ ${t('ha confermato')}`}
                     {!c.indisponibile && c.risposta === 'assente' && ` ${c.ruolo ? '· ' : ''}❌ ${t('non può')}`}
                   </span>

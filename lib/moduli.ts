@@ -1,3 +1,5 @@
+import { lineaDi } from './roster'
+
 // Formati di gioco e moduli del Club: quanti giocano per squadra (portiere compreso) e come si dispongono.
 // Il modulo conta solo i giocatori di movimento, dalla difesa all'attacco (es. 4-4-2 = 4 difensori, 4 centrocampisti, 2 attaccanti).
 
@@ -42,7 +44,7 @@ export function posti(modulo: string): Posto[] {
 // Formazione proposta: in ogni posto chi ha quel ruolo, dal più forte; i posti rimasti ai jolly e poi ai più forti
 // tra gli altri. Chi non entra va in panchina. Restituisce l'id per ogni posto (null se mancano giocatori).
 export function proponi(modulo: string, giocatori: { id: string; ruolo?: string; forza: number }[]): (string | null)[] {
-  const liberi = [...giocatori].sort((a, b) => b.forza - a.forza)
+  const liberi = giocatori.map((g) => ({ ...g, ruolo: lineaDi(g.ruolo) })).sort((a, b) => b.forza - a.forza)
   const prendi = (filtro: (g: (typeof liberi)[number]) => boolean) => {
     const i = liberi.findIndex(filtro)
     return i < 0 ? null : liberi.splice(i, 1)[0].id

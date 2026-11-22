@@ -23,6 +23,50 @@ export const SKILL_DESCRIPTIONS: Record<Skill, string> = {
 export type Skill = keyof typeof SKILLS
 
 export const RUOLI = ['portiere', 'difensore', 'centrocampista', 'attaccante', 'jolly'] as const
+
+// Club PRO: i ruoli precisi di una squadra vera, divisi per reparto, con la sigla. Ognuno appartiene a una
+// linea (portiere, difensore, centrocampista, attaccante): così formazioni e squadre li trattano come i ruoli base.
+// "Allenatore" è nella rosa ma non gioca: niente caratteristiche, voti, convocazioni né formazioni.
+export const REPARTI_CLUB = [
+  { reparto: 'Portieri', linea: 'portiere', ruoli: [['portiere', 'POR']] },
+  {
+    reparto: 'Difensori',
+    linea: 'difensore',
+    ruoli: [['libero', 'LIB'], ['difensore centrale', 'DC'], ['difensore destro', 'DD'], ['difensore sinistro', 'DS'], ['terzino destro', 'TD'], ['terzino sinistro', 'TS'], ['difensore', 'DIF']],
+  },
+  {
+    reparto: 'Centrocampisti',
+    linea: 'centrocampista',
+    ruoli: [['mediano', 'MED'], ['regista', 'REG'], ['mezzala', 'MEZ'], ['centrocampista centrale', 'CC'], ['esterno destro', 'ED'], ['esterno sinistro', 'ES'], ['trequartista', 'TRQ'], ['centrocampista', 'CEN']],
+  },
+  {
+    reparto: 'Attaccanti',
+    linea: 'attaccante',
+    ruoli: [['ala destra', 'AD'], ['ala sinistra', 'AS'], ['seconda punta', 'SP'], ['centravanti', 'CF'], ['attaccante', 'ATT']],
+  },
+  { reparto: 'Jolly e staff', linea: 'jolly', ruoli: [['jolly', 'JOL'], ['allenatore', 'ALL']] },
+] as const
+
+export const ALLENATORE = 'allenatore'
+const SIGLE_RUOLI = new Map<string, string>(REPARTI_CLUB.flatMap((r) => r.ruoli.map(([n, s]) => [n, s] as [string, string])))
+const LINEE_RUOLI = new Map<string, string>(REPARTI_CLUB.flatMap((r) => r.ruoli.map(([n]) => [n, r.linea] as [string, string])))
+export const RUOLI_CLUB = [...SIGLE_RUOLI.keys()]
+
+// I ruoli che si possono scegliere: in una lega Club quelli precisi (e l'allenatore), altrimenti quelli base.
+export const ruoliValidi = (club?: boolean): readonly string[] => (club ? RUOLI_CLUB : RUOLI)
+/** Un ruolo scritto a mano o da un file (nome o sigla, maiuscole o no) → il ruolo, se esiste. */
+export function leggiRuolo(testo: string, club?: boolean): string {
+  const x = testo.trim().toLowerCase()
+  if (ruoliValidi(club).includes(x)) return x
+  if (!club) return ''
+  for (const [n, s] of SIGLE_RUOLI) if (s.toLowerCase() === x) return n
+  return ''
+}
+/** La linea del ruolo (portiere, difensore, centrocampista, attaccante, jolly): serve per formazioni e squadre. */
+export const lineaDi = (ruolo?: string | null): string | undefined => (ruolo ? (ruolo === ALLENATORE ? undefined : (LINEE_RUOLI.get(ruolo) ?? ruolo)) : undefined)
+/** Sigla breve del ruolo (es. DC), per la tabella e il campo. */
+export const siglaRuolo = (ruolo?: string | null) => (ruolo ? (SIGLE_RUOLI.get(ruolo) ?? ruolo.slice(0, 3).toUpperCase()) : '')
+export const isAllenatore = (p: { ruolo?: string | null }) => p.ruolo === ALLENATORE
 export const PIEDI = ['destro', 'sinistro', 'ambidestro'] as const
 
 // Il badge che si vede accanto al nome.

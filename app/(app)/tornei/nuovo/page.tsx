@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { Suspense } from 'react'
-import { displayName, getCurrentPlayer, getMemberships, requireAdmin, requireIn } from '@/lib/player'
+import { displayName, isAllenatore, getCurrentPlayer, getMemberships, requireAdmin, requireIn } from '@/lib/player'
 import { getPlayers } from '@/lib/matches'
 import { forza } from '@/lib/teams'
 import { puoCreareTornei } from '@/lib/tornei'
@@ -73,7 +73,7 @@ async function Form({ searchParams }: { searchParams: Promise<Record<string, str
     typeof lega === 'string' ? await requireIn(lega, 'organizzatore') : attiva?.isAdmin || !organizzate.length ? await requireAdmin() : organizzate[0]
   if (!(await puoCreareTornei(admin.lega._id))) return <VetrinaPro />
   const rosa = (await getPlayers(admin.lega._id))
-    .filter((p) => p.attivo !== false)
+    .filter((p) => p.attivo !== false && !isAllenatore(p))
     .map((p) => ({ id: p._id, nome: displayName(p), forza: forza(p), ruolo: p.ruolo }))
 
   return (

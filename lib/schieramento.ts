@@ -1,4 +1,4 @@
-import type { Player } from './roster'
+import { lineaDi, type Player } from './roster'
 
 // Come si dispone una squadra in campo: un portiere e tre linee, secondo i ruoli del profilo.
 // È casuale ma sempre uguale per la stessa squadra in quella partita: tutti vedono la stessa formazione,
@@ -50,11 +50,11 @@ export function schiera<G extends Giocatore>(giocatori: G[], seme: string): Schi
 
   // In porta il portiere; se non c'è, un jolly o uno senza ruolo, e solo in ultimo gli altri.
   const portiere = togli(
-    restanti.find((g) => g.ruolo === 'portiere') ?? restanti.find((g) => g.ruolo === 'jolly') ?? restanti.find((g) => !g.ruolo) ?? restanti[0],
+    restanti.find((g) => lineaDi(g.ruolo) === 'portiere') ?? restanti.find((g) => lineaDi(g.ruolo) === 'jolly') ?? restanti.find((g) => !lineaDi(g.ruolo)) ?? restanti[0],
   )
 
   // Il modulo che lascia fuori ruolo meno giocatori; a parità, a caso.
-  const quanti = LINEE.map((l) => restanti.filter((g) => g.ruolo === l).length)
+  const quanti = LINEE.map((l) => restanti.filter((g) => lineaDi(g.ruolo) === l).length)
   const fuoriRuolo = (m: number[]) => m.reduce((s, posti, i) => s + Math.max(0, quanti[i] - posti), 0)
   const opzioni = moduli(restanti.length)
   const meglio = Math.min(...opzioni.map(fuoriRuolo))
@@ -64,16 +64,16 @@ export function schiera<G extends Giocatore>(giocatori: G[], seme: string): Schi
   // Prima ognuno nella sua linea, finché c'è posto.
   const linee: [G[], G[], G[]] = [[], [], []]
   for (const g of [...restanti]) {
-    const i = LINEE.indexOf(g.ruolo ?? '')
+    const i = LINEE.indexOf(lineaDi(g.ruolo) ?? '')
     if (i >= 0 && linee[i].length < modulo[i]) {
       linee[i].push(g)
       togli(g)
     }
   }
   // Poi gli altri: chi ha un ruolo nella linea libera più vicina (un portiere in più va in difesa), jolly e senza ruolo dove resta posto.
-  restanti.sort((a, b) => Number(LINEE.includes(b.ruolo ?? '') || b.ruolo === 'portiere') - Number(LINEE.includes(a.ruolo ?? '') || a.ruolo === 'portiere'))
+  restanti.sort((a, b) => Number(LINEE.includes(lineaDi(b.ruolo) ?? '') || lineaDi(b.ruolo) === 'portiere') - Number(LINEE.includes(lineaDi(a.ruolo) ?? '') || lineaDi(a.ruolo) === 'portiere'))
   for (const g of restanti) {
-    const da = g.ruolo === 'portiere' ? 0 : Math.max(LINEE.indexOf(g.ruolo ?? ''), 0)
+    const da = lineaDi(g.ruolo) === 'portiere' ? 0 : Math.max(LINEE.indexOf(lineaDi(g.ruolo) ?? ''), 0)
     const libere = [0, 1, 2].filter((i) => linee[i].length < modulo[i]).sort((a, b) => Math.abs(a - da) - Math.abs(b - da))
     linee[libere[0]].push(g)
   }

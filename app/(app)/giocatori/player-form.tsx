@@ -1,5 +1,5 @@
 import type { FormState } from '@/app/actions'
-import { BADGE, PIEDI, RUOLI, SKILLS, SKILL_DESCRIPTIONS, type Player, type Skill } from '@/lib/player'
+import { BADGE, PIEDI, REPARTI_CLUB, RUOLI, SKILLS, siglaRuolo, SKILL_DESCRIPTIONS, type Player, type Skill } from '@/lib/player'
 import { avatarUrl } from '@/lib/image'
 import { ActionForm } from '@/components/action-form'
 import { PhotoInput } from '@/components/photo-input'
@@ -13,14 +13,17 @@ export async function PlayerForm({
   action,
   player,
   submitLabel,
+  club = false,
 }: {
   action: (prev: FormState, fd: FormData) => Promise<FormState>
   player?: Player
   submitLabel: string
+  /** lega Club PRO: ruoli precisi (es. DC, terzino sinistro) e l'allenatore */
+  club?: boolean
 }) {
   const t = await getT()
   return (
-    <ActionForm action={action} className="space-y-4">
+    <ActionForm action={action} className="group/scheda space-y-4">
       {/* la versione della scheda da cui parte la modifica: se nel frattempo è cambiata, non si sovrascrive */}
       {player?._rev && <input type="hidden" name="rev" value={player._rev} />}
       <Card className="space-y-4">
@@ -64,13 +67,23 @@ export async function PlayerForm({
         </div>
         <div className="grid grid-cols-2 gap-4">
           <Field label={t('Ruolo')}>
-            <select name="ruolo" defaultValue={player?.ruolo ?? ''} className={`${inputClass} capitalize`}>
+            <select name="ruolo" defaultValue={player?.ruolo ?? ''} className={`${inputClass} first-letter:uppercase`}>
               <option value="">—</option>
-              {RUOLI.map((r) => (
-                <option key={r} value={r}>
-                  {t(r)}
-                </option>
-              ))}
+              {club
+                ? REPARTI_CLUB.map((r) => (
+                    <optgroup key={r.reparto} label={t(r.reparto)}>
+                      {r.ruoli.map(([ruolo]) => (
+                        <option key={ruolo} value={ruolo}>
+                          {siglaRuolo(ruolo)} · {t(ruolo)}
+                        </option>
+                      ))}
+                    </optgroup>
+                  ))
+                : RUOLI.map((r) => (
+                    <option key={r} value={r}>
+                      {t(r)}
+                    </option>
+                  ))}
             </select>
           </Field>
           <Field label={t('Piede')}>
@@ -105,7 +118,12 @@ export async function PlayerForm({
         </div>
       </Card>
 
-      <Card className="space-y-3">
+      {club && (
+        <p className="hidden rounded-xl border border-zinc-200 bg-white p-4 text-sm text-zinc-500 group-has-[option[value=allenatore]:checked]/scheda:block dark:border-zinc-800 dark:bg-zinc-900">
+          🧑‍🏫 {t('L’allenatore non gioca: niente caratteristiche, voti, convocazioni né formazioni.')}
+        </p>
+      )}
+      <Card className="space-y-3 group-has-[option[value=allenatore]:checked]/scheda:hidden">
         <h2 className="font-semibold">{t('Caratteristiche (1–10)')}</h2>
         {(Object.entries(SKILLS) as [Skill, string][]).map(([key, label]) => (
           <RatingInput key={key} name={key} label={t(label)} hint={t(SKILL_DESCRIPTIONS[key])} defaultValue={player?.caratteristiche?.[key] ?? 5} />

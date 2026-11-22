@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { Suspense } from 'react'
 import { salvaFormazioni } from '@/app/actions'
-import { displayName, iniziali, requireIn } from '@/lib/player'
+import { displayName, iniziali, isAllenatore, requireIn } from '@/lib/player'
 import { getMatch, presenti } from '@/lib/matches'
 import { avatarUrl } from '@/lib/image'
 import { getT } from '@/lib/lingua'
@@ -49,7 +49,7 @@ async function Editor({ params }: { params: Promise<{ id: string }> }) {
 
   // Pro (di chi fa le formazioni): chi è in forma conta un po' di più (anche nel bilanciamento automatico)
   const forma = (await ioPro(match.legaId)) ? (await formaDellaLega(match.legaId)).forma : null
-  const giocatori: GiocatoreFormazione[] = presenti(match).map(({ giocatore: p }) => ({
+  const giocatori: GiocatoreFormazione[] = presenti(match).filter(({ giocatore }) => !isAllenatore(giocatore)).map(({ giocatore: p }) => ({
     _id: p._id,
     ruolo: p.ruolo,
     caratteristiche: p.caratteristiche,

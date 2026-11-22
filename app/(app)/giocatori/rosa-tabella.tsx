@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { SKILLS, type Skill } from '@/lib/roster'
+import { SKILLS, isAllenatore, siglaRuolo, type Skill } from '@/lib/roster'
 import { coloreVoto } from '@/components/ui'
 import type { T } from '@/lib/i18n'
 import type { Ordine, RigaRosa } from '@/lib/rosa-tabella'
@@ -47,13 +47,16 @@ export function RosaTabella({ righe, ordine, club, mioId, t }: { righe: RigaRosa
                 </Link>
                 {r.fuori && <span className="ml-1" title={t('Indisponibile')}>🚑</span>}
               </td>
-              <td className="px-1.5 py-2 text-xs capitalize text-zinc-500">{r.ruolo ?? ''}</td>
+              <td className="px-1.5 py-2 text-xs text-zinc-500 first-letter:uppercase" title={r.ruolo ? siglaRuolo(r.ruolo) : undefined}>
+                {r.ruolo ? t(r.ruolo) : ''}
+              </td>
+              {/* l'allenatore non ha voto né caratteristiche */}
               <td className="px-1.5 py-2 text-right">
-                <span className={`rounded px-1.5 py-0.5 text-xs font-bold ${coloreVoto(r.voto)}`}>{numero(r.voto)}</span>
+                {isAllenatore(r.player) ? <span title={t('allenatore')}>🧑‍🏫</span> : <span className={`rounded px-1.5 py-0.5 text-xs font-bold ${coloreVoto(r.voto)}`}>{numero(r.voto)}</span>}
               </td>
               {skills.map((k) => (
                 <td key={k} className="px-1 py-2 text-center text-xs text-zinc-600 dark:text-zinc-300">
-                  {numero(r.skill[k])}
+                  {isAllenatore(r.player) ? '–' : numero(r.skill[k])}
                 </td>
               ))}
               <td className="px-1.5 py-2 text-right">{r.partite}</td>

@@ -18,6 +18,6 @@ export default async function NuovoGiocatorePage() {
 }
 
 async function Form() {
-  const [, t] = await Promise.all([requireAdmin(), getT()])
-  return <PlayerForm action={salvaGiocatore.bind(null, null)} submitLabel={t('Aggiungi alla rosa')} />
+  const [me, t] = await Promise.all([requireAdmin(), getT()])
+  return <PlayerForm action={salvaGiocatore.bind(null, null)} submitLabel={t('Aggiungi alla rosa')} club={!!me.lega.club} />
 }

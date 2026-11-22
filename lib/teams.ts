@@ -1,4 +1,4 @@
-import { SKILLS, type Player, type Skill } from './roster'
+import { SKILLS, lineaDi, type Player, type Skill } from './roster'
 
 // Le due squadre di una partita si chiamano Squadra 1 e Squadra 2 (dentro restano A e B);
 // nei tornei hanno il nome della squadra del torneo.
@@ -76,7 +76,7 @@ function migliora<T extends Giocatore>(a: T[], b: T[], bloccati: Set<string>) {
 // portieri, i due migliori finiscono in squadre diverse. Tra le divisioni quasi
 // ottimali ne sceglie una a caso, così "Automatico" propone formazioni diverse.
 export function balanceTeams<T extends Giocatore>(players: T[], tentativi = 300): { a: T[]; b: T[] } {
-  const [gk1, gk2] = players.filter((p) => p.ruolo === 'portiere').sort((x, y) => forza(y) - forza(x))
+  const [gk1, gk2] = players.filter((p) => lineaDi(p.ruolo) === 'portiere').sort((x, y) => forza(y) - forza(x))
   const bloccati = new Set([gk1, gk2].filter(Boolean).map((p) => p._id))
   const resto = players.filter((p) => !bloccati.has(p._id))
 

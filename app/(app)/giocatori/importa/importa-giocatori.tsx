@@ -13,6 +13,8 @@ import { RUOLI } from '@/lib/roster'
 export type LegaImport = {
   id: string
   nome: string
+  /** Club PRO: ruoli precisi (anche come sigla, es. DC) e allenatore */
+  club?: boolean
   /** Link firmato al modello Excel della lega (con i menu dei tornei e delle squadre). */
   modello: string
   rosa: { nome: string; cognome?: string; email?: string }[]
@@ -231,7 +233,7 @@ export function ImportaGiocatori({ leghe }: { leghe: LegaImport[] }) {
               <b>{t('Obbligatorio')}</b>: {t('almeno uno tra')} <b>{t('Nome')}</b> {t('ed')} <b>Email</b> {t('(senza nome si usa la prima parte dell’email).')}
             </p>
             <p>
-              <b>{t('Facoltativi')}</b>: {t('Cognome, Telefono, Soprannome, Numero di maglia')} · <b>{t('Ruolo')}</b> ({RUOLI.join(', ')}) · <b>{t('Torneo')}</b> {t('e')}{' '}
+              <b>{t('Facoltativi')}</b>: {t('Cognome, Telefono, Soprannome, Numero di maglia')} · <b>{t('Ruolo')}</b> ({lega.club ? t('i ruoli del Club, anche come sigla: POR, DC, DS, TD, MED, REG, TRQ, AD, CF, ALL…') : RUOLI.join(', ')}) · <b>{t('Torneo')}</b> {t('e')}{' '}
               <b>{t('Squadra')}</b> {t('(nel modello Excel li scegli dal menu a tendina; se il torneo è vuoto vale quello scelto qui sopra).')}
             </p>
             <p>{t('La prima riga è l’intestazione: le colonne possono essere in qualsiasi ordine.')}</p>
