@@ -1,6 +1,6 @@
 import 'server-only'
 import { sanity } from './sanity'
-import { ENTITLEMENT_CLUB, ENTITLEMENT_PRO } from './entitlement'
+import { ENTITLEMENT_CLUB, ENTITLEMENT_PRO, MAX_LEGHE_CLUB } from './entitlement'
 
 // Abbonamenti Pro pagati dentro le app (App Store e Google Play), gestiti da RevenueCat.
 // RevenueCat conosce l'utente con il suo id di Clerk; ogni volta che qualcosa cambia (acquisto, rinnovo,
@@ -38,10 +38,15 @@ export async function sincronizzaAbbonamento(utente: string, email?: string) {
   if (!r.ok) throw new Error(`RevenueCat ${r.status}`)
   const { subscriber } = (await r.json()) as Subscriber
   const club = await scrivi(subscriber, ENTITLEMENT_CLUB, `abbonamento-club-${idDoc(utente).replace('abbonamento-', '')}`, utente, email, 'club')
-  // Club scaduto o rimborsato: si spegne nelle leghe in cui l'aveva acceso questo utente
+  // Club scaduto o rimborsato: nelle leghe in cui l'aveva acceso questo utente passa a un altro organizzatore
+  // della lega che ha il Club attivo (e un posto libero); se non c'è nessuno, la lega torna tra amici.
   if (!club.attivo) {
     const leghe = await sanity.fetch<string[]>(`*[_type == "league" && clubDi == $utente]._id`, { utente })
-    for (const id of leghe) await sanity.patch(id).unset(['club', 'clubDi', 'tipo']).commit()
+    for (const id of leghe) {
+      const erede = await altroConClub(id, utente)
+      if (erede) await sanity.patch(id).set({ clubDi: erede }).commit()
+      else await sanity.patch(id).unset(['club', 'clubDi', 'tipo']).commit()
+    }
   }
   return scrivi(subscriber, ENTITLEMENT_PRO, idDoc(utente), utente, email)
 }
@@ -73,6 +78,20 @@ async function scrivi(subscriber: Subscriber['subscriber'], entitlement: string,
   return { attivo, scadenza: ent.expires_date }
 }
 
+// Un altro organizzatore della lega con il Club attivo e meno di MAX_LEGHE_CLUB leghe Club: prende il Club della lega.
+async function altroConClub(legaId: string, tranne: string) {
+  const candidati = await sanity.fetch<string[]>(
+    `*[_type == "abbonamento" && piano == "club" && attivo != false && (!defined(scadenza) || scadenza > now())
+      && clerkUserId in *[_type == "player" && lega._ref == $id && isAdmin == true && attivo != false && clerkUserId != $tranne].clerkUserId].clerkUserId`,
+    { id: legaId, tranne },
+  )
+  for (const c of [...new Set(candidati)]) {
+    const occupate = await sanity.fetch<number>(`count(*[_type == "league" && club == true && clubDi == $c && _id != $id])`, { c, id: legaId })
+    if (occupate < MAX_LEGHE_CLUB) return c
+  }
+  return null
+}
+
 // Il mio abbonamento al Club Allenatore, se attivo.
 export function mioClub(utente: string) {
   return sanity.fetch<{ scadenza?: string; store?: string; rinnovo?: boolean; dal?: string; prodotto?: string } | null>(
@@ -81,10 +100,11 @@ export function mioClub(utente: string) {
   )
 }
 
-// Il mio abbonamento Pro (da store o creato a mano), se attivo.
-export function mioAbbonamento(utente: string) {
-  return sanity.fetch<{ scadenza?: string; store?: string; rinnovo?: boolean; dal?: string; prodotto?: string } | null>(
-    `*[_type == "abbonamento" && clerkUserId == $utente && attivo != false && (!defined(scadenza) || scadenza > now())] | order(scadenza desc)[0]{scadenza, store, rinnovo, dal, prodotto}`,
+// Il mio abbonamento (da store o creato a mano), se attivo: il Club, se ce l'ho (include il Pro), altrimenti il Pro.
+export async function mioAbbonamento(utente: string) {
+  const attivi = await sanity.fetch<{ scadenza?: string; store?: string; rinnovo?: boolean; dal?: string; prodotto?: string; piano?: string }[]>(
+    `*[_type == "abbonamento" && clerkUserId == $utente && attivo != false && (!defined(scadenza) || scadenza > now())] | order(scadenza desc){scadenza, store, rinnovo, dal, prodotto, piano}`,
     { utente },
   )
+  return attivi.find((a) => a.piano === 'club') ?? attivi[0] ?? null
 }

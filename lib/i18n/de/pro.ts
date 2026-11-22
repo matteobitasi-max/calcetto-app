@@ -179,4 +179,5 @@ export const pro: Record<string, string> = {
   "Il Club PRO vale in {n} leghe ed è già attivo in:": "Club PRO gilt für {n} Ligen und ist schon aktiv in:",
   "Per spostarlo qui, apri una di quelle leghe e in Impostazioni lega → Tipo di lega scegli “Tra amici”.": "Um ihn hierher zu verschieben, öffne eine dieser Ligen und wähle unter Liga-Einstellungen → Liga-Typ „Unter Freunden“.",
   "Vale per {n} leghe (squadre).": "Gilt für {n} Ligen (Mannschaften).",
+  "Grazie per essere Club PRO!": "Danke, dass du Club PRO bist!",
 }

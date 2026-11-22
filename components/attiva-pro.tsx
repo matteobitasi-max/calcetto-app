@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useSyncExternalStore, useTransition } from 'react'
 import { Capacitor } from '@capacitor/core'
-import { Purchases, PACKAGE_TYPE, type PurchasesPackage } from '@revenuecat/purchases-capacitor'
+import { Purchases, PACKAGE_TYPE, STORE_REPLACEMENT_MODE, type PurchasesPackage } from '@revenuecat/purchases-capacitor'
 import { aggiornaClub, aggiornaPro } from '@/app/actions'
 import { useRouter } from 'next/navigation'
 import { ENTITLEMENT_CLUB, ENTITLEMENT_PRO, OFFERING_CLUB } from '@/lib/entitlement'
@@ -13,7 +13,7 @@ const EULA_APPLE = 'https://www.apple.com/legal/internet-services/itunes/dev/std
 
 const niente = () => () => {}
 
-export type MioPro = { scadenza?: string; store?: string; rinnovo?: boolean; dal?: string; prodotto?: string } | null
+export type MioPro = { scadenza?: string; store?: string; rinnovo?: boolean; dal?: string; prodotto?: string; piano?: string } | null
 
 // Dove si disdice l'abbonamento, se non lo si fa dall'app (pagina Pro aperta dal sito o da un altro telefono).
 const GESTIONE: Record<string, string> = {
@@ -120,7 +120,19 @@ export function AttivaPro({
     setErrore(null)
     setInCorso(true)
     try {
-      await Purchases.purchasePackage({ aPackage: p })
+      // Android: chi ha già il Pro su Google Play passa al Club come cambio di piano (il Pro si chiude, il tempo
+      // non usato viene accreditato), altrimenti avrebbe due abbonamenti in parallelo. Su iPhone ci pensa Apple
+      // se i prodotti del Club sono nello stesso gruppo del Pro.
+      let cambio = null
+      if (club && piattaforma === 'android') {
+        const { customerInfo } = await Purchases.getCustomerInfo()
+        const pro = customerInfo.entitlements.active[ENTITLEMENT_PRO]
+        if (pro && pro.store === 'PLAY_STORE' && !customerInfo.entitlements.active[ENTITLEMENT_CLUB]) {
+          // su Google Play l'abbonamento si indica senza il piano base (thecap_pro:annuale → thecap_pro)
+          cambio = { oldProductIdentifier: pro.productIdentifier.split(':')[0], replacementMode: STORE_REPLACEMENT_MODE.WITH_TIME_PRORATION }
+        }
+      }
+      await Purchases.purchasePackage({ aPackage: p, ...(cambio && { storeProductChangeInfo: cambio }) })
       dopo()
     } catch (e) {
       const err = e as { userCancelled?: boolean; code?: string | number }
@@ -163,7 +175,7 @@ export function AttivaPro({
     const disdici = mio.store ? GESTIONE[mio.store] : undefined
     return (
       <div className="space-y-3 text-sm">
-        <p className="font-medium text-green-900 dark:text-green-200">✅ {club ? t('Hai il Club Allenatore.') : t('Hai The Cap Pro.')}</p>
+        <p className="font-medium text-green-900 dark:text-green-200">✅ {club || mio.piano === 'club' ? t('Hai il Club Allenatore.') : t('Hai The Cap Pro.')}</p>
         <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-zinc-600 dark:text-zinc-300">
           {piano && (
             <>

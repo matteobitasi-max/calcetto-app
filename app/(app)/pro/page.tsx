@@ -36,7 +36,11 @@ async function Vetrina() {
   if (mio && utente) {
     return (
       <div className="space-y-4">
-        <Testata t={t} titolo={t('Grazie per essere Pro!')} sotto={t('Tutte le funzioni Pro sono attive nelle tue leghe (fino a {n}).', { n: MAX_LEGHE_PRO })} />
+        <Testata
+          t={t}
+          titolo={mio.piano === 'club' ? t('Grazie per essere Club PRO!') : t('Grazie per essere Pro!')}
+          sotto={t('Tutte le funzioni Pro sono attive nelle tue leghe (fino a {n}).', { n: MAX_LEGHE_PRO })}
+        />
         {oltre && (
           // questa lega è oltre quelle coperte dall'abbonamento
           <Card className="space-y-2 border-amber-400 bg-amber-50 dark:bg-amber-950/40">
@@ -50,7 +54,7 @@ async function Vetrina() {
           </Card>
         )}
         <Card className="space-y-3 border-green-600 bg-green-50 dark:bg-green-950">
-          <AttivaPro utente={utente.id} chiavi={chiaviRevenueCat()} mio={mio} giocatori={giocatori} />
+          <AttivaPro utente={utente.id} chiavi={chiaviRevenueCat()} mio={mio} giocatori={giocatori} piano={mio.piano === 'club' ? 'club' : 'pro'} />
         </Card>
         <Vantaggi t={t} link />
         <SezioneClub t={t} legaId={me.isAdmin ? me.lega._id : undefined} />
