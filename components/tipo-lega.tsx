@@ -48,19 +48,34 @@ export async function TipoLega({ lega }: { lega: Lega }) {
               ['pagelle', lega.pagelle !== false, t('Pagelle a fine partita, con note'), t('Voto da 1 a 10 a chi era in lista. Il voto lo vedono tutti, la nota solo il giocatore e gli organizzatori.')],
             ] as const
           ).map(([opzione, attiva, titolo, testo]) => (
-            <form key={opzione} action={salvaOpzioneSquadra.bind(null, lega._id, opzione, !attiva)} className="flex items-center gap-3 rounded-xl bg-zinc-50 p-3 dark:bg-zinc-950">
+            <div key={opzione} className="flex items-center gap-3 rounded-xl bg-zinc-50 p-3 dark:bg-zinc-950">
               <span className="min-w-0 flex-1">
                 <span className="block text-sm font-semibold">{titolo}</span>
                 <span className="block text-xs text-zinc-500">{testo}</span>
               </span>
-              <SubmitButton
-                aria-pressed={attiva}
-                aria-label={titolo}
-                className={`shrink-0 rounded-full px-3 py-1 text-sm font-semibold ${attiva ? 'bg-green-600 text-white' : 'bg-zinc-200 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300'}`}
-              >
-                {attiva ? t('Sì') : t('No')}
-              </SubmitButton>
-            </form>
+              {/* pillola No | Sì: si vedono tutte e due le scelte, quella attiva è piena */}
+              <div role="radiogroup" aria-label={titolo} className="flex shrink-0 rounded-full bg-zinc-200 p-0.5 dark:bg-zinc-800">
+                {([false, true] as const).map((valore) => (
+                  <form key={String(valore)} action={salvaOpzioneSquadra.bind(null, lega._id, opzione, valore)}>
+                    <SubmitButton
+                      role="radio"
+                      aria-checked={attiva === valore}
+                      disabled={attiva === valore}
+                      pendingText="…"
+                      className={`min-w-11 rounded-full px-3 py-1 text-sm font-semibold transition ${
+                        attiva === valore
+                          ? valore
+                            ? 'bg-green-600 text-white shadow-sm'
+                            : 'bg-white text-zinc-900 shadow-sm dark:bg-zinc-600 dark:text-white'
+                          : 'text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-100'
+                      }`}
+                    >
+                      {valore ? t('Sì') : t('No')}
+                    </SubmitButton>
+                  </form>
+                ))}
+              </div>
+            </div>
           ))}
         {lega.club && lega.tipo === 'squadra' && (
           <FormatoLega azione={salvaFormatoLega.bind(null, lega._id)} formato={isFormato(lega.formato) ? lega.formato : 11} modulo={lega.modulo} />
