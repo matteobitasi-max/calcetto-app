@@ -14,7 +14,7 @@ import { isoToRomeLocal } from '@/lib/dates'
 import { assicuraRicorrenze } from '@/lib/series'
 import { Card, Loading, StatoBadge } from '@/components/ui'
 import { PillNuovaPartita } from '@/components/pill-nuova-partita'
-import { ScriviSquadra } from '@/components/scrivi-squadra'
+import { AzioniHome } from '@/components/azioni-home'
 import { Countdown } from '@/components/countdown'
 import { NotificheToggle } from '@/components/notifiche-toggle'
 import { RispostaButtons } from './partite/risposta-buttons'
@@ -51,33 +51,26 @@ async function Partite() {
 
   return (
     <div className="space-y-6 pb-16">
+      {/* In alto a destra: ＋ per invitare (organizzatori) e il megafono per scrivere alla squadra (organizzatori e capitano) */}
+      <AzioniHome
+        invito={linkInvito && !daSolo ? { url: linkInvito, nomeLega: player.lega.nome, codice: player.lega.codiceInvito! } : undefined}
+        scrivi={!!player.isAdmin || player.badge === 'capitano'}
+      />
+
       <NotificheToggle variant="banner" />
 
-      {/* L'invito per gli organizzatori: aperto finché sono da solo nella lega, poi a tendina (sempre a portata) */}
-      {linkInvito &&
-        (daSolo ? (
-          <Card className="space-y-3 border-2 border-green-600">
-            <h2 className="font-semibold">📨 {t('Invita i tuoi amici')}</h2>
-            <p className="text-sm text-zinc-500">{t('“{lega}” è pronta! Chi apre il link entra subito nella lega.', { lega: player.lega.nome })}</p>
-            <InvitoLink url={linkInvito} nomeLega={player.lega.nome} />
-            <CodiceInvito codice={player.lega.codiceInvito!} />
-          </Card>
-        ) : (
-          <details className="group rounded-xl border border-zinc-200 bg-white dark:border-zinc-700 dark:bg-zinc-900">
-            <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-3 font-semibold [&::-webkit-details-marker]:hidden">
-              📨 {t('Invita amici nella lega')}
-              <span className="text-zinc-400 transition group-open:rotate-90">›</span>
-            </summary>
-            <div className="space-y-3 border-t border-zinc-100 p-4 dark:border-zinc-800">
-              <InvitoLink url={linkInvito} nomeLega={player.lega.nome} />
-              <CodiceInvito codice={player.lega.codiceInvito!} />
-            </div>
-          </details>
-        ))}
+      {/* Lega appena nata, ancora da solo: l'invito resta in grande, è il primo passo */}
+      {linkInvito && daSolo && (
+        <Card className="space-y-3 border-2 border-green-600">
+          <h2 className="font-semibold">📨 {t('Invita i tuoi amici')}</h2>
+          <p className="text-sm text-zinc-500">{t('“{lega}” è pronta! Chi apre il link entra subito nella lega.', { lega: player.lega.nome })}</p>
+          <InvitoLink url={linkInvito} nomeLega={player.lega.nome} />
+          <CodiceInvito codice={player.lega.codiceInvito!} />
+        </Card>
+      )}
 
       {/* Anche nelle leghe in cui gioco soltanto, se ne organizzo almeno una: la lega si sceglie dopo */}
       {(player.isAdmin || mie.some((m) => m.isAdmin)) && <PillNuovaPartita />}
-      {(player.isAdmin || player.badge === 'capitano') && <ScriviSquadra />}
 
       {/* In alto: la prossima partita con il conto alla rovescia delle convocazioni */}
       {prossima ? (

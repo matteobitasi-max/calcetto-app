@@ -267,4 +267,5 @@ export const comune: Record<string, string> = {
   "{gol} gol subiti dalla sua squadra (attesi {attesi})": "{gol} Gegentore seiner Mannschaft (erwartet {attesi})",
   "Come funziona": "So funktioniert's",
   "Home": "Start",
+  "Chi apre il link e fa l’accesso entra subito nella rosa.": "Wer den Link öffnet und sich anmeldet, ist sofort im Kader.",
 }

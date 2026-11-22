@@ -6,6 +6,7 @@ import { buttonClass, inputClass } from './ui-classes'
 import { useT } from '@/components/lingua'
 
 // "Scrivi alla squadra": il capitano (o un organizzatore) manda una comunicazione a tutti.
+// Si apre dal megafono in alto a destra nella home (components/azioni-home.tsx).
 export function ScriviSquadra() {
   const t = useT()
   const [testo, setTesto] = useState('')
@@ -21,14 +22,7 @@ export function ScriviSquadra() {
   const whatsapp = (msg: string) => `https://wa.me/?text=${encodeURIComponent(`📢 ${msg}`)}`
 
   return (
-    <details className="group rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
-      <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-3 text-sm font-semibold [&::-webkit-details-marker]:hidden">
-        📢 {t('Scrivi alla squadra')}
-        <span className="text-zinc-400 transition group-open:rotate-180" aria-hidden>
-          ▾
-        </span>
-      </summary>
-      <form action={invia} className="space-y-2 border-t border-zinc-200 p-4 dark:border-zinc-800">
+    <form action={invia} className="space-y-2">
         <textarea
           name="testo"
           rows={3}
@@ -70,7 +64,6 @@ export function ScriviSquadra() {
             )}
           </p>
         )}
-      </form>
-    </details>
+    </form>
   )
 }
