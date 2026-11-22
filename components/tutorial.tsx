@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { buttonClass } from './ui-classes'
+import { EtichettaClub } from './pill-scelta'
 import { useT } from './lingua'
 import type { T } from '@/lib/i18n'
 
@@ -441,43 +442,272 @@ function SceneImpostazioni({ t, tempo: { passo, ms } }: Demo) {
   )
 }
 
+// ---------- parte allenatore (Club PRO) ----------
+
+const ROSA_CLUB = [
+  { n: 1, nome: 'Andrea', ruolo: 'por' },
+  { n: 2, nome: 'Luca', ruolo: 'dif' },
+  { n: 5, nome: 'Marco', ruolo: 'dif', fuori: '🚑' },
+  { n: 6, nome: 'Paolo', ruolo: 'dif' },
+  { n: 8, nome: 'Fede', ruolo: 'cen' },
+  { n: 10, nome: 'Ste', ruolo: 'cen' },
+  { n: 9, nome: 'Leo', ruolo: 'att' },
+] as const
+
+const DURATE_CONVOCATI = [2000, 4200, 1800, 2600] as const
+function SceneConvocati({ t, tempo: { passo, ms } }: Demo) {
+  const spuntati = passo === 1 ? Math.min(ROSA_CLUB.length, Math.floor(Math.max(0, ms - 300) / 550)) : passo > 1 ? ROSA_CLUB.length : 0
+  return (
+    <Telefono>
+      {passo === 0 && (
+        <div className="space-y-2 pt-3">
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-zinc-500">{t('Prossima partita')}</p>
+          <Riquadro className="space-y-2">
+            <p className="font-semibold">{t('gio 20 nov, 21:00')}</p>
+            <p className="rounded-md bg-zinc-100 p-1.5 dark:bg-zinc-800">📋 {t('L’allenatore non ha ancora scelto i convocati')}</p>
+            <Tocco attivo={ms > 900}>
+              <Pulsante>{t('Scegli i convocati')}</Pulsante>
+            </Tocco>
+          </Riquadro>
+        </div>
+      )}
+      {(passo === 1 || passo === 2) && (
+        <>
+          <p className="pt-3 text-sm font-bold">📋 {t('Scegli i convocati')}</p>
+          {ROSA_CLUB.map((g, i) => {
+            const fuori = 'fuori' in g
+            const preso = !fuori && i < spuntati
+            return (
+              <div key={g.n} className={`flex items-center gap-2 rounded-md border border-zinc-200 bg-white px-2 py-1 dark:border-zinc-800 dark:bg-zinc-900 ${fuori ? 'opacity-50' : ''}`}>
+                <span className={`flex h-3.5 w-3.5 items-center justify-center rounded border text-[9px] text-white ${preso ? 'border-green-600 bg-green-600' : 'border-zinc-400'}`}>{preso ? '✓' : ''}</span>
+                <span className="w-4 text-right font-semibold tabular-nums text-zinc-400">{g.n}</span>
+                <span className="flex-1">{g.nome}</span>
+                <span className="text-[10px] text-zinc-500">{fuori ? `${g.fuori} ${t('Infortunato')}` : g.ruolo}</span>
+              </div>
+            )
+          })}
+          <Tocco attivo={passo === 2 && ms > 500}>
+            <Pulsante>{t('Conferma {n} convocati', { n: ROSA_CLUB.length - 1 })}</Pulsante>
+          </Tocco>
+        </>
+      )}
+      {passo === 3 && (
+        <div className="space-y-2 pt-6">
+          <div className="rounded-md bg-zinc-800 px-2 py-1.5 text-white dark:bg-zinc-700">
+            <p className="font-semibold">📋 {t('Sei convocato!')}</p>
+            <p className="text-[10px] opacity-80">{t('gio 20 nov, 21:00')}</p>
+          </div>
+          <Tocco attivo={ms > 1000}>
+            <div className="rounded-lg bg-green-600 py-1.5 text-center font-semibold text-white">{t('Ci sono')} ✋</div>
+          </Tocco>
+          <p className="text-center text-[10px] text-zinc-500">{t('Marco è infortunato: non si può convocare.')}</p>
+        </div>
+      )}
+    </Telefono>
+  )
+}
+
+// mini campo per la formazione: righe di pallini dal portiere all'attacco
+function MiniCampo({ linee, pieni }: { linee: number[]; pieni: number }) {
+  let k = 0
+  const righe = [1, ...linee]
+  return (
+    <div className="relative h-44 overflow-hidden rounded-lg bg-[repeating-linear-gradient(to_bottom,#2f8f46_0_12.5%,#2a8340_12.5%_25%)]">
+      <div className="absolute inset-1.5 rounded border border-white/60" />
+      <div className="absolute inset-x-1.5 top-1/2 border-t border-white/60" />
+      {righe.map((n, r) => {
+        const y = 88 - (r * 76) / (righe.length - 1)
+        return Array.from({ length: n }, (_, c) => {
+          const i = k++
+          return (
+            <span
+              key={`${r}-${c}`}
+              className={`absolute flex h-5 w-5 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border text-[8px] font-bold transition ${
+                i < pieni ? 'border-white bg-white text-zinc-900' : 'border-dashed border-white/80 text-white'
+              }`}
+              style={{ left: `${((c + 1) * 100) / (n + 1)}%`, top: `${y}%` }}
+            >
+              {i < pieni ? [1, 2, 5, 6, 3, 8, 4, 10, 7, 9, 11][i] : '+'}
+            </span>
+          )
+        })
+      })}
+    </div>
+  )
+}
+
+const DURATE_FORMAZIONE = [2600, 3600, 3000] as const
+function SceneFormazioneClub({ t, tempo: { passo, ms } }: Demo) {
+  const modulo = passo === 2 && ms > 1200 ? '3-5-2' : '4-4-2'
+  const linee = modulo.split('-').map(Number)
+  return (
+    <Telefono>
+      {passo === 0 && (
+        <>
+          <p className="pt-3 text-sm font-bold">⚙️ {t('Impostazioni lega')}</p>
+          <Riquadro className="space-y-1.5">
+            <p className="font-semibold">⚽ {t('Formato e modulo')}</p>
+            <div className="grid grid-cols-2 gap-1.5">
+              <Tocco attivo={ms > 600 && ms < 1500}>
+                <div className="rounded-md border border-zinc-300 px-2 py-1 dark:border-zinc-700">{t('Calcio a {n}', { n: 11 })}</div>
+              </Tocco>
+              <Tocco attivo={ms >= 1500}>
+                <div className="rounded-md border border-zinc-300 px-2 py-1 dark:border-zinc-700">4-4-2</div>
+              </Tocco>
+            </div>
+          </Riquadro>
+          <p className="text-[10px] text-zinc-500">{t('Il modulo preferito si usa in ogni nuova formazione; in ogni partita lo puoi cambiare.')}</p>
+        </>
+      )}
+      {passo >= 1 && (
+        <>
+          <div className="flex items-center justify-between pt-3">
+            <span className="rounded-md border border-zinc-300 px-2 py-0.5 font-semibold dark:border-zinc-700">{modulo}</span>
+            <Tocco attivo={passo === 1 && ms < 900}>
+              <span className="rounded-md border border-zinc-300 bg-white px-2 py-0.5 dark:border-zinc-700 dark:bg-zinc-900">✨ {t('Proponi formazione')}</span>
+            </Tocco>
+          </div>
+          <MiniCampo linee={linee} pieni={passo === 1 ? Math.min(11, Math.floor(Math.max(0, ms - 900) / 220)) : 11} />
+          <p className="text-[10px] text-zinc-500">🪑 {t('Panchina')}: 12 Ivo · 14 Max · 16 Sami</p>
+        </>
+      )}
+    </Telefono>
+  )
+}
+
+const DURATE_PAGELLE = [3600, 2600, 3200] as const
+function ScenePagelle({ t, tempo: { passo, ms } }: Demo) {
+  const voti = [7.5, 6.5, 8]
+  return (
+    <Telefono>
+      {passo === 0 && (
+        <>
+          <p className="pt-3 text-sm font-bold">📝 {t('Pagelle')}</p>
+          {['Andrea', 'Luca', 'Ste'].map((g, i) => (
+            <Riquadro key={g} className="space-y-1">
+              <div className="flex items-center justify-between">
+                <span className="font-semibold">{g}</span>
+                <span className="rounded-md border border-zinc-300 px-2 tabular-nums dark:border-zinc-700">{ms > 500 + i * 700 ? t.numero(voti[i]) : '—'}</span>
+              </div>
+              {i === 2 && <p className="text-[10px] text-zinc-500">{scrivi(t('Ottimo pressing, migliora i passaggi'), ms, 2400)}</p>}
+            </Riquadro>
+          ))}
+        </>
+      )}
+      {passo === 1 && (
+        <div className="space-y-2 pt-6">
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-zinc-500">{t('Il tuo voto')}</p>
+          <div className="rounded-lg bg-green-50 p-2 dark:bg-green-950">
+            <p className="font-semibold">
+              Ste · <span className="rounded bg-violet-600 px-1 text-white">8</span>
+            </p>
+            <p className="mt-1 text-zinc-600 dark:text-zinc-300">“{t('Ottimo pressing, migliora i passaggi')}”</p>
+          </div>
+          <p className="text-center text-[10px] text-zinc-500">{t('La nota la vedono solo il giocatore e gli organizzatori.')}</p>
+        </div>
+      )}
+      {passo === 2 && (
+        <>
+          <p className="pt-3 text-sm font-bold">📊 {t('Statistiche')}</p>
+          <Riquadro className="space-y-1">
+            <p className="font-semibold">🏃 {t('Presenze agli allenamenti')}</p>
+            {[
+              ['Ste', 92],
+              ['Andrea', 80],
+              ['Luca', 64],
+            ].map(([g, perc], i) => (
+              <div key={g} className="grid grid-cols-[3rem_1fr_2rem] items-center gap-1.5">
+                <span>{g}</span>
+                <span className="h-1.5 overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-700">
+                  <span className="block h-full rounded-full bg-green-600 transition-all duration-700" style={{ width: `${ms > 300 + i * 300 ? perc : 0}%` }} />
+                </span>
+                <span className="text-right tabular-nums text-zinc-500">{perc}%</span>
+              </div>
+            ))}
+          </Riquadro>
+          <Riquadro className="flex items-center justify-between">
+            <span>📝 {t('Media pagelle')} · Ste</span>
+            <span className="rounded bg-green-600 px-1.5 font-bold text-white">7,6</span>
+          </Riquadro>
+        </>
+      )}
+    </Telefono>
+  )
+}
+
 // ---------- il tutorial ----------
 
-type Scena = { titolo: string; pro?: boolean; passi: string[]; demo?: { Vista: (p: Demo) => ReactNode; durate: readonly number[] } }
+type Scena = { titolo: string; pro?: boolean; parte?: 'amici' | 'club'; passi: string[]; demo?: { Vista: (p: Demo) => ReactNode; durate: readonly number[] } }
 const SCENE: Scena[] = [
   {
     titolo: 'Benvenuto in The Cap!',
-    passi: ['Ti mostriamo come organizzare il calcetto con i tuoi amici. Scorri o tocca Avanti.'],
+    passi: ['Come usi The Cap? Scegli la parte che ti interessa, oppure scorri per vederle tutte e due.'],
   },
   {
     titolo: 'Crea la tua lega',
+    parte: 'amici',
     demo: { Vista: SceneLega, durate: DURATE_LEGA },
     passi: ['Tocca Crea una lega', 'Scrivi il nome (e la città per il meteo)', 'Tocca Crea la lega: sei l’organizzatore', 'Invita gli amici con il link su WhatsApp'],
   },
   {
     titolo: 'Dai i voti ai giocatori',
+    parte: 'amici',
     demo: { Vista: SceneVoti, durate: DURATE_VOTI },
     passi: ['In Rosa tocca un giocatore e poi Modifica', 'Sposta i cursori delle caratteristiche (da 1 a 10)', 'Il voto si calcola da solo e serve a fare squadre equilibrate'],
   },
   {
     titolo: 'Crea una partita',
+    parte: 'amici',
     demo: { Vista: ScenePartita, durate: DURATE_PARTITA },
     passi: ['Tocca + Nuova partita', 'Scegli Partita', 'Giorno, campo, numero di giocatori: puoi anche ripeterla ogni settimana', 'Le convocazioni si aprono da sole e a tutti arriva la notifica'],
   },
   {
     titolo: 'Crea un torneo',
+    parte: 'amici',
     pro: true,
     demo: { Vista: SceneTorneo, durate: DURATE_TORNEO },
     passi: ['Tocca + Nuova partita e scegli Torneo', 'Nome, formato e numero di squadre', 'Tocca Bilancia: squadre equilibrate in un attimo', 'Calendario, classifica e tabellone si creano da soli'],
   },
   {
     titolo: 'Impostazioni lega',
+    parte: 'amici',
     demo: { Vista: SceneImpostazioni, durate: DURATE_IMPOSTAZIONI },
     passi: [
       'Tocca il nome della lega in alto e poi Impostazioni lega',
       'Satispay: metti il tuo link e i giocatori pagano la quota con un tocco',
       'Città del campo: in ogni partita compare il meteo previsto',
       'Interviste: incolla una playlist YouTube e i video compaiono da soli nell’app',
+    ],
+  },
+  {
+    titolo: 'Convocati e indisponibili',
+    parte: 'club',
+    demo: { Vista: SceneConvocati, durate: DURATE_CONVOCATI },
+    passi: [
+      'Nella partita tocca Scegli i convocati',
+      'Spunta chi vuoi: infortunati e squalificati non si possono scegliere',
+      'Conferma: solo i convocati possono rispondere',
+      'Ai convocati arriva la notifica e confermano con un tocco',
+    ],
+  },
+  {
+    titolo: 'Formazione con modulo',
+    parte: 'club',
+    demo: { Vista: SceneFormazioneClub, durate: DURATE_FORMAZIONE },
+    passi: [
+      'Nelle impostazioni scegli il formato (dal calcio a 5 all’11) e il modulo preferito',
+      'Proponi formazione: i titolari arrivano da ruoli e caratteristiche',
+      'Cambia modulo quando vuoi (4-4-2, 3-5-2…) e sposta i giocatori',
+    ],
+  },
+  {
+    titolo: 'Pagelle e statistiche',
+    parte: 'club',
+    demo: { Vista: ScenePagelle, durate: DURATE_PAGELLE },
+    passi: [
+      'A fine partita dai un voto e una nota a chi ha giocato',
+      'Ogni giocatore vede il suo voto e la nota, solo per lui',
+      'Nelle Statistiche: presenze agli allenamenti e media delle pagelle',
     ],
   },
 ]
@@ -492,9 +722,12 @@ export function Tutorial({ dopo }: { dopo: string }) {
   const fine = () => router.replace(dopo)
   const vaiA = (i: number) => setIndice(Math.max(0, Math.min(SCENE.length - 1, i)))
 
+  const primaAmici = SCENE.findIndex((x) => x.parte === 'amici')
+  const primaClub = SCENE.findIndex((x) => x.parte === 'club')
   return (
     <div
-      className="space-y-4"
+      // la parte allenatore è in blu, come l'app nelle leghe Club PRO
+      className={`space-y-4 ${scena.parte === 'club' ? 'tema-club' : ''}`}
       onTouchStart={(e) => (tocco.current = e.touches[0].clientX)}
       onTouchEnd={(e) => {
         if (tocco.current == null) return
@@ -503,7 +736,15 @@ export function Tutorial({ dopo }: { dopo: string }) {
         if (Math.abs(dx) > 60) vaiA(indice + (dx < 0 ? 1 : -1))
       }}
     >
-      <div className="text-center">
+      <div className="space-y-1.5 text-center">
+        {scena.parte === 'amici' && (
+          <span className="inline-block rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-semibold text-green-800 dark:bg-green-950 dark:text-green-300">👥 {t('Tra amici')}</span>
+        )}
+        {scena.parte === 'club' && (
+          <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-green-800 dark:text-green-300">
+            🧢 {t('Per l’allenatore')} <EtichettaClub />
+          </span>
+        )}
         <h1 className="text-xl font-bold">
           {t(scena.titolo)}
           {scena.pro && <span className="ml-2 rounded-full bg-amber-400 px-2 py-0.5 align-middle text-[10px] font-bold uppercase text-amber-950">Pro</span>}
@@ -513,23 +754,44 @@ export function Tutorial({ dopo }: { dopo: string }) {
       {scena.demo ? (
         <ScenaAnimata key={indice} scena={scena} t={t} />
       ) : (
-        <div className="space-y-4 py-6 text-center">
-          <p className="text-7xl" aria-hidden>
+        <div className="space-y-4 py-4 text-center">
+          <p className="text-6xl" aria-hidden>
             ⚽
           </p>
           <p className="text-sm text-zinc-600 dark:text-zinc-400">{t(scena.passi[0])}</p>
+          {/* scelta della parte: amici o allenatore */}
+          <div className="grid gap-2 text-left">
+            <button type="button" onClick={() => vaiA(primaAmici)} className="flex items-center gap-3 rounded-xl border-2 border-zinc-200 bg-white p-3 hover:border-green-600 dark:border-zinc-700 dark:bg-zinc-900">
+              <span className="text-2xl">👥</span>
+              <span>
+                <span className="block font-semibold">{t('Gioco con gli amici')}</span>
+                <span className="block text-xs text-zinc-500">{t('Lega, voti, partite, tornei')}</span>
+              </span>
+            </button>
+            <button type="button" onClick={() => vaiA(primaClub)} className="flex items-center gap-3 rounded-xl border-2 border-zinc-200 bg-white p-3 hover:border-zinc-900 dark:border-zinc-700 dark:bg-zinc-900">
+              <span className="text-2xl">🧢</span>
+              <span className="min-w-0 flex-1">
+                <span className="flex items-center gap-2 font-semibold">
+                  {t('Alleno una squadra')} <EtichettaClub />
+                </span>
+                <span className="block text-xs text-zinc-500">{t('Convocati, indisponibili, formazione, pagelle')}</span>
+              </span>
+            </button>
+          </div>
         </div>
       )}
 
-      <div className="flex justify-center gap-2">
-        {SCENE.map((_, i) => (
-          <button
-            key={i}
-            type="button"
-            onClick={() => vaiA(i)}
-            aria-label={`${i + 1}/${SCENE.length}`}
-            className={`h-2 rounded-full transition-all ${i === indice ? 'w-6 bg-green-600' : 'w-2 bg-zinc-300 dark:bg-zinc-700'}`}
-          />
+      {/* pallini divisi per parte: benvenuto · amici · allenatore */}
+      <div className="flex items-center justify-center gap-2">
+        {SCENE.map((x, i) => (
+          <span key={i} className={`flex items-center gap-2 ${i > 0 && x.parte !== SCENE[i - 1].parte ? 'ml-2' : ''}`}>
+            <button
+              type="button"
+              onClick={() => vaiA(i)}
+              aria-label={`${i + 1}/${SCENE.length}`}
+              className={`h-2 rounded-full transition-all ${i === indice ? 'w-6 bg-green-600' : x.parte === 'club' ? 'w-2 bg-zinc-500' : 'w-2 bg-zinc-300 dark:bg-zinc-700'}`}
+            />
+          </span>
         ))}
       </div>
 
