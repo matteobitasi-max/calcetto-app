@@ -8,6 +8,7 @@ import { sanity } from '@/lib/sanity'
 import { AttivaPro } from '@/components/attiva-pro'
 import { SubmitButton } from '@/components/submit-button'
 import { Card, Loading, buttonClass } from '@/components/ui'
+import { EtichettaClub } from '@/components/pill-scelta'
 import { getT } from '@/lib/lingua'
 
 export default function ClubPage({ searchParams }: PageProps<'/club'>) {
@@ -29,35 +30,41 @@ async function Vetrina({ searchParams }: { searchParams: PageProps<'/club'>['sea
   const mieClub = mio && utente ? await sanity.fetch<{ _id: string; nome: string }[]>(`*[_type == "league" && club == true && clubDi == $u]{_id, nome}`, { u: utente.id }) : []
   const pieno = !!legaId && !mieClub.some((l) => l._id === legaId) && mieClub.length >= MAX_LEGHE_CLUB
 
+  // le funzioni del Club, con la spunta (come nella pagina Pro): titolo e una riga di spiegazione
   const ora = [
-    ['📋', t('Convocati scelti dall’allenatore'), t('Solo loro ricevono l’avviso e possono confermare.')],
-    ['🚑', t('Infortunati e squalificati'), t('Con la data di rientro: non si possono convocare.')],
-    ['📝', t('Pagelle a fine partita'), t('Voto e nota a ogni giocatore, con la media nel profilo.')],
-    ['⚙️', t('Regole della squadra'), t('Scegli tu se i giocatori possono convocarsi da soli.')],
-    ['🧢', t('Formazione con modulo e ruoli'), t('Dal calcio a 5 al calcio a 11: 4-4-2, 3-5-2, 4-3-3 e gli altri, con i titolari proposti.')],
-    ['⭐', t('Tutto il Pro incluso'), t('Tornei, forma dei giocatori e statistiche dei km.')],
+    [t('Convocati scelti dall’allenatore'), t('Solo loro ricevono l’avviso e possono confermare.')],
+    [t('Infortunati e squalificati'), t('Con la data di rientro: non si possono convocare.')],
+    [t('Pagelle a fine partita'), t('Voto e nota a ogni giocatore, con la media nel profilo.')],
+    [t('Formazione con modulo e ruoli'), t('Dal calcio a 5 al calcio a 11: 4-4-2, 3-5-2, 4-3-3 e gli altri, con i titolari proposti.')],
+    [t('Presenze agli allenamenti'), t('Quante volte ognuno si è allenato, in percentuale.')],
+    [t('Regole della squadra'), t('Scegli tu se i giocatori possono convocarsi da soli.')],
   ]
   const presto = [t('Staff: vice, preparatore, dirigente'), t('Dati dalle telecamere Veo')]
 
   return (
     <div className="space-y-4">
       <Card className="space-y-2 border-2 border-zinc-900 text-center dark:border-white">
-        <p className="text-4xl">🧢</p>
+        <div className="flex justify-center">
+          <EtichettaClub />
+        </div>
         <h1 className="text-2xl font-bold">{t('Club PRO')}</h1>
         <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">{t('Club Allenatore')}</p>
         <p className="text-sm text-zinc-500">{t('Per squadre con allenatore e società: decidi tu chi convocare e segui ogni giocatore.')}</p>
       </Card>
 
       <Card className="space-y-3">
-        {ora.map(([emoji, titolo, testo]) => (
-          <div key={titolo} className="flex gap-3">
-            <span className="text-xl">{emoji}</span>
-            <span>
-              <span className="block font-semibold">{titolo}</span>
-              <span className="block text-sm text-zinc-500">{testo}</span>
-            </span>
-          </div>
-        ))}
+        <p className="text-sm font-semibold">{t('Tutto il Pro, più:')}</p>
+        <ul className="space-y-2.5">
+          {ora.map(([titolo, testo]) => (
+            <li key={titolo} className="flex gap-2.5">
+              <span className="font-bold text-green-600">✓</span>
+              <span>
+                <span className="block text-sm font-semibold">{titolo}</span>
+                <span className="block text-xs text-zinc-500">{testo}</span>
+              </span>
+            </li>
+          ))}
+        </ul>
         <div className="border-t border-zinc-200 pt-3 dark:border-zinc-800">
           <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-zinc-500">{t('In arrivo nel Club')}</p>
           <p className="text-sm text-zinc-600 dark:text-zinc-300">{presto.join(' · ')}</p>
