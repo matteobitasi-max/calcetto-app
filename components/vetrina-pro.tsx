@@ -242,12 +242,12 @@ export function Confronto({ t }: { t: T }) {
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b border-zinc-200 dark:border-zinc-800">
-            <th className="p-3 text-left font-semibold">{t('Cosa ottieni')}</th>
-            <th className="w-12 p-2 text-center text-xs font-semibold text-zinc-500">{t('Gratis')}</th>
-            <th className="w-12 bg-amber-50 p-2 text-center dark:bg-amber-950/40">
+            <th className="px-3 py-2 text-left font-semibold">{t('Cosa ottieni')}</th>
+            <th className="w-11 px-1 py-2 text-center text-[11px] font-semibold text-zinc-500">{t('Gratis')}</th>
+            <th className="w-11 bg-amber-50 px-1 py-2 text-center dark:bg-amber-950/40">
               <span className="rounded-full bg-amber-400 px-1.5 py-0.5 text-[10px] font-bold text-zinc-900">PRO</span>
             </th>
-            <th className="w-20 bg-zinc-100 p-2 text-center dark:bg-zinc-800/60">
+            <th className="w-[4.5rem] bg-zinc-100 px-1 py-2 text-center dark:bg-zinc-800/60">
               <EtichettaClub />
             </th>
           </tr>
@@ -255,10 +255,10 @@ export function Confronto({ t }: { t: T }) {
         <tbody>
           {righe.map(([voce, livello, presto]) => (
             <tr key={voce} className="border-b border-zinc-100 last:border-0 dark:border-zinc-800">
-              <td className={`p-3 ${livello === 0 ? 'text-zinc-600 dark:text-zinc-300' : 'font-medium'}`}>{voce}</td>
-              <td className="p-2 text-center">{livello === 0 ? si : no}</td>
-              <td className="bg-amber-50 p-2 text-center dark:bg-amber-950/40">{livello <= 1 ? si : no}</td>
-              <td className="bg-zinc-100 p-2 text-center dark:bg-zinc-800/60">
+              <td className={`px-3 py-1.5 text-[13px] leading-snug ${livello === 0 ? 'text-zinc-600 dark:text-zinc-300' : 'font-medium'}`}>{voce}</td>
+              <td className="px-1 py-1.5 text-center">{livello === 0 ? si : no}</td>
+              <td className="bg-amber-50 px-1 py-1.5 text-center dark:bg-amber-950/40">{livello <= 1 ? si : no}</td>
+              <td className="bg-zinc-100 px-1 py-1.5 text-center dark:bg-zinc-800/60">
                 {presto ? <span className="text-[10px] font-semibold uppercase text-zinc-500">{t('presto')}</span> : si}
               </td>
             </tr>
@@ -269,40 +269,56 @@ export function Confronto({ t }: { t: T }) {
   )
 }
 
-// Club PRO: cosa c'è in più rispetto al Pro, per chi allena una squadra. Porta alla pagina del Club.
+// Le due carte dei piani, una sotto l'altra: titolo, a chi serve e pochi punti con la spunta.
+function Punti({ voci }: { voci: string[] }) {
+  return (
+    <ul className="space-y-1.5 text-sm">
+      {voci.map((v) => (
+        <li key={v} className="flex gap-2">
+          <span className="font-bold text-green-600">✓</span>
+          <span>{v}</span>
+        </li>
+      ))}
+    </ul>
+  )
+}
+
+// Il piano Pro: per chi organizza la lega. Sotto (children) i prezzi e l'acquisto.
+export function PianoPro({ t, children }: { t: T; children?: ReactNode }) {
+  return (
+    <Card className="space-y-4 border-2 border-amber-400">
+      <div className="flex items-center justify-between gap-2">
+        <h3 className="text-lg font-bold">The Cap Pro</h3>
+        <span className="rounded-full bg-amber-400 px-2 py-0.5 text-xs font-bold text-zinc-900">PRO</span>
+      </div>
+      <p className="text-sm text-zinc-500">{t('Per chi organizza la lega: lo paghi solo tu, i giocatori lo usano gratis.')}</p>
+      <Punti
+        voci={[t('Tornei con gironi e tabellone'), t('Forma dei giocatori a ogni partita'), t('Squadre equilibrate anche sulla forma'), t('Classifica km, record e km nel profilo')]}
+      />
+      {children}
+    </Card>
+  )
+}
+
+// Il piano Club PRO: per chi allena una squadra. Porta alla pagina del Club.
 export function SezioneClub({ t, legaId }: { t: T; legaId?: string }) {
-  const voci: [string, string, string][] = [
-    ['📋', t('Convocati scelti dall’allenatore'), t('Solo loro ricevono l’avviso e possono confermare.')],
-    ['🚑', t('Infortunati e squalificati'), t('Con la data di rientro: non si possono convocare.')],
-    ['📝', t('Pagelle a fine partita'), t('Voto e nota a ogni giocatore, con la media nel profilo.')],
-    ['🏃', t('Presenze agli allenamenti'), t('Quante volte ognuno si è allenato, in percentuale.')],
-    ['⚙️', t('Regole della squadra'), t('Scegli tu se i giocatori possono convocarsi da soli.')],
-    ['🧢', t('Formazione con modulo e ruoli'), t('Dal calcio a 5 al calcio a 11: 4-4-2, 3-5-2, 4-3-3 e gli altri, con i titolari proposti.')],
-  ]
   return (
     <Card className="space-y-4 border-2 border-zinc-900 dark:border-white">
       <div className="flex items-center justify-between gap-2">
-        <h2 className="text-lg font-bold">🧢 {t('Club PRO')}</h2>
+        <h3 className="text-lg font-bold">{t('Club PRO')}</h3>
         <EtichettaClub />
       </div>
-      <p className="text-sm text-zinc-500">
-        {t('Per squadre con allenatore e società: tutto il Pro, più gli strumenti per decidere chi convocare e seguire ogni giocatore.')}{' '}
-        {t('Vale per {n} leghe (squadre).', { n: MAX_LEGHE_CLUB })}
-      </p>
-      <ul className="space-y-3">
-        {voci.map(([emoji, titolo, testo]) => (
-          <li key={titolo} className="flex gap-3">
-            <span className="text-xl">{emoji}</span>
-            <span>
-              <span className="block text-sm font-semibold">{titolo}</span>
-              <span className="block text-xs text-zinc-500">{testo}</span>
-            </span>
-          </li>
-        ))}
-      </ul>
-      <p className="text-xs text-zinc-500">
-        <b>{t('In arrivo nel Club')}:</b> {[t('Staff: vice, preparatore, dirigente'), t('Dati dalle telecamere Veo')].join(' · ')}
-      </p>
+      <p className="text-sm text-zinc-500">{t('Per squadre con allenatore e società. Vale per {n} leghe (squadre).', { n: MAX_LEGHE_CLUB })}</p>
+      <p className="text-sm font-semibold">{t('Tutto il Pro, più:')}</p>
+      <Punti
+        voci={[
+          t('Convocati scelti dall’allenatore'),
+          t('Infortunati e squalificati'),
+          t('Pagelle a fine partita, con note'),
+          t('Formazione con modulo e ruoli'),
+          t('Presenze agli allenamenti'),
+        ]}
+      />
       <Link href={`/club${legaId ? `?lega=${legaId}` : ''}`} className="block rounded-xl bg-zinc-900 py-3 text-center text-sm font-bold text-white hover:bg-zinc-800 dark:bg-white dark:text-zinc-900">
         {t('Scopri Club PRO ›')}
       </Link>

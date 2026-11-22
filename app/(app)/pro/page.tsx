@@ -3,7 +3,7 @@ import { Suspense } from 'react'
 import { getUtente, requirePlayer } from '@/lib/player'
 import { chiaviRevenueCat, mioAbbonamento, pagamentiConfigurati } from '@/lib/abbonamenti'
 import { AttivaPro } from '@/components/attiva-pro'
-import { ChiusuraPro, Confronto, Domande, Garanzie, SezioneClub, StatoLega, Testata, Vantaggi } from '@/components/vetrina-pro'
+import { ChiusuraPro, Confronto, Domande, Garanzie, PianoPro, SezioneClub, StatoLega, Testata, Vantaggi } from '@/components/vetrina-pro'
 import { MAX_LEGHE_PRO, ioPro, legaPro, oltreLimitePro } from '@/lib/pro'
 import { getPlayers } from '@/lib/matches'
 import { Card, Loading } from '@/components/ui'
@@ -77,21 +77,25 @@ async function Vetrina() {
 
       <StatoLega t={t} attiva={attiva} admin={!!me.isAdmin} mioPro={mioPro} lega={lega} vendibile={vendibile} />
 
-      <Vantaggi t={t} link={attiva} />
+      {/* 1. i due piani, uno sotto l'altro: Pro (con i prezzi) e Club PRO */}
+      <section id="prezzi" className="scroll-mt-28 space-y-3">
+        <h2 className="text-center text-lg font-bold">{t('Scegli il tuo piano')}</h2>
+        <PianoPro t={t}>{vendibile && <AttivaPro utente={utente!.id} chiavi={chiaviRevenueCat()} mio={null} giocatori={giocatori} />}</PianoPro>
+        <SezioneClub t={t} legaId={me.isAdmin ? me.lega._id : undefined} />
+        {vendibile && <Garanzie t={t} />}
+      </section>
 
-      <Confronto t={t} />
+      {/* 2. le differenze tra i piani */}
+      <section className="space-y-3">
+        <h2 className="text-center text-lg font-bold">{t('Le differenze')}</h2>
+        <Confronto t={t} />
+      </section>
 
-      <SezioneClub t={t} legaId={me.isAdmin ? me.lega._id : undefined} />
-
-      {vendibile && (
-        <section id="prezzi" className="scroll-mt-28 space-y-3">
-          <h2 className="text-center text-lg font-bold">{t('Scegli il tuo piano')}</h2>
-          <Card className="space-y-3 border-2 border-amber-400 shadow-lg shadow-amber-200/40 dark:shadow-none">
-            <AttivaPro utente={utente!.id} chiavi={chiaviRevenueCat()} mio={null} giocatori={giocatori} />
-          </Card>
-          <Garanzie t={t} />
-        </section>
-      )}
+      {/* 3. le funzioni nel dettaglio */}
+      <section className="space-y-3">
+        <h2 className="text-center text-lg font-bold">{t('Le funzioni nel dettaglio')}</h2>
+        <Vantaggi t={t} link={attiva} />
+      </section>
 
       <Domande t={t} />
 

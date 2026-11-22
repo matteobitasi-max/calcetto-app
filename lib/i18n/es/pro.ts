@@ -180,4 +180,9 @@ export const pro: Record<string, string> = {
   "Per spostarlo qui, apri una di quelle leghe e in Impostazioni lega → Tipo di lega scegli “Tra amici”.": "Para moverlo aquí, abre una de esas ligas y en Ajustes de la liga → Tipo de liga elige “Entre amigos”.",
   "Vale per {n} leghe (squadre).": "Vale para {n} ligas (equipos).",
   "Grazie per essere Club PRO!": "¡Gracias por ser Club PRO!",
+  "Per chi organizza la lega: lo paghi solo tu, i giocatori lo usano gratis.": "Para quien organiza la liga: lo pagas solo tú, los jugadores lo usan gratis.",
+  "Per squadre con allenatore e società. Vale per {n} leghe (squadre).": "Para equipos con entrenador y clubes. Vale para {n} ligas (equipos).",
+  "Tutto il Pro, più:": "Todo el Pro, más:",
+  "Le differenze": "Las diferencias",
+  "Le funzioni nel dettaglio": "Las funciones en detalle",
 }
