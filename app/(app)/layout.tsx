@@ -1,3 +1,4 @@
+import { TemaClub } from '@/components/tema-club'
 import Link from 'next/link'
 import { Suspense } from 'react'
 import { UserButton } from '@clerk/nextjs'
@@ -60,6 +61,7 @@ async function LegaEUtente() {
   if (!me) {
     return (
       <>
+        <TemaClub attivo={false} />
         <span className="flex-1 font-semibold">{t('Calcetto')}</span>
         <UserButton />
       </>
@@ -73,6 +75,8 @@ async function LegaEUtente() {
   })
   return (
     <>
+      {/* leghe Club PRO: l'app diventa blu */}
+      <TemaClub attivo={!!me.lega.club && me.lega.tipo === 'squadra'} />
       <LegaZoom
         nome={me.lega.nome}
         piccola={avatarUrl(me.lega.logo, 96)}

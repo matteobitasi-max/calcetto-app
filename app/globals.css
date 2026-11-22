@@ -144,3 +144,46 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .conferma-sfondo, .conferma-finestra { animation: none; }
 }
+
+
+/* Tema Club PRO: nelle leghe Club l'app passa dal verde al blu. La classe "tema-club" su <html>
+   (components/tema-club.tsx) ridefinisce i verdi di Tailwind con i blu: pulsanti, pillole, evidenziazioni
+   e testi verdi diventano blu senza toccare le pagine. Il disegno del campo da gioco resta verde. */
+.tema-club {
+  --color-green-50: oklch(97% 0.014 254.604);
+  --color-green-100: oklch(93.2% 0.032 255.585);
+  --color-green-200: oklch(88.2% 0.059 254.128);
+  --color-green-300: oklch(80.9% 0.105 251.813);
+  --color-green-400: oklch(70.7% 0.165 254.624);
+  --color-green-500: oklch(62.3% 0.214 259.815);
+  --color-green-600: oklch(54.6% 0.245 262.881);
+  --color-green-700: oklch(48.8% 0.243 264.376);
+  --color-green-800: oklch(42.4% 0.199 265.638);
+  --color-green-900: oklch(37.9% 0.146 265.522);
+  --color-green-950: oklch(28.2% 0.091 267.935);
+  --color-emerald-700: oklch(45.7% 0.24 277.023);
+  --color-emerald-900: oklch(35.9% 0.144 278.697);
+  /* il logo C: campo a strisce blu */
+  --logo-campo: #2563eb;
+  --logo-strisce: #1d4ed8;
+  --logo-bordo: #1e3a8a;
+  --logo-c: #1e40af;
+}
+/* lo sfondo a strisce delle schermate: azzurro invece dell'erba */
+.tema-club .campo {
+  --erba-chiara: #c7dbf7;
+  --erba-scura: #b3cdf2;
+}
+/* di sera: blu notte invece del verde-ardesia */
+:root.dark.tema-club {
+  --background: #0f1d33;
+  --color-zinc-950: #16233a;
+  --color-zinc-900: #22304a;
+  --color-zinc-800: #2f3e5a;
+  --color-zinc-700: #43526e;
+}
+.dark.tema-club .campo,
+.dark .tema-club .campo {
+  --erba-chiara: #13233d;
+  --erba-scura: #182a47;
+}
