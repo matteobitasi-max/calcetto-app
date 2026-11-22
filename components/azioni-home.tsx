@@ -15,7 +15,8 @@ export function AzioniHome({ invito, scrivi }: { invito?: { url: string; nomeLeg
   const tondo = 'flex h-10 w-10 items-center justify-center rounded-full bg-white text-lg font-bold shadow ring-1 ring-zinc-200 hover:bg-zinc-50 dark:bg-zinc-900 dark:ring-zinc-700 dark:hover:bg-zinc-800'
 
   return (
-    <div className="flex justify-end gap-2">
+    // -mb-4: nella home (space-y-6) la riga dei pulsanti sta vicina a quello che segue (la prossima partita)
+    <div className="-mb-4 flex justify-end gap-2">
       {scrivi && (
         <button type="button" onClick={() => setAperta('scrivi')} aria-haspopup="dialog" aria-label={t('Scrivi alla squadra')} title={t('Scrivi alla squadra')} className={tondo}>
           📣
