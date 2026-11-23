@@ -228,6 +228,9 @@ public class SalutePlugin: CAPPlugin, CAPBridgedPlugin {
             let gruppo = DispatchGroup()
             let coda = DispatchQueue(label: "salute.km")
             var distanza = 0.0, allenamenti = 0.0
+            // gli allenamenti a cavallo della partita, grezzi: le regole per contarli stanno nel sito (lib/salute.ts),
+            // così si possono cambiare senza una nuova versione dell'app
+            var elenco: [[String: Any]] = []
             var passiPartita: [String: Double] = [:], passiGiorni: [String: Double] = [:], metriGiorni: [String: Double] = [:]
             // per il passo di ogni persona: km e passi di ogni fonte nella settimana prima e nel giorno dopo
             // (Garmin scrive i km del giorno solo quando si sincronizza, anche a notte fonda)
@@ -250,15 +253,21 @@ public class SalutePlugin: CAPPlugin, CAPBridgedPlugin {
             gruppo.enter()
             self.salute.execute(HKSampleQuery(sampleType: tipoAllenamenti, predicate: filtro, limit: HKObjectQueryNoLimit, sortDescriptors: nil) { _, campioni, _ in
                 var migliore = 0.0
+                var tutti: [[String: Any]] = []
                 for allenamento in campioni as? [HKWorkout] ?? [] {
                     guard let km = allenamento.totalDistance?.doubleValue(for: .meter()) else { continue }
+                    tutti.append([
+                        "inizio": allenamento.startDate.timeIntervalSince1970 * 1000,
+                        "fine": allenamento.endDate.timeIntervalSince1970 * 1000,
+                        "metri": km,
+                    ])
                     let durata = allenamento.endDate.timeIntervalSince(allenamento.startDate)
                     let dentro = min(allenamento.endDate, fine).timeIntervalSince(max(allenamento.startDate, inizio))
                     guard durata > 0, dentro > 0 else { continue }
                     let intero = allenamento.startDate >= inizio.addingTimeInterval(-30 * 60) && allenamento.endDate <= fine.addingTimeInterval(60 * 60)
                     migliore = max(migliore, intero ? km : km * min(1, dentro / durata))
                 }
-                coda.sync { allenamenti = migliore }
+                coda.sync { allenamenti = migliore; elenco = tutti }
                 gruppo.leave()
             })
 
@@ -284,7 +293,7 @@ public class SalutePlugin: CAPPlugin, CAPBridgedPlugin {
                 }
                 let metri = max(distanza, allenamenti, daiPassi)
                 let fonte = metri == 0 ? "nessuna" : metri == distanza ? "distanza" : metri == allenamenti ? "allenamento" : "passi"
-                call.resolve(["metri": metri, "fonte": fonte])
+                call.resolve(["metri": metri, "fonte": fonte, "distanza": distanza, "passi": daiPassi, "allenamenti": elenco])
             }
         }
     }

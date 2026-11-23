@@ -5,7 +5,7 @@ import { Capacitor } from '@capacitor/core'
 import { useEffect, useState, useTransition } from 'react'
 import { collegaStrava, kmDaStrava, salvaKm, togliKm } from '@/app/actions'
 import type { Distanza } from '@/lib/matches'
-import { Salute, avvisiNascosti, chiediConsensoKm, escludiPartita, impostaKmAutomatici, includiPartita, kmAutomatici, nascondiAvviso, nomeSalute, partiteEscluse, pochiKm, saluteDisponibile } from '@/lib/salute'
+import { metriPartita, avvisiNascosti, chiediConsensoKm, escludiPartita, impostaKmAutomatici, includiPartita, kmAutomatici, nascondiAvviso, nomeSalute, partiteEscluse, pochiKm, saluteDisponibile } from '@/lib/salute'
 import { useT } from './lingua'
 
 const DOPO_STRAVA = 'km-dopo-strava'
@@ -77,7 +77,7 @@ export function KmPartita({
     if (dopo === matchId && stravaCollegato) daStrava()
     // km automatici attivi ma niente salvato: se in Salute ci sono pochi km lo si fa notare
     if (saluteDisponibile() && kmAutomatici() && !miei && fine <= Date.now() && !partiteEscluse().includes(matchId) && !avvisiNascosti().includes(matchId)) {
-      Salute.distanza({ inizio, fine })
+      metriPartita(inizio, fine)
         .then(({ metri }) => {
           if (metri >= 50 && pochiKm(metri, inizio, fine)) setPochi(metri)
         })
@@ -90,7 +90,7 @@ export function KmPartita({
     if (!(await chiediConsensoKm(t('Per i km delle partite, The Cap legge da {app} solo i dati sul movimento registrati durante le tue partite: distanza camminata e corsa, passi e allenamenti. Sono dati legati alla salute: li usiamo solo per mostrare i tuoi km ai membri della lega e puoi disattivarlo quando vuoi in Il mio account. Acconsenti?', { app: nome })), t('Acconsento'))) return
     startTransition(async () => {
       try {
-        const { metri } = await Salute.distanza({ inizio, fine })
+        const { metri } = await metriPartita(inizio, fine)
         // permesso chiesto: da ora i km delle partite si prendono da soli all'apertura dell'app
         impostaKmAutomatici(true)
         // presi a mano: anche se prima li avevo tolti, i km automatici possono di nuovo aggiornarli

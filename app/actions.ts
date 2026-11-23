@@ -1623,7 +1623,8 @@ const KM_ORA_MAX = 10
 export async function salvaKm(matchId: string, km: number, fonte: 'salute'): Promise<{ error?: string }> {
   const { me, match } = await partitaPerKm(matchId)
   if (fonte !== 'salute') return { error: await tr('I km si prendono dall\u2019app Salute del telefono.') }
-  const massimo = (KM_ORA_MAX * (match.durataMinuti ?? 60)) / 60
+  // l'allenamento dell'orologio conta intero anche se va oltre l'orario (fino a 30 minuti prima e un'ora dopo)
+  const massimo = (KM_ORA_MAX * ((match.durataMinuti ?? 60) + 90)) / 60
   if (!Number.isFinite(km) || km <= 0) return { error: await tr('Dall\u2019app Salute arriva una distanza non valida.') }
   if (km > massimo) {
     return {

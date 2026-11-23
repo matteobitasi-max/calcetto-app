@@ -5,7 +5,45 @@ import { conferma } from '@/components/conferma'
 // Plugin nativo "Salute" dell'app: Apple Salute su iPhone (SalutePlugin in AppDelegate.swift),
 // Health Connect su Android (SalutePlugin.kt). Restituisce i metri percorsi tra inizio e fine.
 // Su iPhone `fonte` dice da dove vengono: distanza, allenamento o passi (stima, per chi ha Garmin).
-export const Salute = registerPlugin<{ distanza(o: { inizio: number; fine: number }): Promise<{ metri: number; fonte?: string }> }>('Salute')
+// Dalla versione 1.6 (build 22) su iPhone restituisce anche i dati grezzi: distanza e passi nell'orario e gli
+// allenamenti a cavallo della partita. Le regole per contarli stanno qui (metriPartita), così si cambiano dal sito.
+type AllenamentoSalute = { inizio: number; fine: number; metri: number }
+type LetturaSalute = { metri: number; fonte?: string; distanza?: number; passi?: number; allenamenti?: AllenamentoSalute[] }
+export const Salute = registerPlugin<{ distanza(o: { inizio: number; fine: number }): Promise<LetturaSalute> }>('Salute')
+
+// L'orologio (es. Garmin) si avvia quando si entra in campo e si ferma a fine partita, che spesso comincia
+// o finisce dopo l'orario scritto in The Cap: un allenamento a cavallo della partita conta intero se parte
+// al massimo 30 minuti prima e finisce al massimo un'ora dopo; uno più lungo solo per la parte dentro l'orario.
+const PRIMA_MS = 30 * 60_000
+const DOPO_MS = 60 * 60_000
+
+function metriAllenamento(a: AllenamentoSalute, inizio: number, fine: number) {
+  const durata = a.fine - a.inizio
+  const dentro = Math.min(a.fine, fine) - Math.max(a.inizio, inizio)
+  if (durata <= 0 || dentro <= 0 || !(a.metri > 0)) return 0
+  const intero = a.inizio >= inizio - PRIMA_MS && a.fine <= fine + DOPO_MS
+  return intero ? a.metri : a.metri * Math.min(1, dentro / durata)
+}
+
+/** I metri della partita da Salute / Health Connect: il più alto tra distanza, allenamento dell'orologio e passi. */
+export async function metriPartita(inizio: number, fine: number): Promise<{ metri: number; fonte?: string }> {
+  const r = await Salute.distanza({ inizio, fine })
+  // app nuova: dati grezzi, si applicano le regole qui
+  if (Array.isArray(r.allenamenti)) {
+    const allenamento = Math.max(0, ...r.allenamenti.map((a) => metriAllenamento(a, inizio, fine)))
+    const distanza = r.distanza ?? 0
+    const passi = r.passi ?? 0
+    const metri = Math.max(distanza, allenamento, passi, r.metri)
+    return { metri, fonte: metri === allenamento ? 'allenamento' : metri === distanza ? 'distanza' : metri === passi ? 'passi' : r.fonte }
+  }
+  // app di prima su iPhone: conta solo la parte di allenamento dentro l'orario. Se a vincere è un allenamento,
+  // si rilegge su un orario più largo (30 minuti prima, un'ora dopo) per prenderlo intero.
+  if (r.fonte === 'allenamento') {
+    const largo = await Salute.distanza({ inizio: inizio - PRIMA_MS, fine: fine + DOPO_MS }).catch(() => null)
+    if (largo?.fonte === 'allenamento' && largo.metri > r.metri) return { metri: largo.metri, fonte: 'allenamento' }
+  }
+  return { metri: r.metri, fonte: r.fonte }
+}
 
 export const saluteDisponibile = () => Capacitor.isNativePlatform() && Capacitor.isPluginAvailable('Salute')
 

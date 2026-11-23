@@ -4,7 +4,7 @@ import { App } from '@capacitor/app'
 import { useRouter } from 'next/navigation'
 import { useEffect } from 'react'
 import { partiteSenzaKm, salvaKm } from '@/app/actions'
-import { Salute, kmAutomatici, partiteEscluse, pochiKm, saluteDisponibile } from '@/lib/salute'
+import { metriPartita, kmAutomatici, partiteEscluse, pochiKm, saluteDisponibile } from '@/lib/salute'
 
 // App per iPhone, con i km automatici attivi: all'apertura e quando l'app torna in primo piano
 // prende da Apple Salute / Health Connect i km delle mie partite finite (ultimi 7 giorni) a cui mancano,
@@ -28,7 +28,7 @@ export function KmAutomatici() {
         let salvati = 0
         for (const p of await partiteSenzaKm()) {
           if (escluse.has(p.matchId)) continue
-          const { metri } = await Salute.distanza({ inizio: p.inizio, fine: p.fine })
+          const { metri } = await metriPartita(p.inizio, p.fine)
           const km = Math.round(metri / 10) / 100
           // pochi km (nessun tracker addosso): li si inserisce a mano dalla partita, se si vuole
           if (metri < 50 || pochiKm(metri, p.inizio, p.fine) || km === p.km) continue
