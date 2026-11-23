@@ -8,7 +8,7 @@ import { conferma } from '@/components/conferma'
 // Dalla versione 1.6 (build 22) su iPhone restituisce anche i dati grezzi: distanza e passi nell'orario e gli
 // allenamenti a cavallo della partita. Le regole per contarli stanno qui (metriPartita), così si cambiano dal sito.
 type AllenamentoSalute = { inizio: number; fine: number; metri: number }
-type LetturaSalute = { metri: number; fonte?: string; distanza?: number; passi?: number; allenamenti?: AllenamentoSalute[] }
+type LetturaSalute = { metri: number; fonte?: string; distanza?: number; passi?: number; allenamenti?: AllenamentoSalute[]; versione?: number }
 export const Salute = registerPlugin<{ distanza(o: { inizio: number; fine: number }): Promise<LetturaSalute> }>('Salute')
 
 // L'orologio (es. Garmin) si avvia quando si entra in campo e si ferma a fine partita, che spesso comincia
@@ -41,21 +41,24 @@ export async function fetteSalute(inizio: number, fine: number) {
 /** I metri della partita da Salute / Health Connect: il più alto tra distanza, allenamento dell'orologio e passi. */
 export async function metriPartita(inizio: number, fine: number): Promise<{ metri: number; fonte?: string }> {
   const r = await Salute.distanza({ inizio, fine })
-  // app nuova: dati grezzi, si applicano le regole qui
-  if (Array.isArray(r.allenamenti)) {
+  // app per iPhone dalla build 22: dati grezzi già calcolati bene, le regole sull'allenamento si applicano qui
+  if ((r.versione ?? 0) >= 2 && Array.isArray(r.allenamenti)) {
     const allenamento = Math.max(0, ...r.allenamenti.map((a) => metriAllenamento(a, inizio, fine)))
     const distanza = r.distanza ?? 0
     const passi = r.passi ?? 0
-    const metri = Math.max(distanza, allenamento, passi, r.metri)
-    return { metri, fonte: metri === allenamento ? 'allenamento' : metri === distanza ? 'distanza' : metri === passi ? 'passi' : r.fonte }
+    const metri = Math.max(distanza, allenamento, passi)
+    return { metri, fonte: metri === 0 ? 'nessuna' : metri === allenamento ? 'allenamento' : metri === distanza ? 'distanza' : 'passi' }
   }
-  // app di prima su iPhone: conta solo la parte di allenamento dentro l'orario. Se a vincere è un allenamento,
-  // si rilegge su un orario più largo (30 minuti prima, un'ora dopo) per prenderlo intero.
-  // Solo se il risultato è coerente con quell'allenamento: almeno metà dell'allenamento cade nell'orario, quindi
-  // intero è al massimo il doppio di quanto visto dentro (altrimenti è un altro dato, es. il totale del giorno).
-  if (r.fonte === 'allenamento') {
-    const largo = await Salute.distanza({ inizio: inizio - PRIMA_MS, fine: fine + DOPO_MS }).catch(() => null)
-    if (largo?.fonte === 'allenamento' && largo.metri > r.metri && largo.metri <= r.metri * 2) return { metri: largo.metri, fonte: 'allenamento' }
+  // App di prima (e Android): conta per intero ogni dato che tocca l'orario. Garmin scrive la distanza in pochi
+  // blocchi lunghi (es. tutto il pomeriggio in uno solo): un blocco che finisce poco dopo l'inizio gonfiava i km.
+  // Si rilegge la parte centrale della partita: se cala molto più del tempo tolto, il di più veniva dai bordi
+  // e vale la lettura centrale (che comprende comunque per intero l'allenamento dell'orologio).
+  const durata = fine - inizio
+  const bordo = Math.min(10 * 60_000, durata / 6)
+  if (r.metri > 0 && durata > 0) {
+    const centro = await Salute.distanza({ inizio: inizio + bordo, fine: fine - bordo }).catch(() => null)
+    const atteso = (r.metri * (durata - 2 * bordo)) / durata
+    if (centro && centro.metri > 0 && centro.metri < atteso * 0.85) return { metri: centro.metri, fonte: centro.fonte }
   }
   return { metri: r.metri, fonte: r.fonte }
 }

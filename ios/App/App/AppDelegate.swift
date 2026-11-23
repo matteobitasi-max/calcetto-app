@@ -205,6 +205,23 @@ public class SalutePlugin: CAPPlugin, CAPBridgedPlugin {
         })
     }
 
+    // Il totale di un dato nell'orario, app per app, contando ogni campione solo per la parte dentro l'orario.
+    // (Le statistiche di Salute contano per intero ogni campione che tocca l'orario: Garmin scrive la distanza
+    // in pochi blocchi lunghi, per esempio tutto il pomeriggio in un solo dato, e i km uscivano gonfiati.)
+    private func proporzionale(_ tipo: HKQuantityType, _ unita: HKUnit, _ inizio: Date, _ fine: Date, _ fatto: @escaping ([String: Double]) -> Void) {
+        let filtro = HKQuery.predicateForSamples(withStart: inizio, end: fine, options: [])
+        salute.execute(HKSampleQuery(sampleType: tipo, predicate: filtro, limit: HKObjectQueryNoLimit, sortDescriptors: nil) { _, campioni, _ in
+            var totali: [String: Double] = [:]
+            for campione in campioni as? [HKQuantitySample] ?? [] {
+                let durata = campione.endDate.timeIntervalSince(campione.startDate)
+                let dentro = min(campione.endDate, fine).timeIntervalSince(max(campione.startDate, inizio))
+                let quota = durata <= 0 ? 1 : max(0, min(1, dentro / durata))
+                totali[campione.sourceRevision.source.bundleIdentifier, default: 0] += campione.quantity.doubleValue(for: unita) * quota
+            }
+            fatto(totali)
+        })
+    }
+
     @objc func distanza(_ call: CAPPluginCall) {
         guard HKHealthStore.isHealthDataAvailable(),
               let tipoDistanza = HKQuantityType.quantityType(forIdentifier: .distanceWalkingRunning),
@@ -236,15 +253,13 @@ public class SalutePlugin: CAPPlugin, CAPBridgedPlugin {
             // (Garmin scrive i km del giorno solo quando si sincronizza, anche a notte fonda)
             let giorni = HKQuery.predicateForSamples(withStart: inizio.addingTimeInterval(-7 * 86400), end: fine.addingTimeInterval(86400), options: [])
 
-            // 1. Il totale di Salute nell'orario della partita, lo stesso numero che mostra l'app Salute:
-            // somma tutte le fonti senza contare due volte gli stessi passi registrati da telefono e orologio,
-            // e dei dati a cavallo dell'inizio o della fine conta solo la parte dentro.
+            // 1. La distanza nell'orario della partita: app per app (telefono e orologio non si sommano, vale quella
+            // che ne ha di più) e di ogni dato solo la parte dentro l'orario.
             gruppo.enter()
-            self.salute.execute(HKStatisticsQuery(quantityType: tipoDistanza, quantitySamplePredicate: filtro, options: .cumulativeSum) { _, statistiche, _ in
-                let metri = statistiche?.sumQuantity()?.doubleValue(for: .meter()) ?? 0
-                coda.sync { distanza = metri }
+            self.proporzionale(tipoDistanza, .meter(), inizio, fine) { t in
+                coda.sync { distanza = t.values.max() ?? 0 }
                 gruppo.leave()
-            })
+            }
 
             // 2. Gli allenamenti a cavallo della partita. L'orologio (es. Garmin) si avvia quando si entra in campo
             // e si ferma a fine partita, che spesso comincia o finisce più tardi dell'orario in The Cap:
@@ -273,7 +288,7 @@ public class SalutePlugin: CAPPlugin, CAPBridgedPlugin {
 
             // 3. I passi, fonte per fonte (l'orologio, non il telefono in borsa), e il passo di ognuno.
             gruppo.enter()
-            self.perFonte(tipoPassi, .count(), filtro) { t in coda.sync { passiPartita = t }; gruppo.leave() }
+            self.proporzionale(tipoPassi, .count(), inizio, fine) { t in coda.sync { passiPartita = t }; gruppo.leave() }
             gruppo.enter()
             self.perFonte(tipoPassi, .count(), giorni) { t in coda.sync { passiGiorni = t }; gruppo.leave() }
             gruppo.enter()
@@ -293,7 +308,7 @@ public class SalutePlugin: CAPPlugin, CAPBridgedPlugin {
                 }
                 let metri = max(distanza, allenamenti, daiPassi)
                 let fonte = metri == 0 ? "nessuna" : metri == distanza ? "distanza" : metri == allenamenti ? "allenamento" : "passi"
-                call.resolve(["metri": metri, "fonte": fonte, "distanza": distanza, "passi": daiPassi, "allenamenti": elenco])
+                call.resolve(["metri": metri, "fonte": fonte, "distanza": distanza, "passi": daiPassi, "allenamenti": elenco, "versione": 2])
             }
         }
     }
