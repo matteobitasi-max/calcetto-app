@@ -243,7 +243,10 @@ public class SalutePlugin: CAPPlugin, CAPBridgedPlugin {
                 gruppo.leave()
             })
 
-            // 2. Gli allenamenti nell'orario della partita: i loro km, solo per la parte dentro la partita.
+            // 2. Gli allenamenti a cavallo della partita. L'orologio (es. Garmin) si avvia quando si entra in campo
+            // e si ferma a fine partita, che spesso comincia o finisce più tardi dell'orario in The Cap:
+            // un allenamento che parte al massimo 30 minuti prima e finisce al massimo un'ora dopo conta intero;
+            // uno più lungo (es. tutta la giornata) solo per la parte dentro la partita.
             gruppo.enter()
             self.salute.execute(HKSampleQuery(sampleType: tipoAllenamenti, predicate: filtro, limit: HKObjectQueryNoLimit, sortDescriptors: nil) { _, campioni, _ in
                 var migliore = 0.0
@@ -252,7 +255,8 @@ public class SalutePlugin: CAPPlugin, CAPBridgedPlugin {
                     let durata = allenamento.endDate.timeIntervalSince(allenamento.startDate)
                     let dentro = min(allenamento.endDate, fine).timeIntervalSince(max(allenamento.startDate, inizio))
                     guard durata > 0, dentro > 0 else { continue }
-                    migliore = max(migliore, km * min(1, dentro / durata))
+                    let intero = allenamento.startDate >= inizio.addingTimeInterval(-30 * 60) && allenamento.endDate <= fine.addingTimeInterval(60 * 60)
+                    migliore = max(migliore, intero ? km : km * min(1, dentro / durata))
                 }
                 coda.sync { allenamenti = migliore }
                 gruppo.leave()
