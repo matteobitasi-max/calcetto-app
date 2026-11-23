@@ -5,7 +5,7 @@ import { Capacitor } from '@capacitor/core'
 import { useEffect, useState, useTransition } from 'react'
 import { collegaStrava, kmDaStrava, salvaKm, togliKm } from '@/app/actions'
 import type { Distanza } from '@/lib/matches'
-import { Salute, chiediConsensoKm, escludiPartita, impostaKmAutomatici, kmAutomatici, nomeSalute, partiteEscluse, pochiKm, saluteDisponibile } from '@/lib/salute'
+import { Salute, avvisiNascosti, chiediConsensoKm, escludiPartita, impostaKmAutomatici, includiPartita, kmAutomatici, nascondiAvviso, nomeSalute, partiteEscluse, pochiKm, saluteDisponibile } from '@/lib/salute'
 import { useT } from './lingua'
 
 const DOPO_STRAVA = 'km-dopo-strava'
@@ -41,6 +41,7 @@ export function KmPartita({
   const salva = (metri: number) =>
     startTransition(async () => {
       setPochi(null)
+      includiPartita(matchId)
       const r = await salvaKm(matchId, metri / 1000, 'salute')
       setMessaggio(r.error ? { testo: r.error, errore: true } : { testo: `✅ ${t('{km} km da {app}', { km: formatoKm(metri / 1000), app: nome })}` })
     })
@@ -75,7 +76,7 @@ export function KmPartita({
     } catch {}
     if (dopo === matchId && stravaCollegato) daStrava()
     // km automatici attivi ma niente salvato: se in Salute ci sono pochi km lo si fa notare
-    if (saluteDisponibile() && kmAutomatici() && !miei && fine <= Date.now() && !partiteEscluse().includes(matchId)) {
+    if (saluteDisponibile() && kmAutomatici() && !miei && fine <= Date.now() && !partiteEscluse().includes(matchId) && !avvisiNascosti().includes(matchId)) {
       Salute.distanza({ inizio, fine })
         .then(({ metri }) => {
           if (metri >= 50 && pochiKm(metri, inizio, fine)) setPochi(metri)
@@ -92,6 +93,8 @@ export function KmPartita({
         const { metri } = await Salute.distanza({ inizio, fine })
         // permesso chiesto: da ora i km delle partite si prendono da soli all'apertura dell'app
         impostaKmAutomatici(true)
+        // presi a mano: anche se prima li avevo tolti, i km automatici possono di nuovo aggiornarli
+        includiPartita(matchId)
         if (metri < 50) {
           setMessaggio({
             testo: t('In {app} non ci sono km registrati durante la partita (controlla anche di aver dato il permesso di leggere la distanza).', { app: nome }),
@@ -168,8 +171,8 @@ export function KmPartita({
               type="button"
               disabled={pending}
               onClick={() => {
-                // non li si propone più per questa partita
-                escludiPartita(matchId)
+                // nasconde solo l'avviso: se più tardi arrivano i dati dell'orologio, i km si prendono lo stesso
+                nascondiAvviso(matchId)
                 setPochi(null)
               }}
               className={`${pulsante} text-amber-900 underline dark:text-amber-200`}

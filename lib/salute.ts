@@ -40,6 +40,14 @@ export const impostaKmAutomatici = (attivi: boolean) => scrivi(AUTO, attivi ? '1
 
 export const partiteEscluse = (): string[] => JSON.parse(leggi(ESCLUSE) ?? '[]')
 export const escludiPartita = (matchId: string) => scrivi(ESCLUSE, JSON.stringify([...new Set([...partiteEscluse(), matchId])].slice(-50)))
+// km presi di nuovo a mano da Salute: da qui in poi i km automatici possono aggiornarli
+export const includiPartita = (matchId: string) => scrivi(ESCLUSE, JSON.stringify(partiteEscluse().filter((id) => id !== matchId)))
+
+// "Lascia stare" sull'avviso dei pochi km: nasconde solo l'avviso. Se poi arrivano i dati dell'orologio
+// (Garmin e simili scrivono in Salute quando si sincronizzano, anche dopo la partita) i km si prendono lo stesso.
+const AVVISI = 'km-salute-avviso-nascosto'
+export const avvisiNascosti = (): string[] => JSON.parse(leggi(AVVISI) ?? '[]')
+export const nascondiAvviso = (matchId: string) => scrivi(AVVISI, JSON.stringify([...new Set([...avvisiNascosti(), matchId])].slice(-50)))
 
 // Consenso esplicito prima di leggere i km (dati legati alla salute): chiesto una volta su questo telefono
 // e registrato sull'account con la data; disattivando i km si registra la revoca.

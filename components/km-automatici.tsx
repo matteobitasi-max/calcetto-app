@@ -10,6 +10,10 @@ import { Salute, kmAutomatici, partiteEscluse, pochiKm, saluteDisponibile } from
 // prende da Apple Salute / Health Connect i km delle mie partite finite (ultimi 7 giorni) a cui mancano,
 // e nelle 24 ore dopo la partita li riprende se in Salute sono cambiati (l'iPhone li scrive in ritardo).
 // Apple permette di leggere Salute solo con l'app aperta: non si può fare a telefono in tasca.
+// Con l'app aperta si ricontrolla ogni pochi minuti: Garmin e gli altri orologi scrivono in Salute solo quando
+// si sincronizzano, spesso dopo la fine della partita, e i km devono arrivare anche senza riaprire l'app.
+const OGNI_MS = 3 * 60_000
+
 export function KmAutomatici() {
   const router = useRouter()
 
@@ -39,7 +43,9 @@ export function KmAutomatici() {
     }
     sincronizza()
     const listener = App.addListener('appStateChange', ({ isActive }) => isActive && sincronizza())
+    const timer = setInterval(() => document.visibilityState === 'visible' && sincronizza(), OGNI_MS)
     return () => {
+      clearInterval(timer)
       listener.then((l) => l.remove())
     }
   }, [router])

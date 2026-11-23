@@ -1645,7 +1645,7 @@ export async function partiteSenzaKm(): Promise<{ matchId: string; inizio: numbe
   if (mie.length === 0) return []
   const ora = Date.now()
   const partite = await sanity.fetch<{ _id: string; data: string; durataMinuti?: number; io: string; d?: { _key: string; km?: number; fonte?: string }[] }[]>(
-    `*[_type == "match" && coalesce(stato, "aperta") in ["chiusa", "giocata"] && data > $da && data < $a
+    `*[_type == "match" && coalesce(stato, "aperta") in ["aperta", "chiusa", "giocata"] && data > $da && data < $a
       && count(convocazioni[risposta == "presente" && giocatore._ref in $mie]) > 0]{
       _id, data, durataMinuti,
       "io": convocazioni[risposta == "presente" && giocatore._ref in $mie][0].giocatore._ref,
