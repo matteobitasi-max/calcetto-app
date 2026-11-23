@@ -318,4 +318,7 @@ export const comune: Record<string, string> = {
   "allenatore": "coach",
   "L’allenatore non gioca: niente caratteristiche, voti, convocazioni né formazioni.": "The coach doesn’t play: no attributes, ratings, call-ups or line-ups.",
   "i ruoli del Club, anche come sigla: POR, DC, DS, TD, MED, REG, TRQ, AD, CF, ALL…": "Club roles, also as abbreviations: POR, DC, DS, TD, MED, REG, TRQ, AD, CF, ALL…",
+  "allenamento dell’orologio": "watch workout",
+  "distanza camminata e corsa": "walking and running distance",
+  "stima dai passi": "estimate from steps",
 }

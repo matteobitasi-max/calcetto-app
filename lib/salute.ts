@@ -38,9 +38,11 @@ export async function metriPartita(inizio: number, fine: number): Promise<{ metr
   }
   // app di prima su iPhone: conta solo la parte di allenamento dentro l'orario. Se a vincere è un allenamento,
   // si rilegge su un orario più largo (30 minuti prima, un'ora dopo) per prenderlo intero.
+  // Solo se il risultato è coerente con quell'allenamento: almeno metà dell'allenamento cade nell'orario, quindi
+  // intero è al massimo il doppio di quanto visto dentro (altrimenti è un altro dato, es. il totale del giorno).
   if (r.fonte === 'allenamento') {
     const largo = await Salute.distanza({ inizio: inizio - PRIMA_MS, fine: fine + DOPO_MS }).catch(() => null)
-    if (largo?.fonte === 'allenamento' && largo.metri > r.metri) return { metri: largo.metri, fonte: 'allenamento' }
+    if (largo?.fonte === 'allenamento' && largo.metri > r.metri && largo.metri <= r.metri * 2) return { metri: largo.metri, fonte: 'allenamento' }
   }
   return { metri: r.metri, fonte: r.fonte }
 }

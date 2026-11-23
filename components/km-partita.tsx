@@ -10,6 +10,9 @@ import { useT } from './lingua'
 
 const DOPO_STRAVA = 'km-dopo-strava'
 
+// da quale dato di Salute vengono i km (lo dice l'app per iPhone)
+const DATI_SALUTE: Record<string, string> = { allenamento: 'allenamento dell’orologio', distanza: 'distanza camminata e corsa', passi: 'stima dai passi' }
+
 const FONTI: Record<string, string> = { strava: 'da Strava', salute: 'da Apple Health / Health Connect', manuale: 'inseriti a mano' }
 
 // "I tuoi km" nella partita finita: da Apple Salute (iPhone) o Health Connect (Android), o da Strava (se attivo).
@@ -37,6 +40,8 @@ export function KmPartita({
   const [nome, setNome] = useState('Apple Health')
   // metri letti da Salute ma troppo pochi per una partita: si chiede se inserirli comunque
   const [pochi, setPochi] = useState<number | null>(null)
+
+  const conDato = (testo: string, fonte?: string) => (fonte && DATI_SALUTE[fonte] ? `${testo} · ${t(DATI_SALUTE[fonte])}` : testo)
 
   const salva = (metri: number) =>
     startTransition(async () => {
@@ -90,7 +95,7 @@ export function KmPartita({
     if (!(await chiediConsensoKm(t('Per i km delle partite, The Cap legge da {app} solo i dati sul movimento registrati durante le tue partite: distanza camminata e corsa, passi e allenamenti. Sono dati legati alla salute: li usiamo solo per mostrare i tuoi km ai membri della lega e puoi disattivarlo quando vuoi in Il mio account. Acconsenti?', { app: nome })), t('Acconsento'))) return
     startTransition(async () => {
       try {
-        const { metri } = await metriPartita(inizio, fine)
+        const { metri, fonte } = await metriPartita(inizio, fine)
         // permesso chiesto: da ora i km delle partite si prendono da soli all'apertura dell'app
         impostaKmAutomatici(true)
         // presi a mano: anche se prima li avevo tolti, i km automatici possono di nuovo aggiornarli
@@ -108,7 +113,7 @@ export function KmPartita({
           return
         }
         const r = await salvaKm(matchId, metri / 1000, 'salute')
-        setMessaggio(r.error ? { testo: r.error, errore: true } : { testo: `✅ ${t('{km} km da {app}', { km: formatoKm(metri / 1000), app: nome })}` })
+        setMessaggio(r.error ? { testo: conDato(r.error, fonte), errore: true } : { testo: conDato(`✅ ${t('{km} km da {app}', { km: formatoKm(metri / 1000), app: nome })}`, fonte) })
       } catch (e) {
         setMessaggio({ testo: (e as { message?: string })?.message || t('Non riesco a leggere {app}.', { app: nome }), errore: true })
       }
