@@ -38,8 +38,14 @@ export async function fetteSalute(inizio: number, fine: number) {
   return { fette, totale: tutto?.metri ?? 0, fonte: tutto?.fonte, grezzi: tutto }
 }
 
-/** I metri della partita da Salute / Health Connect: il più alto tra distanza, allenamento dell'orologio e passi. */
-export async function metriPartita(inizio: number, fine: number): Promise<{ metri: number; fonte?: string }> {
+// Se in Salute c'è un allenamento dell'orologio durante la partita, si leggono anche i 15 minuti dopo la fine:
+// si finisce quasi sempre un po' dopo l'orario scritto. Senza allenamento resta l'orario della partita
+// (dopo la fine si cammina verso la macchina: non sono km della partita).
+const MARGINE_FINE_MS = 15 * 60_000
+
+type Lettura = { metri: number; fonte?: string; allenamento: boolean; vecchia: boolean }
+
+async function lettura(inizio: number, fine: number): Promise<Lettura> {
   const r = await Salute.distanza({ inizio, fine })
   // app per iPhone dalla build 22: dati grezzi già calcolati bene, le regole sull'allenamento si applicano qui
   if ((r.versione ?? 0) >= 2 && Array.isArray(r.allenamenti)) {
@@ -47,7 +53,8 @@ export async function metriPartita(inizio: number, fine: number): Promise<{ metr
     const distanza = r.distanza ?? 0
     const passi = r.passi ?? 0
     const metri = Math.max(distanza, allenamento, passi)
-    return { metri, fonte: metri === 0 ? 'nessuna' : metri === allenamento ? 'allenamento' : metri === distanza ? 'distanza' : 'passi' }
+    const fonte = metri === 0 ? 'nessuna' : metri === allenamento ? 'allenamento' : metri === distanza ? 'distanza' : 'passi'
+    return { metri, fonte, allenamento: allenamento > 0, vecchia: false }
   }
   // App di prima (e Android): conta per intero ogni dato che tocca l'orario. Garmin scrive la distanza in pochi
   // blocchi lunghi (es. tutto il pomeriggio in uno solo): un blocco che finisce poco dopo l'inizio gonfiava i km.
@@ -58,9 +65,27 @@ export async function metriPartita(inizio: number, fine: number): Promise<{ metr
   if (r.metri > 0 && durata > 0) {
     const centro = await Salute.distanza({ inizio: inizio + bordo, fine: fine - bordo }).catch(() => null)
     const atteso = (r.metri * (durata - 2 * bordo)) / durata
-    if (centro && centro.metri > 0 && centro.metri < atteso * 0.85) return { metri: centro.metri, fonte: centro.fonte }
+    if (centro && centro.metri > 0 && centro.metri < atteso * 0.85) {
+      return { metri: centro.metri, fonte: centro.fonte, allenamento: r.fonte === 'allenamento' || centro.fonte === 'allenamento', vecchia: true }
+    }
   }
-  return { metri: r.metri, fonte: r.fonte }
+  return { metri: r.metri, fonte: r.fonte, allenamento: r.fonte === 'allenamento', vecchia: true }
+}
+
+/** I metri della partita da Salute / Health Connect: il più alto tra distanza, allenamento dell'orologio e passi.
+ *  Con un allenamento dell'orologio si contano anche i 15 minuti dopo la fine prevista. */
+export async function metriPartita(inizio: number, fine: number): Promise<{ metri: number; fonte?: string }> {
+  const base = await lettura(inizio, fine)
+  let allenamento = base.allenamento
+  // app di prima: l'allenamento si vede solo quando vince; si guarda anche nei 15 minuti dopo la fine
+  if (!allenamento && base.vecchia) {
+    const dopo = await Salute.distanza({ inizio: fine, fine: fine + MARGINE_FINE_MS }).catch(() => null)
+    allenamento = dopo?.fonte === 'allenamento'
+  }
+  if (!allenamento) return { metri: base.metri, fonte: base.fonte }
+  const lunga = await lettura(inizio, fine + MARGINE_FINE_MS).catch(() => null)
+  const scelta = lunga && lunga.metri >= base.metri ? lunga : base
+  return { metri: scelta.metri, fonte: scelta.fonte }
 }
 
 export const saluteDisponibile = () => Capacitor.isNativePlatform() && Capacitor.isPluginAvailable('Salute')
