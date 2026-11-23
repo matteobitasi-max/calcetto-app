@@ -25,6 +25,19 @@ function metriAllenamento(a: AllenamentoSalute, inizio: number, fine: number) {
   return intero ? a.metri : a.metri * Math.min(1, dentro / durata)
 }
 
+/** Per capire da dove vengono i km: Salute letta a fette di 10 minuti, da mezz'ora prima a un'ora dopo la partita.
+ *  Solo sul telefono, non si salva e non si invia niente. */
+export async function fetteSalute(inizio: number, fine: number) {
+  const passo = 10 * 60_000
+  const fette: { da: number; a: number; metri: number; fonte?: string }[] = []
+  for (let da = inizio - PRIMA_MS; da < fine + DOPO_MS; da += passo) {
+    const r = await Salute.distanza({ inizio: da, fine: da + passo }).catch(() => null)
+    fette.push({ da, a: da + passo, metri: r?.metri ?? 0, fonte: r?.fonte })
+  }
+  const tutto = await Salute.distanza({ inizio, fine }).catch(() => null)
+  return { fette, totale: tutto?.metri ?? 0, fonte: tutto?.fonte, grezzi: tutto }
+}
+
 /** I metri della partita da Salute / Health Connect: il più alto tra distanza, allenamento dell'orologio e passi. */
 export async function metriPartita(inizio: number, fine: number): Promise<{ metri: number; fonte?: string }> {
   const r = await Salute.distanza({ inizio, fine })

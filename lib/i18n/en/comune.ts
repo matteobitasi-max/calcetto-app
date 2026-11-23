@@ -321,4 +321,6 @@ export const comune: Record<string, string> = {
   "allenamento dell’orologio": "watch workout",
   "distanza camminata e corsa": "walking and running distance",
   "stima dai passi": "estimate from steps",
+  "Perché questi km?": "Why these km?",
+  "Allenamenti": "Workouts",
 }

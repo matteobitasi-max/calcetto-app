@@ -5,7 +5,7 @@ import { Capacitor } from '@capacitor/core'
 import { useEffect, useState, useTransition } from 'react'
 import { collegaStrava, kmDaStrava, salvaKm, togliKm } from '@/app/actions'
 import type { Distanza } from '@/lib/matches'
-import { metriPartita, avvisiNascosti, chiediConsensoKm, escludiPartita, impostaKmAutomatici, includiPartita, kmAutomatici, nascondiAvviso, nomeSalute, partiteEscluse, pochiKm, saluteDisponibile } from '@/lib/salute'
+import { fetteSalute, metriPartita, avvisiNascosti, chiediConsensoKm, escludiPartita, impostaKmAutomatici, includiPartita, kmAutomatici, nascondiAvviso, nomeSalute, partiteEscluse, pochiKm, saluteDisponibile } from '@/lib/salute'
 import { useT } from './lingua'
 
 const DOPO_STRAVA = 'km-dopo-strava'
@@ -40,6 +40,8 @@ export function KmPartita({
   const [nome, setNome] = useState('Apple Health')
   // metri letti da Salute ma troppo pochi per una partita: si chiede se inserirli comunque
   const [pochi, setPochi] = useState<number | null>(null)
+  const [dettaglio, setDettaglio] = useState<Awaited<ReturnType<typeof fetteSalute>> | null>(null)
+  const ora = (ms: number) => new Date(ms).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })
 
   const conDato = (testo: string, fonte?: string) => (fonte && DATI_SALUTE[fonte] ? `${testo} · ${t(DATI_SALUTE[fonte])}` : testo)
 
@@ -188,6 +190,33 @@ export function KmPartita({
         </div>
       )}
 
+      {salute && (
+        <button
+          type="button"
+          disabled={pending}
+          onClick={() => startTransition(async () => setDettaglio(await fetteSalute(inizio, fine).catch(() => null)))}
+          className="text-xs text-zinc-500 underline"
+        >
+          🔍 {t('Perché questi km?')}
+        </button>
+      )}
+      {dettaglio && (
+        <div className="space-y-1 rounded-lg bg-zinc-50 p-3 font-mono text-[11px] leading-snug text-zinc-700 dark:bg-zinc-950 dark:text-zinc-300">
+          <p>
+            {t('Partita')} {ora(inizio)}–{ora(fine)}: {formatoKm(dettaglio.totale / 1000)} km · {dettaglio.fonte ? t(DATI_SALUTE[dettaglio.fonte] ?? dettaglio.fonte) : '—'}
+          </p>
+          {dettaglio.grezzi?.allenamenti && (
+            <p>
+              {t('Allenamenti')}: {dettaglio.grezzi.allenamenti.map((a) => `${ora(a.inizio)}–${ora(a.fine)} ${formatoKm(a.metri / 1000)} km`).join(', ') || '—'}
+            </p>
+          )}
+          {dettaglio.fette.map((f) => (
+            <p key={f.da} className={f.da >= inizio && f.a <= fine ? '' : 'opacity-50'}>
+              {ora(f.da)}–{ora(f.a)} · {formatoKm(f.metri / 1000)} km{f.fonte && f.metri > 0 ? ` · ${t(DATI_SALUTE[f.fonte] ?? f.fonte)}` : ''}
+            </p>
+          ))}
+        </div>
+      )}
       {pending && <p className="text-sm text-zinc-500">…</p>}
       {messaggio && <p className={`text-sm ${messaggio.errore ? 'text-red-600' : 'text-green-700 dark:text-green-400'}`}>{messaggio.testo}</p>}
     </div>
