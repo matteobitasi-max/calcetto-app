@@ -28,6 +28,9 @@ function apriLega(req: NextRequest) {
   const risposta = NextResponse.redirect(pulito)
   if (/^[\w.-]{1,100}$/.test(legaId)) {
     risposta.cookies.set('lega', legaId, { path: '/', maxAge: 60 * 60 * 24 * 365, sameSite: 'lax', httpOnly: true })
+    // un link di una lega (notifica, calendario) si apre nella versione giocatore, anche da chi stava usando
+    // il gestionale del centro sportivo con lo stesso account (lib/modo.ts)
+    risposta.cookies.set('modo', 'giocatore', { path: '/', maxAge: 60 * 60 * 24 * 365, sameSite: 'lax' })
   }
   return risposta
 }
