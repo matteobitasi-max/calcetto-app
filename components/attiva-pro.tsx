@@ -175,7 +175,10 @@ export function AttivaPro({
     const disdici = mio.store ? GESTIONE[mio.store] : undefined
     return (
       <div className="space-y-3 text-sm">
-        <p className="font-medium text-green-900 dark:text-green-200">✅ {club || mio.piano === 'club' ? t('Hai il Club Allenatore.') : t('Hai The Cap Pro.')}</p>
+        {/* il Club resta blu anche nelle leghe tra amici (il tema cambia solo i verdi) */}
+        <p className={`font-medium ${club || mio.piano === 'club' ? 'text-blue-900 dark:text-blue-200' : 'text-green-900 dark:text-green-200'}`}>
+          ✅ {club || mio.piano === 'club' ? t('Hai il Club PRO: il Pro è incluso.') : t('Hai The Cap Pro.')}
+        </p>
         <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-zinc-600 dark:text-zinc-300">
           {piano && (
             <>
@@ -199,7 +202,11 @@ export function AttivaPro({
             </>
           )}
         </dl>
-        {mio.rinnovo === false && <p className="text-xs text-zinc-500">{t('Hai disdetto: Pro resta attivo fino a quella data, poi non si rinnova.')}</p>}
+        {mio.rinnovo === false && (
+          <p className="text-xs text-zinc-500">
+            {club || mio.piano === 'club' ? t('Hai disdetto: il Club resta attivo fino a quella data, poi non si rinnova.') : t('Hai disdetto: Pro resta attivo fino a quella data, poi non si rinnova.')}
+          </p>
+        )}
         {!mio.store && <p className="text-xs text-zinc-500">{t('Abbonamento assegnato dal titolare dell’app.')}</p>}
         {mio.store &&
           (pronta ? (

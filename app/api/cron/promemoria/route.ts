@@ -62,5 +62,33 @@ export async function GET(request: Request) {
     ).catch(() => ({ inviate: 0, totali: p.mancanti.length }))
     esiti.push({ partita: p._id, destinatari: p.mancanti.length, ...r })
   }
-  return Response.json({ controllate: partite.length, esiti, chiuse })
+  const club = await avvisiScadenzaClub(ora).catch(() => 0)
+  return Response.json({ controllate: partite.length, esiti, chiuse, club })
+}
+
+// Club PRO disdetto che scade entro 7 giorni: un avviso all'allenatore (una volta per scadenza),
+// con le leghe in cui il suo Club è acceso. Dopo la scadenza c'è la tolleranza (lib/club-stato.ts).
+async function avvisiScadenzaClub(ora: Date) {
+  const tra7 = new Date(ora.getTime() + 7 * 86_400_000)
+  const abbonamenti = await sanity.fetch<{ _id: string; utente: string; scadenza: string }[]>(
+    `*[_type == "abbonamento" && piano == "club" && attivo != false && rinnovo == false && scadenza > $ora && scadenza < $tra7
+      && (!defined(avvisoScadenza) || avvisoScadenza != scadenza)]{_id, "utente": clerkUserId, scadenza}`,
+    { ora: ora.toISOString(), tra7: tra7.toISOString() },
+  )
+  for (const a of abbonamenti) {
+    const schede = await sanity.fetch<string[]>(
+      `*[_type == "player" && clerkUserId == $u && attivo != false && lega->clubDi == $u]._id`,
+      { u: a.utente },
+    )
+    if (schede.length) {
+      await inviaAGiocatori(schede, (t) => ({
+        title: `⏳ ${t('Il tuo Club PRO scade il {data}', { data: t.data(a.scadenza, { day: 'numeric', month: 'long' }) })}`,
+        body: t('Rinnovalo per continuare a usare convocati, formazioni e pagelle della squadra. Dopo la scadenza hai ancora 14 giorni.'),
+        url: '/club',
+        tag: `club-scade-${a._id}`,
+      })).catch(() => undefined)
+    }
+    await sanity.patch(a._id).set({ avvisoScadenza: a.scadenza }).commit()
+  }
+  return abbonamenti.length
 }

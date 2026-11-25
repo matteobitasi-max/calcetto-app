@@ -7,6 +7,7 @@ import { redirect } from 'next/navigation'
 import { sanity } from '@/lib/sanity'
 import { leggiCampo } from '@/lib/campo'
 import { periodoInCorso } from '@/lib/stagioni'
+import { statoClub } from '@/lib/club-stato'
 import { BADGE, CATEGORIE_NOTIFICHE, COOKIE_LEGA, eta, leggiRuolo, normalizzaTelefono, PIEDI, RUOLI, SKILLS, displayName, requirePlayer, getUtente, getMemberships, isTitolare, membroDi, soloGiocatore, requireAdmin, requireForDoc, requireIn, type Player, type Skill } from '@/lib/player'
 import { assegnaPosti, conSelezione, finestra, getMatch, getPartiteTorneo, getPlayers, orarioPartita, presenti, risultatoDa, type FonteKm, type Match, type Risposta, type Stato } from '@/lib/matches'
 import { idPlaylist, intervisteDellaPlaylist } from '@/lib/interviste'
@@ -159,8 +160,16 @@ export async function scambiaConAttesa(matchId: string, entra: string, esce: str
 
 // L'organizzatore convoca un giocatore della rosa che non si è convocato: risponde "ci sono" al suo posto
 // e lo mette sempre in lista (scelto a mano, non va in lista d'attesa): se la lista è piena, i posti salgono di uno.
+// Club scaduto da oltre la tolleranza (lib/club-stato.ts): convocati, formazione, pagelle e indisponibili
+// si vedono ma non si modificano.
+async function clubBloccato(lega: { club?: boolean; tipo?: string; clubScadeIl?: string }) {
+  return lega.club && lega.tipo === 'squadra' && statoClub(lega.clubScadeIl) === 'sola-lettura' ? await tr('Il Club PRO di questa squadra è scaduto: rinnovalo per modificare, oppure rimetti la lega “tra amici” in Impostazioni lega.') : null
+}
+
 export async function convocaGiocatore(matchId: string, giocatoreId: string) {
   const admin = await requireForDoc(matchId, 'organizzatore')
+  const bloccato = await clubBloccato(admin.lega)
+  if (bloccato) throw new Error(bloccato)
   const giocatore = await sanity.fetch<{ legaId: string; attivo?: boolean; indisponibile?: Player['indisponibile'] } | null>(
     `*[_type == "player" && _id == $id][0]{"legaId": lega._ref, attivo, indisponibile}`,
     { id: giocatoreId },
@@ -212,6 +221,8 @@ export async function convocaGiocatore(matchId: string, giocatoreId: string) {
 // esce dalla lista. I posti diventano quanti sono i convocati (niente lista d'attesa) e i nuovi ricevono l'avviso.
 export async function salvaConvocati(matchId: string, _prev: FormState, formData: FormData): Promise<FormState> {
   const admin = await requireForDoc(matchId, 'organizzatore')
+  const bloccato = await clubBloccato(admin.lega)
+  if (bloccato) return { error: bloccato }
   const scelti = [...new Set(formData.getAll('giocatore').map(String))]
   for (let attempt = 0; attempt < 3; attempt++) {
     const match = await getMatch(matchId)
@@ -1393,7 +1404,9 @@ export async function salvaOpzioneSquadra(legaId: string, opzione: 'autoconvocaz
 // Pagelle a fine partita: l'allenatore dà un voto (1-10, a mezzi punti) e una nota a chi era in lista.
 // Un voto lasciato vuoto toglie la pagella di quel giocatore.
 export async function salvaPagelle(matchId: string, _prev: FormState, formData: FormData): Promise<FormState> {
-  await requireForDoc(matchId, 'organizzatore')
+  const admin = await requireForDoc(matchId, 'organizzatore')
+  const bloccato = await clubBloccato(admin.lega)
+  if (bloccato) return { error: bloccato }
   const match = await getMatch(matchId)
   if (!match || !match.pagelleAttive || match.tipo === 'allenamento' || match.torneo) return { error: await tr('Partita non trovata.') }
   if (match.stato === 'annullata') return { error: await tr('La partita è annullata.') }
@@ -1427,7 +1440,9 @@ export async function salvaFormatoLega(legaId: string, _prev: FormState, formDat
 // Club: la formazione titolare della partita, con il modulo scelto. In ogni posto uno di quelli in lista
 // (ognuno una volta sola); chi non è in campo è in panchina.
 export async function salvaFormazioneTitolare(matchId: string, _prev: FormState, formData: FormData): Promise<FormState> {
-  await requireForDoc(matchId, 'organizzatore')
+  const admin = await requireForDoc(matchId, 'organizzatore')
+  const bloccato = await clubBloccato(admin.lega)
+  if (bloccato) return { error: bloccato }
   const match = await getMatch(matchId)
   if (!match || !match.club || match.tipo === 'allenamento' || match.torneo) return { error: await tr('Partita non trovata.') }
   if (match.stato === 'annullata') return { error: await tr('La partita è annullata.') }
@@ -1456,7 +1471,9 @@ const MOTIVI: MotivoIndisponibile[] = ['infortunio', 'squalifica', 'altro']
 export async function salvaIndisponibilita(playerId: string, _prev: FormState, formData: FormData): Promise<FormState> {
   const lega = await sanity.fetch<string | null>(`*[_type == "player" && _id == $id][0].lega._ref`, { id: playerId })
   if (!lega) return { error: await tr('Giocatore non trovato.') }
-  await requireIn(lega, 'organizzatore')
+  const admin = await requireIn(lega, 'organizzatore')
+  const bloccato = await clubBloccato(admin.lega)
+  if (bloccato) return { error: bloccato }
   const motivo = str(formData, 'motivo') as MotivoIndisponibile
   if (!MOTIVI.includes(motivo)) {
     await sanity.patch(playerId).unset(['indisponibile']).commit()

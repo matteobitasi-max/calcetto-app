@@ -1,9 +1,9 @@
 import Link from 'next/link'
 import { Suspense } from 'react'
-import { getUtente, requirePlayer } from '@/lib/player'
+import { getMemberships, getUtente, requirePlayer } from '@/lib/player'
 import { chiaviRevenueCat, mioAbbonamento, pagamentiConfigurati } from '@/lib/abbonamenti'
 import { AttivaPro } from '@/components/attiva-pro'
-import { ChiusuraPro, Confronto, Domande, Garanzie, PianoPro, SezioneClub, StatoLega, Testata, Vantaggi } from '@/components/vetrina-pro'
+import { ChiusuraPro, ClubIncludePro, Confronto, Domande, Garanzie, PianoPro, SezioneClub, StatoLega, Testata, Vantaggi } from '@/components/vetrina-pro'
 import { MAX_LEGHE_PRO, ioPro, legaPro, oltreLimitePro } from '@/lib/pro'
 import { getPlayers } from '@/lib/matches'
 import { Card, Loading } from '@/components/ui'
@@ -32,14 +32,21 @@ async function Vetrina() {
   const lega = me.lega.nome
   const vendibile = !!utente && pagamentiConfigurati()
 
-  // Già abbonato: il suo abbonamento in cima, poi cosa ha
+  // Già abbonato: il suo abbonamento in cima, poi cosa ha. Chi ha il Club vede tutto in blu, in ogni lega.
   if (mio && utente) {
+    const club = mio.piano === 'club'
+    const mie = club ? (await getMemberships()).filter((m) => m.isAdmin && !m.ospite) : []
     return (
       <div className="space-y-4">
         <Testata
           t={t}
-          titolo={mio.piano === 'club' ? t('Grazie per essere Club PRO!') : t('Grazie per essere Pro!')}
-          sotto={t('Tutte le funzioni Pro sono attive nelle tue leghe (fino a {n}).', { n: MAX_LEGHE_PRO })}
+          club={club}
+          titolo={club ? t('Grazie per essere Club PRO!') : t('Grazie per essere Pro!')}
+          sotto={
+            club
+              ? t('Le funzioni Club sono attive nelle tue squadre e tutte quelle Pro nelle leghe tra amici che organizzi.')
+              : t('Tutte le funzioni Pro sono attive nelle tue leghe (fino a {n}).', { n: MAX_LEGHE_PRO })
+          }
         />
         {oltre && (
           // questa lega è oltre quelle coperte dall'abbonamento
@@ -53,11 +60,13 @@ async function Vetrina() {
             </Link>
           </Card>
         )}
-        <Card className="space-y-3 border-green-600 bg-green-50 dark:bg-green-950">
-          <AttivaPro utente={utente.id} chiavi={chiaviRevenueCat()} mio={mio} giocatori={giocatori} piano={mio.piano === 'club' ? 'club' : 'pro'} />
+        <Card className={`space-y-3 ${club ? 'border-blue-600 bg-blue-50 dark:bg-blue-950' : 'border-green-600 bg-green-50 dark:bg-green-950'}`}>
+          <AttivaPro utente={utente.id} chiavi={chiaviRevenueCat()} mio={mio} giocatori={giocatori} piano={club ? 'club' : 'pro'} />
         </Card>
+        {club && <ClubIncludePro t={t} leghe={mie.map((m) => ({ id: m.lega._id, nome: m.lega.nome, club: !!m.lega.club && m.lega.tipo === 'squadra' }))} />}
         <Vantaggi t={t} link />
-        <SezioneClub t={t} legaId={me.isAdmin ? me.lega._id : undefined} />
+        {/* chi ha solo il Pro: il Club è il passo successivo, non un secondo abbonamento */}
+        {!club && <SezioneClub t={t} legaId={me.isAdmin ? me.lega._id : undefined} hoPro />}
       </div>
     )
   }

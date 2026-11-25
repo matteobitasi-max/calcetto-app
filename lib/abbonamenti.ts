@@ -39,14 +39,18 @@ export async function sincronizzaAbbonamento(utente: string, email?: string) {
   const { subscriber } = (await r.json()) as Subscriber
   const club = await scrivi(subscriber, ENTITLEMENT_CLUB, `abbonamento-club-${idDoc(utente).replace('abbonamento-', '')}`, utente, email, 'club')
   // Club scaduto o rimborsato: nelle leghe in cui l'aveva acceso questo utente passa a un altro organizzatore
-  // della lega che ha il Club attivo (e un posto libero); se non c'è nessuno, la lega torna tra amici.
-  if (!club.attivo) {
-    const leghe = await sanity.fetch<string[]>(`*[_type == "league" && clubDi == $utente]._id`, { utente })
-    for (const id of leghe) {
-      const erede = await altroConClub(id, utente)
-      if (erede) await sanity.patch(id).set({ clubDi: erede }).commit()
-      else await sanity.patch(id).unset(['club', 'clubDi', 'tipo']).commit()
+  // della lega che ha il Club attivo (e un posto libero). Se non c'è nessuno la lega resta una squadra:
+  // si segna quando è scaduto, e dopo la tolleranza è in sola lettura (lib/club-stato.ts).
+  const leghe = await sanity.fetch<{ _id: string; clubScadeIl?: string }[]>(`*[_type == "league" && clubDi == $utente]{_id, clubScadeIl}`, { utente })
+  for (const l of leghe) {
+    if (club.attivo) {
+      // rinnovato o riattivato: il Club torna pieno
+      if (l.clubScadeIl) await sanity.patch(l._id).unset(['clubScadeIl']).commit()
+      continue
     }
+    const erede = await altroConClub(l._id, utente)
+    if (erede) await sanity.patch(l._id).set({ clubDi: erede }).unset(['clubScadeIl']).commit()
+    else if (!l.clubScadeIl) await sanity.patch(l._id).set({ clubScadeIl: club.scadenza ?? new Date().toISOString() }).commit()
   }
   return scrivi(subscriber, ENTITLEMENT_PRO, idDoc(utente), utente, email)
 }

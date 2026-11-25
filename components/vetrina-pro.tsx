@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import type { ReactNode } from 'react'
-import { MarchioPro } from '@/components/logo-c'
+import { LogoC, MarchioPro } from '@/components/logo-c'
 import { BarraPro, LinkPrezzi } from '@/components/barra-pro'
 import { ButtonLink, Card } from '@/components/ui'
 import { EtichettaClub } from '@/components/pill-scelta'
@@ -11,19 +11,24 @@ import { MAX_LEGHE_CLUB } from '@/lib/entitlement'
 // Le parti della pagina The Cap Pro (app/(app)/pro/page.tsx).
 
 // In cima: fondo verde campo con le strisce, il marchio PRO e la promessa.
-export function Testata({ t, titolo, sotto, cta }: { t: T; titolo: string; sotto: string; cta?: boolean }) {
+// `club`: chi ha il Club PRO vede la testata blu in tutte le leghe, anche in quelle tra amici.
+export function Testata({ t, titolo, sotto, cta, club = false }: { t: T; titolo: string; sotto: string; cta?: boolean; club?: boolean }) {
   return (
-    <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-green-600 via-green-700 to-emerald-900 px-5 pb-6 pt-5 text-white shadow-lg">
+    <div
+      className={`relative overflow-hidden rounded-3xl bg-gradient-to-br px-5 pb-6 pt-5 text-white shadow-lg ${
+        club ? 'from-blue-600 via-blue-700 to-indigo-900' : 'from-green-600 via-green-700 to-emerald-900'
+      }`}
+    >
       {/* strisce del prato e cerchio di centrocampo */}
       <div className="pointer-events-none absolute inset-0 bg-[repeating-linear-gradient(90deg,rgba(255,255,255,0.06)_0_28px,transparent_28px_56px)]" aria-hidden />
       <div className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full border-2 border-white/15" aria-hidden />
       <div className="relative space-y-3">
         <div className="flex items-center gap-2">
-          <MarchioPro size={22} />
-          <span className="text-sm font-semibold tracking-wide text-green-100">The Cap</span>
+          {club ? <LogoC size={22} tinta="blu" /> : <MarchioPro size={22} />}
+          <span className={`text-sm font-semibold tracking-wide ${club ? 'text-blue-100' : 'text-green-100'}`}>{club ? 'The Cap Club PRO' : 'The Cap'}</span>
         </div>
         <h1 className="text-2xl font-extrabold leading-tight sm:text-3xl">{titolo}</h1>
-        <p className="text-sm leading-relaxed text-green-50">{sotto}</p>
+        <p className={`text-sm leading-relaxed ${club ? 'text-blue-50' : 'text-green-50'}`}>{sotto}</p>
         {cta && (
           <>
             <LinkPrezzi className="inline-flex rounded-xl bg-amber-400 px-5 py-3 text-sm font-bold text-zinc-900 shadow-md transition active:scale-95">
@@ -247,7 +252,7 @@ export function Confronto({ t }: { t: T }) {
             <th className="w-11 bg-amber-50 px-1 py-2 text-center dark:bg-amber-950/40">
               <span className="rounded-full bg-amber-400 px-1.5 py-0.5 text-[10px] font-bold text-zinc-900">PRO</span>
             </th>
-            <th className="w-[4.5rem] bg-zinc-100 px-1 py-2 text-center dark:bg-zinc-800/60">
+            <th className="w-[4.5rem] bg-blue-50 px-1 py-2 text-center dark:bg-blue-950/50">
               <EtichettaClub />
             </th>
           </tr>
@@ -258,13 +263,16 @@ export function Confronto({ t }: { t: T }) {
               <td className={`px-3 py-1.5 text-[13px] leading-snug ${livello === 0 ? 'text-zinc-600 dark:text-zinc-300' : 'font-medium'}`}>{voce}</td>
               <td className="px-1 py-1.5 text-center">{livello === 0 ? si : no}</td>
               <td className="bg-amber-50 px-1 py-1.5 text-center dark:bg-amber-950/40">{livello <= 1 ? si : no}</td>
-              <td className="bg-zinc-100 px-1 py-1.5 text-center dark:bg-zinc-800/60">
+              <td className="bg-blue-50 px-1 py-1.5 text-center dark:bg-blue-950/50">
                 {presto ? <span className="text-[10px] font-semibold uppercase text-zinc-500">{t('presto')}</span> : si}
               </td>
             </tr>
           ))}
         </tbody>
       </table>
+      <p className="border-t border-zinc-200 bg-blue-50 px-3 py-2 text-xs font-semibold text-blue-900 dark:border-zinc-800 dark:bg-blue-950/50 dark:text-blue-200">
+        ✅ {t('Il Club PRO include tutto il Pro: non serve comprarli tutti e due.')}
+      </p>
     </Card>
   )
 }
@@ -301,14 +309,22 @@ export function PianoPro({ t, children }: { t: T; children?: ReactNode }) {
 }
 
 // Il piano Club PRO: per chi allena una squadra. Porta alla pagina del Club.
-export function SezioneClub({ t, legaId }: { t: T; legaId?: string }) {
+// `hoPro`: chi ha già il Pro passa al Club (non è un secondo abbonamento).
+export function SezioneClub({ t, legaId, hoPro = false }: { t: T; legaId?: string; hoPro?: boolean }) {
   return (
-    <Card className="space-y-4 border-2 border-zinc-900 dark:border-white">
+    <Card className="space-y-4 border-2 border-blue-600">
       <div className="flex items-center justify-between gap-2">
-        <h3 className="text-lg font-bold">{t('Club PRO')}</h3>
+        <h3 className="flex items-center gap-2 text-lg font-bold">
+          <LogoC size={22} tinta="blu" />
+          {t('Club PRO')}
+        </h3>
         <EtichettaClub />
       </div>
       <p className="text-sm text-zinc-500">{t('Per squadre con allenatore e società. Vale per {n} leghe (squadre).', { n: MAX_LEGHE_CLUB })}</p>
+      {/* il punto da capire subito: con il Club il Pro non si compra a parte */}
+      <p className="rounded-xl bg-blue-50 px-3 py-2 text-sm font-semibold text-blue-900 dark:bg-blue-950 dark:text-blue-200">
+        ✅ {hoPro ? t('Il Pro è incluso: passando al Club il tuo Pro si chiude e non paghi due abbonamenti.') : t('Il Pro è incluso: nelle tue leghe tra amici hai tutte le funzioni Pro, senza comprarlo a parte.')}
+      </p>
       <p className="text-sm font-semibold">{t('Tutto il Pro, più:')}</p>
       <Punti
         voci={[
@@ -319,8 +335,8 @@ export function SezioneClub({ t, legaId }: { t: T; legaId?: string }) {
           t('Presenze agli allenamenti'),
         ]}
       />
-      <Link href={`/club${legaId ? `?lega=${legaId}` : ''}`} className="block rounded-xl bg-zinc-900 py-3 text-center text-sm font-bold text-white hover:bg-zinc-800 dark:bg-white dark:text-zinc-900">
-        {t('Scopri Club PRO ›')}
+      <Link href={`/club${legaId ? `?lega=${legaId}` : ''}`} className="block rounded-xl bg-blue-600 py-3 text-center text-sm font-bold text-white hover:bg-blue-700">
+        {hoPro ? t('Passa al Club PRO ›') : t('Scopri Club PRO ›')}
       </Link>
     </Card>
   )
@@ -379,5 +395,37 @@ export function ChiusuraPro({ t }: { t: T }) {
       </div>
       <BarraPro testo={t('Passa a Pro')} sotto={t('Disdici quando vuoi · gratis per i giocatori')} />
     </>
+  )
+}
+
+// Chi ha il Club PRO: dove vale cosa. Le squadre con il Club (C blu) e le leghe tra amici che organizza,
+// dove ha comunque tutto il Pro (C verde). Resta blu anche quando si è in una lega tra amici.
+export function ClubIncludePro({ t, leghe }: { t: T; leghe: { id: string; nome: string; club: boolean }[] }) {
+  const squadre = leghe.filter((l) => l.club)
+  const amici = leghe.filter((l) => !l.club)
+  return (
+    <Card className="space-y-3 border-2 border-blue-600 bg-blue-50 dark:bg-blue-950">
+      <h2 className="flex items-center gap-2 font-bold text-blue-900 dark:text-blue-100">
+        <LogoC size={22} tinta="blu" />
+        {t('Il Club PRO include il Pro')}
+      </h2>
+      <p className="text-sm text-blue-900/80 dark:text-blue-100/80">
+        {t('Non serve comprare il Pro: nelle squadre hai le funzioni Club, nelle leghe tra amici che organizzi tutte quelle Pro (fino a {n}).', { n: MAX_LEGHE_PRO })}
+      </p>
+      {leghe.length > 0 && (
+        <ul className="space-y-1.5 text-sm">
+          {[...squadre, ...amici].map((l) => (
+            <li key={l.id} className="flex items-center gap-2 rounded-lg bg-white/70 px-3 py-2 dark:bg-zinc-900/60">
+              <LogoC size={18} tinta={l.club ? 'blu' : 'verde'} />
+              <span className="min-w-0 flex-1 truncate font-medium text-zinc-900 dark:text-zinc-100">{l.nome}</span>
+              <span className={`shrink-0 text-xs font-bold ${l.club ? 'text-blue-700 dark:text-blue-300' : 'text-zinc-500'}`}>{l.club ? 'Club PRO' : t('Pro incluso')}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+      <Link href="/club" className="inline-block text-sm font-semibold text-blue-700 hover:underline dark:text-blue-300">
+        {t('Gestisci il Club ›')}
+      </Link>
+    </Card>
   )
 }

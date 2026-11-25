@@ -57,7 +57,7 @@ async function Vetrina({ searchParams }: { searchParams: PageProps<'/club'>['sea
         <ul className="space-y-2.5">
           {ora.map(([titolo, testo]) => (
             <li key={titolo} className="flex gap-2.5">
-              <span className="font-bold text-green-600">✓</span>
+              <span className="font-bold text-blue-600">✓</span>
               <span>
                 <span className="block text-sm font-semibold">{titolo}</span>
                 <span className="block text-xs text-zinc-500">{testo}</span>
@@ -71,7 +71,7 @@ async function Vetrina({ searchParams }: { searchParams: PageProps<'/club'>['sea
         </div>
       </Card>
 
-      <Card className="space-y-3 border-green-600">
+      <Card className="space-y-3 border-blue-600">
         {pieno ? (
           <div className="space-y-2 text-sm">
             <p className="font-medium">✅ {t('Hai il Club Allenatore.')}</p>
@@ -95,7 +95,7 @@ async function Vetrina({ searchParams }: { searchParams: PageProps<'/club'>['sea
         ) : (
           <p className="text-sm text-zinc-500">{t('Il Club non è ancora disponibile negli store: scrivici per provarlo.')}</p>
         )}
-        <Link href="/supporto" className="block text-center text-sm font-medium text-green-700 hover:underline dark:text-green-400">
+        <Link href="/supporto" className="block text-center text-sm font-medium text-blue-700 hover:underline dark:text-blue-400">
           {t('Domande sul Club? Scrivici ›')}
         </Link>
       </Card>

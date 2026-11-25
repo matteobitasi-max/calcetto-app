@@ -93,6 +93,8 @@ export type SanityImage = { asset?: { _ref: string }; hotspot?: unknown; crop?: 
 export type Lega = {
   _id: string
   nome: string
+  /** Il Club di chi l'aveva acceso è scaduto (senza un altro organizzatore con il Club): vedi lib/club-stato.ts. */
+  clubScadeIl?: string
   /** Le stagioni chiuse (Impostazioni lega › Termina stagione): periodo e nome. */
   stagioni?: Stagione[]
   /** Club attivo (per ora lo accende il titolare): sblocca il tipo "Squadra". */

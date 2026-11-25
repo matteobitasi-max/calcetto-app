@@ -21,6 +21,7 @@ import { RispostaButtons } from './partite/risposta-buttons'
 import { Tabellino } from './partite/tabellino'
 import { MeteoPartita } from '@/components/meteo-partita'
 import { EtichettaLega } from '@/components/etichetta-lega'
+import { fineTolleranza, statoClub } from '@/lib/club-stato'
 import { RigaImpegno } from '@/components/riga-impegno'
 import { avatarUrl } from '@/lib/image'
 
@@ -72,6 +73,11 @@ async function Partite() {
       />
 
       <NotificheToggle variant="banner" />
+
+      {/* Club scaduto: all'organizzatore, l'avviso per rinnovare (o rimettere la lega tra amici) */}
+      {player.isAdmin && player.lega.club && player.lega.tipo === 'squadra' && player.lega.clubScadeIl && (
+        <AvvisoClubScaduto scadeIl={player.lega.clubScadeIl} legaId={legaId} t={t} />
+      )}
 
       {/* Lega appena nata, ancora da solo: l'invito resta in grande, è il primo passo */}
       {linkInvito && daSolo && (
@@ -333,5 +339,33 @@ function Punteggio({ match, mioId }: { match: Match; mioId: string }) {
       {' – '}
       <span className={vinta && mia === 'B' ? 'font-bold text-zinc-900 dark:text-white' : ''}>{golB}</span>
     </span>
+  )
+}
+
+// Il Club della squadra è scaduto: durante la tolleranza funziona ancora tutto, poi è in sola lettura.
+function AvvisoClubScaduto({ scadeIl, legaId, t }: { scadeIl: string; legaId: string; t: T }) {
+  const bloccato = statoClub(scadeIl) === 'sola-lettura'
+  const giorno = (iso: string) => t.data(iso, { day: 'numeric', month: 'long' })
+  return (
+    <Card className="space-y-2 border-2 border-blue-600 bg-blue-50 dark:bg-blue-950">
+      <p className="font-semibold text-blue-900 dark:text-blue-100">
+        {bloccato ? `🔒 ${t('Club PRO in sola lettura')}` : `⏳ ${t('Il Club PRO di questa squadra è scaduto')}`}
+      </p>
+      <p className="text-sm text-blue-900/80 dark:text-blue-100/80">
+        {bloccato
+          ? t('Convocati, formazioni, pagelle e indisponibili si vedono ma non si possono cambiare. Rinnova il Club, oppure rimetti la lega “tra amici”.')
+          : t('Funziona ancora tutto fino al {data}: rinnova il Club per non fermarti. Nessun dato va perso.', { data: giorno(fineTolleranza(scadeIl)) })}
+      </p>
+      <div className="flex flex-wrap gap-3 text-sm font-semibold">
+        <Link href={`/club?lega=${legaId}`} className="text-blue-700 hover:underline dark:text-blue-300">
+          {t('Rinnova il Club ›')}
+        </Link>
+        {bloccato && (
+          <Link href="/lega" className="text-zinc-600 hover:underline dark:text-zinc-300">
+            {t('Impostazioni lega ›')}
+          </Link>
+        )}
+      </div>
+    </Card>
   )
 }
