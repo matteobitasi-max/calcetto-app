@@ -29,12 +29,25 @@ export async function creaCentro(_prev: FormState, fd: FormData): Promise<FormSt
   if (!utente) redirect('/sign-in')
   if (await getMioCentro()) redirect('/centro')
   const nome = str(fd, 'nome').slice(0, 60)
-  const campi = Math.min(20, Math.max(1, Number(str(fd, 'campi')) || 1))
-  const tipo = Number(str(fd, 'tipo')) as TipoCampo
-  const prezzo = Number(str(fd, 'prezzo').replace(',', '.'))
   if (!nome) return { error: 'Scrivi il nome del centro.' }
-  if (!TIPI_CAMPO.includes(tipo)) return { error: 'Scegli il tipo di campo.' }
-  if (!Number.isFinite(prezzo) || prezzo < 0 || prezzo > 2000) return { error: 'Prezzo orario non valido.' }
+  // i campi a gruppi: quanti, tipo, dentro/fuori e prezzo orario (oppure "li inserisco dopo")
+  const campi: CampoCentro[] = []
+  if (fd.get('saltaCampi') !== '1') {
+    const quanti = fd.getAll('quanti').map(Number)
+    const tipi = fd.getAll('tipo').map(Number)
+    const coperti = fd.getAll('coperto').map(String)
+    const prezzi = fd.getAll('prezzo').map((x) => Number(String(x).replace(',', '.')))
+    for (let i = 0; i < quanti.length; i++) {
+      const tipo = tipi[i] as TipoCampo
+      if (!Number.isInteger(quanti[i]) || quanti[i] < 1 || quanti[i] > 20) return { error: 'Da 1 a 20 campi per gruppo.' }
+      if (!TIPI_CAMPO.includes(tipo)) return { error: 'Scegli il tipo di campo.' }
+      if (!Number.isFinite(prezzi[i]) || prezzi[i] < 0 || prezzi[i] > 2000) return { error: 'Prezzo orario non valido.' }
+      for (let n = 0; n < quanti[i]; n++) {
+        campi.push({ _key: randomUUID(), nome: `Campo ${campi.length + 1}`, tipo, prezzoOra: prezzi[i], coperto: coperti[i] === '1' })
+      }
+    }
+    if (campi.length > 30) return { error: 'Massimo 30 campi.' }
+  }
   const posto = leggiCampo(fd.get('campo'))
   await sanity.create({
     _type: 'centro',
@@ -44,7 +57,7 @@ export async function creaCentro(_prev: FormState, fd: FormData): Promise<FormSt
     apre: '09:00',
     chiude: '24:00',
     gestori: [utente.id],
-    campi: Array.from({ length: campi }, (_, i) => ({ _key: randomUUID(), nome: `Campo ${i + 1}`, tipo, prezzoOra: prezzo })),
+    campi,
   })
   ;(await cookies()).set(COOKIE_MODO, 'centro', { path: '/', maxAge: 60 * 60 * 24 * 365, sameSite: 'lax' })
   redirect('/centro')
@@ -77,7 +90,7 @@ export async function salvaCampo(chiave: string | null, _prev: FormState, fd: Fo
   if (!nome) return { error: 'Scrivi il nome del campo.' }
   if (!TIPI_CAMPO.includes(tipo)) return { error: 'Scegli il tipo di campo.' }
   if (!Number.isFinite(prezzoOra) || prezzoOra < 0 || prezzoOra > 2000) return { error: 'Prezzo orario non valido.' }
-  const campo: CampoCentro = { _key: chiave ?? randomUUID(), nome, tipo, prezzoOra, coperto: fd.get('coperto') === 'on' }
+  const campo: CampoCentro = { _key: chiave ?? randomUUID(), nome, tipo, prezzoOra, coperto: fd.get('coperto') === '1' }
   const campi = chiave ? centro.campi.map((c) => (c._key === chiave ? { ...c, ...campo } : c)) : [...centro.campi, campo]
   if (campi.filter((c) => c.attivo !== false).length > 30) return { error: 'Massimo 30 campi.' }
   await sanity.patch(centro._id).set({ campi }).commit()

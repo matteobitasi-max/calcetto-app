@@ -81,7 +81,7 @@ async function Impostazioni() {
 function ModuloCampo({ campo }: { campo?: CampoCentro }) {
   return (
     <div className="rounded-xl bg-stone-50 p-3 dark:bg-zinc-950">
-      <ActionForm action={salvaCampo.bind(null, campo?._key ?? null)} className="grid items-end gap-3 sm:grid-cols-[1fr_8rem_7rem_auto]">
+      <ActionForm action={salvaCampo.bind(null, campo?._key ?? null)} className="grid items-end gap-3 sm:grid-cols-[1fr_8rem_7rem_7rem]">
         <Field label="Nome">
           <input name="nome" required maxLength={40} defaultValue={campo?.nome} placeholder="Es. Campo 3 (sintetico)" className={inputClass} />
         </Field>
@@ -97,9 +97,12 @@ function ModuloCampo({ campo }: { campo?: CampoCentro }) {
         <Field label="€ all’ora">
           <input name="prezzoOra" inputMode="decimal" required defaultValue={campo ? String(campo.prezzoOra) : ''} className={inputClass} />
         </Field>
-        <label className="flex items-center gap-2 pb-2 text-sm">
-          <input type="checkbox" name="coperto" defaultChecked={campo?.coperto} /> Coperto
-        </label>
+        <Field label="Dove">
+          <select name="coperto" defaultValue={campo?.coperto ? '1' : '0'} className={inputClass}>
+            <option value="0">🌤️ Fuori</option>
+            <option value="1">🏠 Dentro</option>
+          </select>
+        </Field>
         <div className="sm:col-span-4">
           <PillSalva label={campo ? `Salva ${campo.nome}` : 'Aggiungi il campo'} quando={campo ? 'modificato' : 'completo'} />
         </div>

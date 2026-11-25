@@ -1,12 +1,13 @@
 import { redirect } from 'next/navigation'
 import { Suspense } from 'react'
 import { creaCentro } from '@/app/centro-actions'
-import { TIPI_CAMPO, getMioCentro } from '@/lib/centro'
+import { getMioCentro } from '@/lib/centro'
 import { ricercaCampiAttiva } from '@/lib/google-maps'
 import { ActionForm } from '@/components/action-form'
 import { CampoInput } from '@/components/campo-input'
 import { SubmitButton } from '@/components/submit-button'
 import { Field, Loading, inputClass } from '@/components/ui'
+import { GruppiCampi } from '@/components/gruppi-campi'
 
 // Primo accesso come centro sportivo: nome, posizione e i campi (quanti, di che tipo, a che prezzo).
 // Il resto (nomi dei campi, orari, collaboratori) si sistema dopo nelle impostazioni.
@@ -34,24 +35,11 @@ async function Nuovo() {
         <Field label="Dove si trova" group>
           <CampoInput ricerca={ricercaCampiAttiva()} placeholder="Cerca il centro sulla mappa…" maxLength={120} />
         </Field>
-        <div className="grid grid-cols-3 gap-3">
-          <Field label="Quanti campi">
-            <input name="campi" type="number" min={1} max={20} required defaultValue={3} className={inputClass} />
-          </Field>
-          <Field label="Tipo">
-            <select name="tipo" defaultValue="5" className={inputClass}>
-              {TIPI_CAMPO.map((t) => (
-                <option key={t} value={t}>
-                  Calcio a {t}
-                </option>
-              ))}
-            </select>
-          </Field>
-          <Field label="€ all’ora">
-            <input name="prezzo" inputMode="decimal" required defaultValue="70" className={inputClass} />
-          </Field>
+        <div className="space-y-1 text-sm">
+          <span className="font-medium">I campi</span>
+          <p className="text-xs text-stone-500">Un gruppo per ogni tipo: per esempio 3 campi a 5 coperti, 2 a 7 all’aperto, 1 a 11. Nomi e prezzi si cambiano poi campo per campo.</p>
         </div>
-        <p className="text-xs text-stone-500">Nomi, tipi e prezzi diversi per ogni campo si cambiano dopo, nelle impostazioni.</p>
+        <GruppiCampi />
         <SubmitButton className="w-full rounded-xl bg-orange-500 py-3 font-bold text-white hover:bg-orange-600">Crea il centro</SubmitButton>
       </ActionForm>
     </div>

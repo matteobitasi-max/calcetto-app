@@ -114,7 +114,7 @@ async function Planning({ searchParams }: { searchParams: Promise<Record<string,
                     <p className="truncate text-sm font-bold">{c.nome}</p>
                     <p className="text-[11px] text-stone-500">
                       Calcio a {c.tipo}
-                      {c.coperto ? ' · coperto' : ''} · {euro(c.prezzoOra)}/h
+                      {c.coperto ? ' · 🏠 dentro' : ' · 🌤️ fuori'} · {euro(c.prezzoOra)}/h
                     </p>
                   </div>
                   <div className="relative" style={{ height: slot * ALTEZZA }}>
