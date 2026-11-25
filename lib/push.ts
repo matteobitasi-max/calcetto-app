@@ -96,6 +96,20 @@ const subFields = `{_id, tipo, endpoint, keys, token, lingua}`
 // Filtro sulle preferenze del giocatore (la categoria arriva solo dal codice, mai dall'utente).
 const vuole = (categoria?: CategoriaNotifica) => (categoria ? ` && coalesce(notifiche.${categoria}, true)` : '')
 
+// Il link di una notifica porta con sé la sua lega (?apri=): chi è in più leghe (es. la squadra del Club e
+// la lega con gli amici), toccandola, si ritrova nella lega giusta, con il suo tema e le sue funzioni (vedi proxy.ts).
+export const PARAM_APRI_LEGA = 'apri'
+export function conLega(url: string, legaId: string) {
+  if (!url.startsWith('/') || url.startsWith('//')) return url
+  const [percorso, hash] = url.split('#')
+  const sep = percorso.includes('?') ? '&' : '?'
+  return `${percorso}${sep}${PARAM_APRI_LEGA}=${encodeURIComponent(legaId)}${hash !== undefined ? `#${hash}` : ''}`
+}
+const nellaLega = (messaggio: Messaggio, legaId: string): Messaggio => {
+  const metti = (p: PushPayload) => ({ ...p, url: conLega(p.url, legaId) })
+  return typeof messaggio === 'function' ? (t: T) => metti(messaggio(t)) : metti(messaggio)
+}
+
 // A tutti i giocatori attivi della lega che non hanno spento questo tipo di notifica.
 export async function inviaATutti(legaId: string, payload: Messaggio, categoria?: CategoriaNotifica) {
   const subs = await sanity.fetch<Iscrizione[]>(
@@ -104,17 +118,22 @@ export async function inviaATutti(legaId: string, payload: Messaggio, categoria?
     ]${subFields}`,
     { legaId },
   )
-  return invia(subs, payload)
+  return invia(subs, nellaLega(payload, legaId))
 }
 
 // Solo ad alcuni giocatori (per ID della loro scheda).
 export async function inviaAGiocatori(playerIds: string[], payload: Messaggio, categoria?: CategoriaNotifica) {
   if (playerIds.length === 0) return { inviate: 0, totali: 0 }
-  const subs = await sanity.fetch<Iscrizione[]>(
-    `*[_type == "pushSubscription"
-      && coalesce(clerkUserId, giocatore->clerkUserId) in *[_type == "player" && _id in $ids${vuole(categoria)}].clerkUserId
-    ]${subFields}`,
-    { ids: playerIds },
-  )
-  return invia(subs, payload)
+  const [subs, schede] = await Promise.all([
+    sanity.fetch<Iscrizione[]>(
+      `*[_type == "pushSubscription"
+        && coalesce(clerkUserId, giocatore->clerkUserId) in *[_type == "player" && _id in $ids${vuole(categoria)}].clerkUserId
+      ]${subFields}`,
+      { ids: playerIds },
+    ),
+    sanity.fetch<{ legaId?: string }[]>(`*[_type == "player" && _id in $ids]{"legaId": lega._ref}`, { ids: playerIds }),
+  ])
+  // le schede sono sempre di una lega sola (quella della partita o del torneo): il link la porta con sé
+  const leghe = [...new Set(schede.map((s) => s.legaId).filter((x): x is string => !!x))]
+  return invia(subs, leghe.length === 1 ? nellaLega(payload, leghe[0]) : payload)
 }

@@ -377,4 +377,5 @@ export const partite: Record<string, string> = {
   "Dal calcio a 5 al calcio a 11: 4-4-2, 3-5-2, 4-3-3 e gli altri, con i titolari proposti.": "From 5-a-side to 11-a-side: 4-4-2, 3-5-2, 4-3-3 and more, with suggested starters.",
   "Disponibili": "Available",
   "Trascina i giocatori sul campo; dal campo qui per toglierli.": "Drag players onto the pitch; drag them back here to remove them.",
+  "Nelle altre leghe": "In your other leagues",
 }

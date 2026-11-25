@@ -765,7 +765,7 @@ async function avvisaProposte(match: Match) {
   if (!proposte.some((p) => inCampo.has(p.giocatoreId) && p.partite % PARTITE_PER_REVISIONE === 0)) return
   const organizzatori = await organizzatoriPro(match.legaId)
   await inviaAGiocatori(organizzatori, (t) => ({
-    title: `📈 ${t('Nuove proposte di voto')}`,
+    title: `📈 ${t('Nuove proposte di voto')}${match.legaNome ? ` · ${match.legaNome}` : ''}`,
     body: t.n(proposte.length, '{n} giocatore da rivedere: approva o scarta i nuovi voti.', '{n} giocatori da rivedere: approva o scarta i nuovi voti.'),
     url: '/giocatori/proposte',
     tag: `proposte-${match.legaId}`,

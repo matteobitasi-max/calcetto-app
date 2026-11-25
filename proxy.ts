@@ -17,6 +17,21 @@ const vecchioIndirizzo = (req: NextRequest) =>
   !!process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY?.startsWith('pk_live') &&
   req.headers.get('accept')?.includes('text/html')
 
+// I link delle notifiche portano la loro lega (?apri=<lega>, vedi conLega in lib/push.ts): diventa la lega attiva
+// (lo stesso cookie del menu delle leghe) e si apre la pagina senza il parametro. Una lega di cui non si fa
+// parte non dà accesso a niente: getCurrentPlayer la ignora e resta sulla prima lega.
+function apriLega(req: NextRequest) {
+  const legaId = req.nextUrl.searchParams.get('apri')
+  if (legaId === null) return null
+  const pulito = req.nextUrl.clone()
+  pulito.searchParams.delete('apri')
+  const risposta = NextResponse.redirect(pulito)
+  if (/^[\w.-]{1,100}$/.test(legaId)) {
+    risposta.cookies.set('lega', legaId, { path: '/', maxAge: 60 * 60 * 24 * 365, sameSite: 'lax', httpOnly: true })
+  }
+  return risposta
+}
+
 export default function proxy(req: NextRequest, ev: NextFetchEvent) {
   // manutenzione (MANUTENZIONE=1 su Vercel), es. durante lo spostamento dei dati: nessuno legge o scrive
   if (process.env.MANUTENZIONE === '1') {
@@ -25,6 +40,8 @@ export default function proxy(req: NextRequest, ev: NextFetchEvent) {
   // i link d'invito già mandati col vecchio indirizzo si aprono nel browser: lì si va sul sito nuovo
   if (vecchioIndirizzo(req) && /^\/invito/.test(req.nextUrl.pathname)) return NextResponse.redirect(`https://www.thecapfc.app${req.nextUrl.pathname}`)
   if (vecchioIndirizzo(req)) return new NextResponse(PAGINA_SPOSTATI, { headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' } })
+  const apri = apriLega(req)
+  if (apri) return apri
   return conClerk(req, ev)
 }
 

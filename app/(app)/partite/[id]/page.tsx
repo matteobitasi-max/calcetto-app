@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
+import { PassaALega } from '@/components/passa-a-lega'
 import { Suspense } from 'react'
 import { canEnterResults, displayName, getCurrentPlayer, getUtente, membroDi, mioInCima, type Membro, type Player } from '@/lib/player'
 import { indisponibileIl } from '@/lib/roster'
@@ -17,7 +18,7 @@ import { KmPartita } from '@/components/km-partita'
 import { MeteoPartita } from '@/components/meteo-partita'
 import { getT } from '@/lib/lingua'
 import type { T } from '@/lib/i18n'
-import { correggiKm, salvaPagelle, scambiaConAttesa, aggiungiDaAttesa, allungaFinestra, apriConvocazioni, cambiaSquadra, cambiaStato, convocaGiocatore, scegliLega, togliDallaPartita, togliDallaSquadra } from '@/app/actions'
+import { correggiKm, salvaPagelle, scambiaConAttesa, aggiungiDaAttesa, allungaFinestra, apriConvocazioni, cambiaSquadra, cambiaStato, convocaGiocatore, togliDallaPartita, togliDallaSquadra } from '@/app/actions'
 import { Countdown } from '@/components/countdown'
 import { ApriConvocazioni } from '@/components/apri-convocazioni'
 import { baseUrl } from '@/lib/url'
@@ -68,17 +69,7 @@ async function MatchDetail({ params }: { params: Promise<{ id: string }> }) {
 
   return (
     <div className="space-y-4">
-      {attiva && attiva.lega._id !== match.legaId && (
-        <form
-          action={scegliLega.bind(null, match.legaId, `/partite/${match._id}`)}
-          className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-amber-50 p-3 text-sm text-amber-900 dark:bg-amber-950 dark:text-amber-200"
-        >
-          <span>
-            {t('Questa partita è della lega')} <b>{player.lega.nome}</b>
-          </span>
-          <SubmitButton className={buttonClass('secondary')}>{t('Passa a questa lega')}</SubmitButton>
-        </form>
-      )}
+      {attiva && attiva.lega._id !== match.legaId && <PassaALega legaId={match.legaId} nome={player.lega.nome} testo={t('Questa partita è della lega')} />}
       <Card className="space-y-2">
         <div className="flex items-start justify-between gap-2">
           <h1 className="text-lg font-bold leading-tight">

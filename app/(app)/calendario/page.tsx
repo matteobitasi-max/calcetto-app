@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { Suspense } from 'react'
+import { Suspense, type ReactNode } from 'react'
 import { getMemberships, getUtente, requirePlayer } from '@/lib/player'
 import { percorsoCalendario } from '@/lib/calendario'
 import { AggiungiCalendario } from '@/components/aggiungi-calendario'
@@ -11,6 +11,7 @@ import { assicuraRicorrenze } from '@/lib/series'
 import { Card, Loading, StatoBadge } from '@/components/ui'
 import { avatarUrl } from '@/lib/image'
 import { FiltroLega } from './filtro-lega'
+import { EtichettaLega } from '@/components/etichetta-lega'
 import { NuovoNelGiorno } from '@/components/scelta-nuovo'
 
 const DAY = 86_400_000
@@ -59,7 +60,10 @@ async function Calendario({ searchParams }: { searchParams: Promise<Record<strin
   }
   const inVista = membri.filter((x) => (typeof lega === 'string' && membri.some((y) => y.lega._id === lega) ? x.lega._id === lega : true))
   const scelta = inVista.length === 1 && membri.length > 1 ? inVista[0].lega._id : 'tutte'
-  const nomeLega = new Map(membri.map((x) => [x.lega._id, x.lega.nome]))
+  // il segno di ogni lega (logo, nome, "Club"): la squadra del Club e la lega con gli amici si distinguono a colpo d'occhio
+  const segno = new Map(
+    membri.map((x) => [x.lega._id, <EtichettaLega key={x.lega._id} nome={x.lega.nome} logo={avatarUrl(x.lega.logo, 32)} club={!!x.lega.club && x.lega.tipo === 'squadra'} />]),
+  )
   const organizzo = inVista.filter((x) => x.isAdmin)
   const piuLeghe = inVista.length > 1
   await Promise.all(inVista.map((x) => assicuraRicorrenze({ legaId: x.lega._id })))
@@ -179,7 +183,7 @@ async function Calendario({ searchParams }: { searchParams: Promise<Record<strin
         <GiornoScelto
           giorno={giornoScelto}
           partite={perGiorno.get(giornoScelto) ?? []}
-          nomeLega={nomeLega}
+          segno={segno}
           organizzo={giornoScelto >= oggi ? organizzo.map((x) => ({ id: x.lega._id, nome: x.lega.nome })) : []}
           chiudi={url({})}
           t={t}
@@ -198,7 +202,7 @@ async function Calendario({ searchParams }: { searchParams: Promise<Record<strin
                   {t.data(match.data, { weekday: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                 </span>
                 <span className="block truncate text-zinc-500">
-                  {piuLeghe && <b className="font-semibold">{nomeLega.get(match.legaId)} · </b>}
+                  {piuLeghe && <>{segno.get(match.legaId)} · </>}
                   {match.luogo} · {presenti(match).length}/{match.postiDisponibili}
                 </span>
               </span>
@@ -215,7 +219,7 @@ async function Calendario({ searchParams }: { searchParams: Promise<Record<strin
 function GiornoScelto({
   giorno,
   partite,
-  nomeLega,
+  segno,
   organizzo,
   chiudi,
   t,
@@ -223,7 +227,7 @@ function GiornoScelto({
   t: T
   giorno: string
   partite: Match[]
-  nomeLega: Map<string, string>
+  segno: Map<string, ReactNode>
   organizzo: { id: string; nome: string }[]
   chiudi: string
 }) {
@@ -241,7 +245,7 @@ function GiornoScelto({
           <span className="min-w-0">
             <span className="block font-semibold">
               {isAllenamento(match) ? `🏃 ${t('Allenamento')} · ` : '🏟️ '}
-              {nomeLega.get(match.legaId)}
+              {segno.get(match.legaId)}
             </span>
             <span className="block truncate text-zinc-500">
               {t.ora(match.data)} · {match.luogo} · {presenti(match).length}/{match.postiDisponibili}

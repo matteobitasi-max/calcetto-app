@@ -54,7 +54,7 @@ export async function chiudiConvocazioni(matchId: string) {
         (t) => ({
           // all'allenamento niente squadre, quindi niente pettorine
           title: match.tipo === 'allenamento' ? `🔒 ${t('Allenamento')} · ${t('Convocazioni chiuse')}` : `🔒 ${t('Convocazioni chiuse')} – ${t('Ricordate le pettorine')}`,
-          body: `${t.data(match.data, { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })} · ${match.luogo}\n${convocati(match, t)}`,
+          body: `${match.legaNome ? `${match.legaNome} · ` : ''}${t.data(match.data, { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })} · ${match.luogo}\n${convocati(match, t)}`,
           url: `/partite/${matchId}`,
           tag: matchId,
         }),

@@ -3,7 +3,7 @@
 import { Capacitor } from '@capacitor/core'
 import { FirebaseMessaging } from '@capacitor-firebase/messaging'
 import { useRouter } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { attivaNotificheNative } from '@/app/actions'
 
 export const isAppNativa = () => Capacitor.isNativePlatform()
@@ -25,6 +25,12 @@ type Avviso = { titolo: string; testo: string; url?: string }
 export function NotificheNativeListener() {
   const router = useRouter()
   const [avviso, setAvviso] = useState<Avviso | null>(null)
+  // Un link con la sua lega (?apri=) cambia la lega attiva: serve una pagina caricata da capo, così
+  // anche la testata, il menu e il tema passano a quella lega (la navigazione interna non li ridisegna).
+  const vai = useCallback(
+    (url: string) => (/[?&]apri=/.test(url) ? window.location.assign(url) : router.push(url)),
+    [router],
+  )
 
   useEffect(() => {
     if (!avviso) return
@@ -40,7 +46,7 @@ export function NotificheNativeListener() {
       }),
       FirebaseMessaging.addListener('notificationActionPerformed', ({ notification }) => {
         const url = (notification.data as { url?: string } | undefined)?.url
-        if (url?.startsWith('/')) router.push(url)
+        if (url?.startsWith('/')) vai(url)
       }),
       FirebaseMessaging.addListener('notificationReceived', ({ notification }) => {
         if (Capacitor.getPlatform() !== 'android') return
@@ -58,14 +64,14 @@ export function NotificheNativeListener() {
     return () => {
       listeners.forEach((l) => l.then((h) => h.remove()))
     }
-  }, [router])
+  }, [vai])
 
   if (!avviso) return null
   return (
     <button
       type="button"
       onClick={() => {
-        if (avviso.url?.startsWith('/')) router.push(avviso.url)
+        if (avviso.url?.startsWith('/')) vai(avviso.url)
         setAvviso(null)
       }}
       className="fixed inset-x-3 top-[max(0.75rem,var(--safe-area-inset-top,env(safe-area-inset-top)))] z-[80] rounded-2xl bg-zinc-900/95 p-3 text-left text-white shadow-2xl"

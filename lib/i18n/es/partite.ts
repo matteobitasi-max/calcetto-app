@@ -377,4 +377,5 @@ export const partite: Record<string, string> = {
   "Dal calcio a 5 al calcio a 11: 4-4-2, 3-5-2, 4-3-3 e gli altri, con i titolari proposti.": "Del fútbol 5 al fútbol 11: 4-4-2, 3-5-2, 4-3-3 y los demás, con los titulares propuestos.",
   "Disponibili": "Disponibles",
   "Trascina i giocatori sul campo; dal campo qui per toglierli.": "Arrastra a los jugadores al campo; desde el campo aquí para quitarlos.",
+  "Nelle altre leghe": "En tus otras ligas",
 }

@@ -20,6 +20,8 @@ import { NotificheToggle } from '@/components/notifiche-toggle'
 import { RispostaButtons } from './partite/risposta-buttons'
 import { Tabellino } from './partite/tabellino'
 import { MeteoPartita } from '@/components/meteo-partita'
+import { EtichettaLega } from '@/components/etichetta-lega'
+import { avatarUrl } from '@/lib/image'
 
 export default function Home() {
   return (
@@ -39,8 +41,19 @@ async function Partite() {
   if (!player) return <VaiA href="/benvenuto" />
 
   const legaId = player.lega._id
-  await assicuraRicorrenze({ legaId })
-  const [upcoming, past, rosa] = await Promise.all([getUpcomingMatches(legaId), getPastMatches(legaId, 100), getPlayers(legaId)])
+  // le altre leghe in cui gioco (es. la squadra del Club e la lega con gli amici): la loro prossima partita
+  const altreLeghe = player.ospite ? [] : mie.filter((m) => m.lega._id !== legaId)
+  await Promise.all([legaId, ...altreLeghe.map((m) => m.lega._id)].map((id) => assicuraRicorrenze({ legaId: id })))
+  const [upcoming, past, rosa, dalleAltre] = await Promise.all([
+    getUpcomingMatches(legaId),
+    getPastMatches(legaId, 100),
+    getPlayers(legaId),
+    altreLeghe.length ? getUpcomingMatches(altreLeghe.map((m) => m.lega._id)) : Promise.resolve([]),
+  ])
+  const nelleAltre = altreLeghe.flatMap((m) => {
+    const prossimaLi = dalleAltre.find((x) => x.legaId === m.lega._id)
+    return prossimaLi ? [{ membro: m, match: prossimaLi }] : []
+  })
   // lega appena creata (o ancora senza amici): l'invito in cima
   const linkInvito = player.isAdmin && player.lega.codiceInvito ? `${await baseUrl()}/invito/${player.lega.codiceInvito}` : null
   const daSolo = rosa.filter((p) => p.attivo !== false).length <= 1
@@ -77,6 +90,29 @@ async function Partite() {
         <ProssimaPartita match={prossima} player={player} citta={player.lega.citta} lega={player.lega.nome} t={t} />
       ) : (
         <Card className="text-center text-sm text-zinc-500">{t('Nessuna partita in programma.')}</Card>
+      )}
+
+      {/* La prossima partita di ognuna delle mie altre leghe: toccandola si passa a quella lega */}
+      {nelleAltre.length > 0 && (
+        <section className="space-y-2">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">{t('Nelle altre leghe')}</h2>
+          <Card className="divide-y divide-zinc-200 p-0 dark:divide-zinc-800">
+            {nelleAltre.map(({ membro, match }) => (
+              <Link key={match._id} href={`/partite/${match._id}`} className="flex items-center justify-between gap-2 px-4 py-3 text-sm hover:bg-zinc-50 dark:hover:bg-zinc-800">
+                <span className="min-w-0">
+                  <span className="block truncate">
+                    <EtichettaLega nome={membro.lega.nome} logo={avatarUrl(membro.lega.logo, 32)} club={!!membro.lega.club && membro.lega.tipo === 'squadra'} />
+                  </span>
+                  <span className="block truncate text-xs capitalize text-zinc-500">
+                    {isAllenamento(match) && '🏃 '}
+                    {t.data(match.data, breve)} · {match.luogo}
+                  </span>
+                </span>
+                <StatoBadge match={match} />
+              </Link>
+            ))}
+          </Card>
+        </section>
       )}
 
       {/* In basso: l'ultima partita giocata e, a tendina, tutte le altre concluse */}
