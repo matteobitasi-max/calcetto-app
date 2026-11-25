@@ -5,6 +5,7 @@ import { cookies } from 'next/headers'
 import { refresh, revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { sanity } from '@/lib/sanity'
+import { leggiCampo } from '@/lib/campo'
 import { BADGE, CATEGORIE_NOTIFICHE, COOKIE_LEGA, eta, leggiRuolo, normalizzaTelefono, PIEDI, RUOLI, SKILLS, displayName, requirePlayer, getUtente, getMemberships, isTitolare, membroDi, soloGiocatore, requireAdmin, requireForDoc, requireIn, type Player, type Skill } from '@/lib/player'
 import { assegnaPosti, conSelezione, finestra, getMatch, getPartiteTorneo, getPlayers, orarioPartita, presenti, risultatoDa, type FonteKm, type Match, type Risposta, type Stato } from '@/lib/matches'
 import { idPlaylist, intervisteDellaPlaylist } from '@/lib/interviste'
@@ -293,6 +294,8 @@ export async function salvaPartita(matchId: string | null, _prev: FormState, for
       : await requireAdmin()
   const lega = { _type: 'reference' as const, _ref: admin.lega._id }
   const luogo = str(formData, 'luogo')
+  // il posto scelto dalla mappa (facoltativo)
+  const campo = leggiCampo(formData.get('campo'))
   const [data, apertura, chiusura] = ['data', 'aperturaConvocazioni', 'chiusuraConvocazioni'].map((k) => {
     const v = str(formData, k)
     return v ? romeLocalToISO(v) : ''
@@ -348,6 +351,7 @@ export async function salvaPartita(matchId: string | null, _prev: FormState, for
       ...(fineData && { fineData }),
       durataMinuti: durata,
       luogo,
+      ...(campo && { campo }),
       postiDisponibili: posti,
       postiAutomatici: automatici,
       ...(quota != null && { quota }),
@@ -388,8 +392,9 @@ export async function salvaPartita(matchId: string | null, _prev: FormState, for
         convocazioni: assegnaPosti(current?.convocazioni ?? [], posti),
         ...(quota != null && { quota }),
         ...(note && { note }),
+        ...(campo && { campo }),
       })
-      .unset([...(quota == null ? ['quota'] : []), ...(note ? [] : ['note'])])
+      .unset([...(quota == null ? ['quota'] : []), ...(note ? [] : ['note']), ...(campo ? [] : ['campo'])])
       .commit()
   } else {
     const doc = await sanity.create({
@@ -399,6 +404,7 @@ export async function salvaPartita(matchId: string | null, _prev: FormState, for
       ...fields,
       ...(quota != null && { quota }),
       ...(note && { note }),
+      ...(campo && { campo }),
       stato: 'aperta',
       convocazioni: [],
     })
@@ -829,7 +835,7 @@ export async function salvaSerie(seriesId: string, _prev: FormState, formData: F
     chiusuraOra,
     durataFinestraMinuti: durataFinestra,
   }
-  const optional = { quota, note: note || undefined, fineData: fineData || undefined }
+  const optional = { quota, note: note || undefined, fineData: fineData || undefined, campo: leggiCampo(formData.get('campo')) ?? undefined }
   await sanity
     .patch(seriesId)
     .set({ ...fields, ...Object.fromEntries(Object.entries(optional).filter(([, v]) => v !== undefined)) })

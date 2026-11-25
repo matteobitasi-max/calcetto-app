@@ -4,7 +4,10 @@ import { PillSalva } from '@/components/pill-salva'
 import { PostiInput } from '@/components/posti-input'
 import { Card, Field, inputClass } from '@/components/ui'
 import { adessoArrotondato, isoToRomeLocal, minutiTra } from '@/lib/dates'
-import type { Match } from '@/lib/matches'
+import { campiUsati, type Match } from '@/lib/matches'
+import { CampoInput } from '@/components/campo-input'
+import { ricercaCampiAttiva } from '@/lib/google-maps'
+import { getCurrentPlayer } from '@/lib/player'
 import { MAX_ALLENAMENTO } from '@/lib/limiti'
 import { QuandoFields } from './quando-fields'
 import { getT } from '@/lib/lingua'
@@ -27,7 +30,10 @@ export async function MatchForm({
   allenamento?: boolean
   submitLabel: string
 }) {
-  const t = await getT()
+  const [t, me] = await Promise.all([getT(), getCurrentPlayer()])
+  // i campi già usati dalla lega in cui si crea (o della partita che si modifica)
+  const legaDeiCampi = match?.legaId ?? legaId ?? me?.lega._id
+  const usati = legaDeiCampi ? await campiUsati(legaDeiCampi).catch(() => []) : []
   const giornoOk = giorno && /^\d{4}-\d{2}-\d{2}$/.test(giorno) ? giorno : undefined
   // Nuova partita: convocazioni da adesso (arrotondato ai 5 minuti) per 2 ore.
   const quando = match
@@ -48,8 +54,8 @@ export async function MatchForm({
       </Card>
 
       <Card className="space-y-4">
-        <Field label={t('Campo / luogo')}>
-          <input name="luogo" required placeholder={t('Centro sportivo…')} defaultValue={match?.luogo} className={inputClass} />
+        <Field label={t('Campo / luogo')} group>
+          <CampoInput defaultLuogo={match?.luogo} defaultCampo={match?.campo} usati={usati} ricerca={ricercaCampiAttiva()} />
         </Field>
         {allenamento ? (
           <Field label={t('Posti')}>

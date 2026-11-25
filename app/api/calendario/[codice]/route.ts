@@ -28,6 +28,7 @@ type Partita = {
   mia?: 'presente' | 'assente' | 'riserva'
   legaId: string
   presenti?: number
+  campo?: { indirizzo?: string; lat: number; lon: number }
 }
 
 const RISPOSTA = { presente: '✅ In lista', riserva: '⏳ In attesa', assente: '❌ Assente' } as const
@@ -53,7 +54,7 @@ export async function GET(request: Request, { params }: RouteContext<'/api/calen
         `*[_type == "match" && lega._ref in $leghe && data >= $da] | order(data asc){
           _id, _updatedAt, tipo, data, luogo, durataMinuti, stato, note, aperturaConvocazioni, chiusuraConvocazioni, nomeA, nomeB, risultato,
           "lega": lega->nome, "legaId": lega._ref, "torneo": torneo->nome,
-          "presenti": count(convocazioni[risposta == "presente"]),
+          "presenti": count(convocazioni[risposta == "presente"]), campo,
           "mia": convocazioni[giocatore._ref in $miei][0].risposta
         }`,
         { leghe, miei: schede.map((s) => s._id), da: new Date(Date.now() - 60 * 86_400_000).toISOString() },
@@ -122,7 +123,9 @@ function evento(p: Partita, t: T, sito: string, allenatore: boolean) {
     `DTSTART:${utc(inizio)}`,
     `DTEND:${utc(fine)}`,
     `SUMMARY:${testo(annullata ? `❌ ${t('Annullata')} · ${titolo}` : titolo)}`,
-    ...(p.luogo ? [`LOCATION:${testo(p.luogo)}`] : []),
+    // con il posto scelto dalla mappa: indirizzo e coordinate (il calendario mostra la mappa e il tempo di viaggio)
+    ...(p.luogo ? [`LOCATION:${testo(p.campo?.indirizzo ? `${p.luogo}, ${p.campo.indirizzo}` : p.luogo)}`] : []),
+    ...(p.campo ? [`GEO:${p.campo.lat};${p.campo.lon}`] : []),
     `DESCRIPTION:${testo(descrizione)}`,
     `URL:${link}`,
     `STATUS:${annullata ? 'CANCELLED' : 'CONFIRMED'}`,

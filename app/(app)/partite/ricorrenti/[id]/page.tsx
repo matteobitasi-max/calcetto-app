@@ -11,6 +11,9 @@ import { DURATE_FINESTRA } from '@/lib/limiti'
 import { SubmitButton } from '@/components/submit-button'
 import { Card, Field, Loading, PageTitle, buttonClass, inputClass } from '@/components/ui'
 import { getT } from '@/lib/lingua'
+import { campiUsati } from '@/lib/matches'
+import { CampoInput } from '@/components/campo-input'
+import { ricercaCampiAttiva } from '@/lib/google-maps'
 
 export default async function ModificaSeriePage({ params }: PageProps<'/partite/ricorrenti/[id]'>) {
   const t = await getT()
@@ -29,6 +32,7 @@ async function Form({ params }: { params: Promise<{ id: string }> }) {
   const [serie, conRisposte, t] = await Promise.all([getSeries(id), contaFutureConRisposte(id), getT()])
   if (!serie) notFound()
   await requireIn(serie.legaId, 'organizzatore')
+  const usati = await campiUsati(serie.legaId).catch(() => [])
 
   return (
     <ActionForm action={salvaSerie.bind(null, serie._id)} className="space-y-4">
@@ -48,8 +52,8 @@ async function Form({ params }: { params: Promise<{ id: string }> }) {
         <Field label={t('Fino al (facoltativo)')} group>
           <DatePicker name="fineData" defaultValue={serie.fineData} min={serie.primaData} placeholder={t('Nessuna fine')} />
         </Field>
-        <Field label={t('Campo / luogo')}>
-          <input name="luogo" required defaultValue={serie.luogo} className={inputClass} />
+        <Field label={t('Campo / luogo')} group>
+          <CampoInput defaultLuogo={serie.luogo} defaultCampo={serie.campo} usati={usati} ricerca={ricercaCampiAttiva()} />
         </Field>
         {serie.tipo === 'allenamento' ? (
           <Field label={t('Posti')}>

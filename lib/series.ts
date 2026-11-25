@@ -1,4 +1,5 @@
 import 'server-only'
+import type { Campo } from './campo'
 import { MAX_ISCRITTI } from './limiti'
 import { sanity } from './sanity'
 import { addDays, isoToRomeLocal, romeLocalToISO } from './dates'
@@ -17,6 +18,7 @@ export type Series = {
   fineData?: string
   durataMinuti?: number
   luogo: string
+  campo?: Campo
   postiDisponibili: number
   postiAutomatici?: boolean
   durataFinestraMinuti?: number
@@ -32,7 +34,7 @@ export type Series = {
 // Quante settimane in avanti tenere già create le partite.
 const ORIZZONTE_GIORNI = 42
 
-const seriesFields = `_id, "legaId": lega._ref, tipo, attiva, primaData, ora, ogniSettimane, fineData, durataMinuti, luogo, postiDisponibili, postiAutomatici, durataFinestraMinuti, quota, note,
+const seriesFields = `_id, "legaId": lega._ref, tipo, attiva, primaData, ora, ogniSettimane, fineData, durataMinuti, luogo, campo, postiDisponibili, postiAutomatici, durataFinestraMinuti, quota, note,
   aperturaGiorniPrima, aperturaOra, chiusuraGiorniPrima, chiusuraOra, esclusi`
 
 export function getSeries(id: string) {
@@ -61,6 +63,7 @@ function occurrence(s: Series, day: string) {
     aperturaConvocazioni: romeLocalToISO(`${addDays(day, -s.aperturaGiorniPrima)}T${s.aperturaOra}`),
     chiusuraConvocazioni: romeLocalToISO(`${addDays(day, -s.chiusuraGiorniPrima)}T${s.chiusuraOra}`),
     luogo: s.luogo,
+    ...(s.campo && { campo: s.campo }),
     postiDisponibili: s.postiAutomatici ? MAX_ISCRITTI : s.postiDisponibili,
     postiAutomatici: !!s.postiAutomatici,
     durataFinestraMinuti: s.durataFinestraMinuti ?? 120,

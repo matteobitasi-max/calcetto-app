@@ -267,7 +267,7 @@ function ProssimaPartita({
             <span className="block">
               {t('Inizio {ora}', { ora: t.ora(match.data) })}
               <Suspense>
-                <MeteoPartita citta={citta} data={match.data} compatto />
+                <MeteoPartita citta={match.campo ?? citta} data={match.data} compatto />
               </Suspense>
             </span>
           </h3>

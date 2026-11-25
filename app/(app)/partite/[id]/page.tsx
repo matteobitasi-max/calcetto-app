@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
+import { linkMappa } from '@/lib/campo'
 import { PassaALega } from '@/components/passa-a-lega'
 import { Suspense } from 'react'
 import { canEnterResults, displayName, getCurrentPlayer, getUtente, membroDi, mioInCima, type Membro, type Player } from '@/lib/player'
@@ -77,7 +78,7 @@ async function MatchDetail({ params }: { params: Promise<{ id: string }> }) {
             <span className="block">
               {t('Inizio {ora}', { ora: t.ora(match.data) })}
               <Suspense>
-                <MeteoPartita citta={player.lega.citta} data={match.data} compatto />
+                <MeteoPartita citta={match.campo ?? player.lega.citta} data={match.data} compatto />
               </Suspense>
             </span>
           </h1>
@@ -97,9 +98,14 @@ async function MatchDetail({ params }: { params: Promise<{ id: string }> }) {
           </Link>
         )}
         <p className="text-sm text-zinc-500">
-          📍 {match.luogo}
+          {/* il campo apre la mappa (il posto preciso se è stato scelto dalla mappa, altrimenti una ricerca col nome) */}
+          <a href={linkMappa(match.luogo, match.campo)} target="_blank" rel="noopener noreferrer" className="hover:underline">
+            📍 {match.luogo}
+            <span className="ml-1 text-xs font-medium text-green-700 dark:text-green-400">{t('Mappa')} ↗</span>
+          </a>
           {match.quota != null && ` · ${t('{quota} € a testa', { quota: match.quota })}`}
         </p>
+        {match.campo?.indirizzo && <p className="-mt-1 text-xs text-zinc-500">{match.campo.indirizzo}</p>}
 
         {match.note && <p className="whitespace-pre-line text-sm">{match.note}</p>}
         <FinestraInfo match={match} />
@@ -394,7 +400,7 @@ async function whatsappUrl(match: Match, legaNome: string, t: T) {
   const testo = [
     `${isAllenamento(match) ? `🏃 *${t('Allenamento')}* · ` : '⚽ '}*${t('Convocazioni aperte!')}* · ${legaNome}`,
     `📅 ${t.data(match.data, breve)}`,
-    `📍 ${match.luogo}`,
+    `📍 ${match.luogo} · ${linkMappa(match.luogo, match.campo)}`,
     `👥 ${t('{n} posti', { n: match.postiDisponibili })}${match.quota != null ? ` · ${match.quota} €` : ''}`,
     `⏳ ${t('Rispondi entro {data}', { data: t.data(match.chiusuraConvocazioni, breve) })}`,
     '',

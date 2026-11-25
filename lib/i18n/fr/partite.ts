@@ -381,4 +381,12 @@ export const partite: Record<string, string> = {
   "P": "M",
   "A": "E",
   "Impegni passati ({n})": "Événements passés ({n})",
+  "Cerca il centro sportivo…": "Cherche le centre sportif…",
+  "Posizione sulla mappa": "Position sur la carte",
+  "Mappa": "Carte",
+  "Togli il posto sulla mappa": "Retirer le lieu sur la carte",
+  "Campi già usati": "Terrains déjà utilisés",
+  "Sulla mappa": "Sur la carte",
+  "Cerco…": "Recherche…",
+  "Ricerca non disponibile: scrivi il nome del campo.": "Recherche indisponible : écris le nom du terrain.",
 }

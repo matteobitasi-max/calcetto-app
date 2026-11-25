@@ -1,4 +1,5 @@
 import 'server-only'
+import type { Campo } from './campo'
 import { sanity } from './sanity'
 import { playerFields, type Player } from './roster'
 import type { PartitaPunteggio } from './punteggio'
@@ -22,6 +23,8 @@ export type Match = {
   _rev: string
   legaId: string
   legaNome?: string
+  /** Il posto scelto dalla mappa (indirizzo e coordinate), se c'è. */
+  campo?: Campo
   /** Allenamento: convocazioni come una partita, ma niente squadre, risultato né classifica. */
   tipo?: 'allenamento'
   /** La lega è una "Squadra" (Club) in cui convoca l'allenatore: le partite hanno i convocati scelti da lui. */
@@ -99,7 +102,7 @@ export const allenamentoFinito = (m: Pick<Match, 'tipo' | 'data' | 'durataMinuti
 export type Pagamento = { giocatoreId: string; stato: 'dichiarato' | 'confermato'; metodo?: 'satispay' | 'contanti'; il?: string }
 
 const matchFields = `
-  _id, _rev, "legaId": lega._ref, "legaNome": lega->nome, tipo, "squadra": lega->club == true && lega->tipo == "squadra" && lega->autoconvocazione != true, "pagelleAttive": lega->club == true && lega->tipo == "squadra" && lega->pagelle != false, "club": lega->club == true && lega->tipo == "squadra", "formato": lega->formato, "moduloLega": lega->modulo, "formazione": formazione{modulo, "posti": posti[]{posto, "id": giocatore._ref}}, "pagelle": coalesce(pagelle[]{"giocatoreId": giocatore._ref, voto, nota}, []), "convocati": convocati[]._ref, data, luogo, postiDisponibili, postiAutomatici, quota, note, aperturaConvocazioni, chiusuraConvocazioni, durataFinestraMinuti, "serieId": serie._ref, notificaInviataIl,
+  _id, _rev, "legaId": lega._ref, "legaNome": lega->nome, tipo, campo, "squadra": lega->club == true && lega->tipo == "squadra" && lega->autoconvocazione != true, "pagelleAttive": lega->club == true && lega->tipo == "squadra" && lega->pagelle != false, "club": lega->club == true && lega->tipo == "squadra", "formato": lega->formato, "moduloLega": lega->modulo, "formazione": formazione{modulo, "posti": posti[]{posto, "id": giocatore._ref}}, "pagelle": coalesce(pagelle[]{"giocatoreId": giocatore._ref, voto, nota}, []), "convocati": convocati[]._ref, data, luogo, postiDisponibili, postiAutomatici, quota, note, aperturaConvocazioni, chiusuraConvocazioni, durataFinestraMinuti, "serieId": serie._ref, notificaInviataIl,
   "stato": coalesce(stato, "aperta"),
   "convocazioni": coalesce(convocazioni[]{_key, risposta, rispostoIl, aggiunto, "giocatore": giocatore->{${playerFields}}}, []),
   "squadraA": coalesce(squadraA[]->{${playerFields}}, []),
@@ -362,4 +365,24 @@ export function getPartitePerForma(legaId: string) {
     }`,
     { legaId },
   )
+}
+
+// I campi già usati da una lega (i più recenti prima, uno per nome): li propone il modulo della partita,
+// senza passare dalla ricerca su Google.
+export async function campiUsati(legaId: string) {
+  const righe = await sanity.fetch<{ luogo?: string; campo?: Campo }[]>(
+    `*[_type == "match" && lega._ref == $legaId && defined(luogo) && !defined(torneo)] | order(data desc)[0...80]{luogo, campo}`,
+    { legaId },
+  )
+  const visti = new Map<string, { luogo: string; campo?: Campo }>()
+  for (const r of righe) {
+    const luogo = r.luogo?.trim()
+    if (!luogo) continue
+    const chiave = luogo.toLowerCase()
+    const gia = visti.get(chiave)
+    // se lo stesso nome è stato scelto almeno una volta dalla mappa, vale il posto preciso
+    if (!gia) visti.set(chiave, { luogo, ...(r.campo && { campo: r.campo }) })
+    else if (!gia.campo && r.campo) gia.campo = r.campo
+  }
+  return [...visti.values()].slice(0, 8)
 }
