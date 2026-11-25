@@ -78,6 +78,10 @@ export const StatoBadge = async ({
     const quando = t.data(match.aperturaConvocazioni, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
     return <Badge label={t('Convocazioni dal {quando}', { quando })} className={cls} />
   }
+  // convocazioni chiuse: solo la scritta, senza il fondo a pillola
+  if (f === null && match.stato === 'chiusa') {
+    return <span className="shrink-0 text-xs font-medium text-blue-700 dark:text-blue-400">{t(label)}</span>
+  }
   return <Badge label={t(label)} className={cls} />
 }
 
