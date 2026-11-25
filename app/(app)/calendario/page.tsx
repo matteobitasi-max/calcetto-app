@@ -85,6 +85,24 @@ async function Calendario({ searchParams }: { searchParams: Promise<Record<strin
     perGiorno.set(key, [...(perGiorno.get(key) ?? []), match])
   }
   const delMese = matches.filter((match) => isoToRomeLocal(match.data).startsWith(`${y}-${pad(m)}`))
+  // i giorni già passati (quelli di oggi restano in vista)
+  const passati = delMese.filter((match) => isoToRomeLocal(match.data).slice(0, 10) < oggi)
+  const prossimi = delMese.filter((match) => !passati.includes(match))
+  const riga = (match: Match) => (
+    <Link key={match._id} href={`/partite/${match._id}`} className="flex items-center justify-between gap-2 px-4 py-3 text-sm hover:bg-zinc-50 dark:hover:bg-zinc-800">
+      <span className="min-w-0">
+        <span className="block font-medium capitalize">
+          {isAllenamento(match) && '🏃 '}
+          {t.data(match.data, { weekday: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+        </span>
+        <span className="block truncate text-zinc-500">
+          {piuLeghe && <>{segno.get(match.legaId)} · </>}
+          {match.luogo} · {presenti(match).length}/{match.postiDisponibili}
+        </span>
+      </span>
+      <StatoBadge match={match} />
+    </Link>
+  )
 
   const prec = m === 1 ? `${y - 1}-12` : `${y}-${pad(m - 1)}`
   const succ = m === 12 ? `${y + 1}-01` : `${y}-${pad(m + 1)}`
@@ -195,27 +213,27 @@ async function Calendario({ searchParams }: { searchParams: Promise<Record<strin
         />
       )}
 
-      <Card className="divide-y divide-zinc-200 p-0 dark:divide-zinc-800">
-        {delMese.length === 0 ? (
+      {/* gli impegni del mese: quelli già passati chiusi in una tendina, sotto quelli ancora da giocare */}
+      {delMese.length === 0 ? (
+        <Card className="p-0">
           <p className="p-4 text-sm text-zinc-500">{t('Nessuna partita in questo mese.')}</p>
-        ) : (
-          delMese.map((match) => (
-            <Link key={match._id} href={`/partite/${match._id}`} className="flex items-center justify-between gap-2 px-4 py-3 text-sm hover:bg-zinc-50 dark:hover:bg-zinc-800">
-              <span className="min-w-0">
-                <span className="block font-medium capitalize">
-                  {isAllenamento(match) && '🏃 '}
-                  {t.data(match.data, { weekday: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+        </Card>
+      ) : (
+        <>
+          {passati.length > 0 && (
+            <details className="group rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
+              <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-3 text-sm font-semibold [&::-webkit-details-marker]:hidden">
+                {t('Impegni passati ({n})', { n: passati.length })}
+                <span className="text-zinc-400 transition group-open:rotate-180" aria-hidden>
+                  ▾
                 </span>
-                <span className="block truncate text-zinc-500">
-                  {piuLeghe && <>{segno.get(match.legaId)} · </>}
-                  {match.luogo} · {presenti(match).length}/{match.postiDisponibili}
-                </span>
-              </span>
-              <StatoBadge match={match} />
-            </Link>
-          ))
-        )}
-      </Card>
+              </summary>
+              <div className="divide-y divide-zinc-200 border-t border-zinc-200 dark:divide-zinc-800 dark:border-zinc-800">{passati.map(riga)}</div>
+            </details>
+          )}
+          {prossimi.length > 0 && <Card className="divide-y divide-zinc-200 p-0 dark:divide-zinc-800">{prossimi.map(riga)}</Card>}
+        </>
+      )}
     </div>
   )
 }

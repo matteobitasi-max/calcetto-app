@@ -380,4 +380,5 @@ export const partite: Record<string, string> = {
   "Nelle altre leghe": "In deinen anderen Ligen",
   "P": "S",
   "A": "T",
+  "Impegni passati ({n})": "Vergangene Termine ({n})",
 }
