@@ -8,10 +8,11 @@ import { isoToRomeLocal } from '@/lib/dates'
 import { getT } from '@/lib/lingua'
 import { inizialiGiorni, type T } from '@/lib/i18n'
 import { assicuraRicorrenze } from '@/lib/series'
-import { Card, Loading, StatoBadge } from '@/components/ui'
+import { Card, Loading } from '@/components/ui'
 import { avatarUrl } from '@/lib/image'
 import { FiltroLega } from './filtro-lega'
 import { EtichettaLega } from '@/components/etichetta-lega'
+import { RigaImpegno } from '@/components/riga-impegno'
 import { NuovoNelGiorno } from '@/components/scelta-nuovo'
 
 const DAY = 86_400_000
@@ -89,19 +90,14 @@ async function Calendario({ searchParams }: { searchParams: Promise<Record<strin
   const passati = delMese.filter((match) => isoToRomeLocal(match.data).slice(0, 10) < oggi)
   const prossimi = delMese.filter((match) => !passati.includes(match))
   const riga = (match: Match) => (
-    <Link key={match._id} href={`/partite/${match._id}`} className="flex items-center justify-between gap-2 px-4 py-3 text-sm hover:bg-zinc-50 dark:hover:bg-zinc-800">
-      <span className="min-w-0">
-        <span className="block font-medium capitalize">
-          {isAllenamento(match) && '🏃 '}
-          {t.data(match.data, { weekday: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
-        </span>
-        <span className="block truncate text-zinc-500">
-          {piuLeghe && <>{segno.get(match.legaId)} · </>}
-          {match.luogo} · {presenti(match).length}/{match.postiDisponibili}
-        </span>
-      </span>
-      <StatoBadge match={match} />
-    </Link>
+    <RigaImpegno
+      key={match._id}
+      match={match}
+      lega={piuLeghe ? segno.get(match.legaId) : undefined}
+      quando={t.data(match.data, { weekday: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+      dettagli={`${match.luogo} · ${presenti(match).length}/${match.postiDisponibili}`}
+      t={t}
+    />
   )
 
   const prec = m === 1 ? `${y - 1}-12` : `${y}-${pad(m - 1)}`
@@ -264,23 +260,14 @@ function GiornoScelto({
       </div>
       {partite.length === 0 && <p className="px-4 py-3 text-sm text-zinc-500">{t('Nessuna partita in questo giorno.')}</p>}
       {partite.map((match) => (
-        <Link key={match._id} href={`/partite/${match._id}`} className="flex items-center justify-between gap-2 px-4 py-3 text-sm hover:bg-zinc-50 dark:hover:bg-zinc-800">
-          <span className="min-w-0">
-            {/* in cima: che impegno è */}
-            <span
-              className={`mb-1 inline-block rounded px-1.5 py-0.5 text-[11px] font-bold uppercase tracking-wide ${
-                isAllenamento(match) ? 'bg-sky-100 text-sky-800 dark:bg-sky-950 dark:text-sky-300' : 'bg-green-100 text-green-800 dark:bg-green-950 dark:text-green-300'
-              }`}
-            >
-              {isAllenamento(match) ? `🏃 ${t('Allenamento')}` : `⚽ ${t('Partita')}`}
-            </span>
-            <span className="block font-semibold">{segno.get(match.legaId)}</span>
-            <span className="block truncate text-zinc-500">
-              {t.ora(match.data)} · {match.luogo} · {presenti(match).length}/{match.postiDisponibili}
-            </span>
-          </span>
-          <StatoBadge match={match} />
-        </Link>
+        <RigaImpegno
+          key={match._id}
+          match={match}
+          lega={segno.get(match.legaId)}
+          quando={t.ora(match.data)}
+          dettagli={`${match.luogo} · ${presenti(match).length}/${match.postiDisponibili}`}
+          t={t}
+        />
       ))}
       {organizzo.length > 0 && (
         <div className="px-4 py-3">

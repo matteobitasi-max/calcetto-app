@@ -21,6 +21,7 @@ import { RispostaButtons } from './partite/risposta-buttons'
 import { Tabellino } from './partite/tabellino'
 import { MeteoPartita } from '@/components/meteo-partita'
 import { EtichettaLega } from '@/components/etichetta-lega'
+import { RigaImpegno } from '@/components/riga-impegno'
 import { avatarUrl } from '@/lib/image'
 
 export default function Home() {
@@ -98,25 +99,14 @@ async function Partite() {
           <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">{t('Nelle altre leghe')}</h2>
           <Card className="divide-y divide-zinc-200 p-0 dark:divide-zinc-800">
             {nelleAltre.map(({ membro, match }) => (
-              <Link key={match._id} href={`/partite/${match._id}`} className="block space-y-1 px-4 py-3 text-sm hover:bg-zinc-50 dark:hover:bg-zinc-800">
-                {/* in alto: che impegno è e lo stato delle convocazioni */}
-                <span className="flex items-center justify-between gap-2">
-                  <span
-                    className={`rounded px-1.5 py-0.5 text-[11px] font-bold uppercase tracking-wide ${
-                      isAllenamento(match) ? 'bg-sky-100 text-sky-800 dark:bg-sky-950 dark:text-sky-300' : 'bg-green-100 text-green-800 dark:bg-green-950 dark:text-green-300'
-                    }`}
-                  >
-                    {isAllenamento(match) ? `🏃 ${t('Allenamento')}` : `⚽ ${t('Partita')}`}
-                  </span>
-                  <StatoBadge match={match} />
-                </span>
-                <span className="block truncate">
-                  <EtichettaLega nome={membro.lega.nome} logo={avatarUrl(membro.lega.logo, 32)} club={!!membro.lega.club && membro.lega.tipo === 'squadra'} />
-                </span>
-                <span className="block truncate text-xs text-zinc-500">
-                  <b className="font-semibold capitalize text-zinc-800 dark:text-zinc-200">{t.data(match.data, breve)}</b> · {match.luogo}
-                </span>
-              </Link>
+              <RigaImpegno
+                key={match._id}
+                match={match}
+                lega={<EtichettaLega nome={membro.lega.nome} logo={avatarUrl(membro.lega.logo, 32)} club={!!membro.lega.club && membro.lega.tipo === 'squadra'} />}
+                quando={t.data(match.data, breve)}
+                dettagli={match.luogo}
+                t={t}
+              />
             ))}
           </Card>
         </section>
