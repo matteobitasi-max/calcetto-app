@@ -31,56 +31,77 @@ const useSelezione = () =>
 
 const hhmm = (min: number) => `${String(Math.floor(min / 60) % 24).padStart(2, '0')}:${String(min % 60).padStart(2, '0')}`
 
-// Le mezz'ore di una colonna (un campo): trascinando si seleziona, al rilascio si apre il pannello.
+// Le mezz'ore di una colonna (un campo): premendo e trascinando si seleziona, al rilascio si apre il pannello.
+// La colonna "cattura" il puntatore e calcola la mezz'ora dall'altezza: funziona anche passando sopra le
+// prenotazioni, con il trackpad, in Safari, con la penna. Un clic (o un tocco) seleziona un'ora.
 export function ColonnaSlot({ campo, nome, apre, slot, altezza }: { campo: string; nome: string; apre: number; slot: number; altezza: number }) {
   const sel = useSelezione()
-  const trascino = useRef<{ ancora: number; mosso: boolean } | null>(null)
+  const box = useRef<HTMLDivElement>(null)
+  const trascino = useRef<{ ancora: number; mosso: boolean; id: number } | null>(null)
 
-  useEffect(() => {
-    const fine = () => {
-      const t = trascino.current
-      trascino.current = null
-      // un clic senza trascinare: un'ora (due mezz'ore), se c'è spazio
-      if (t && !t.mosso && selezione?.campo === campo) imposta({ campo, da: t.ancora, a: Math.min(t.ancora + 2, slot) })
-    }
-    window.addEventListener('pointerup', fine)
-    return () => window.removeEventListener('pointerup', fine)
-  }, [campo, slot])
+  const indice = (y: number) => {
+    const r = box.current!.getBoundingClientRect()
+    return Math.min(slot - 1, Math.max(0, Math.floor((y - r.top) / altezza)))
+  }
+  const dentro = sel?.campo === campo ? sel : null
 
   return (
-    <div className="absolute inset-0 select-none" style={{ touchAction: 'pan-y' }}>
-      {Array.from({ length: slot }, (_, i) => {
-        const dentro = sel?.campo === campo && i >= sel.da && i < sel.a
-        return (
-          <div
-            key={i}
-            role="button"
-            tabIndex={-1}
-            aria-label={`${nome} ${hhmm(apre + i * 30)}`}
-            onPointerDown={(e) => {
-              if (e.pointerType !== 'mouse') return
-              e.preventDefault()
-              trascino.current = { ancora: i, mosso: false }
-              imposta({ campo, da: i, a: i + 1 })
-            }}
-            onPointerEnter={() => {
-              const t = trascino.current
-              if (!t) return
-              t.mosso = t.mosso || i !== t.ancora
-              imposta({ campo, da: Math.min(t.ancora, i), a: Math.max(t.ancora, i) + 1 })
-            }}
-            onClick={(e) => {
-              // tocco (telefono, tablet): un'ora da lì
-              if ((e.nativeEvent as PointerEvent).pointerType === 'mouse') return
-              imposta({ campo, da: i, a: Math.min(i + 2, slot) })
-            }}
-            className={`cursor-pointer border-b ${i % 2 ? 'border-stone-200 dark:border-zinc-800' : 'border-stone-100 dark:border-zinc-800/60'} ${
-              dentro ? 'bg-orange-200/80 dark:bg-orange-800/50' : 'hover:bg-orange-50 dark:hover:bg-orange-950/40'
-            }`}
-            style={{ height: altezza }}
-          />
-        )
-      })}
+    <div
+      ref={box}
+      className="absolute inset-0 cursor-crosshair select-none"
+      style={{ touchAction: 'pan-x pan-y' }}
+      onPointerDown={(e) => {
+        if (e.button !== 0) return
+        // sul telefono il dito scorre la pagina: lì basta un tocco (vedi onPointerUp)
+        if (e.pointerType === 'touch') {
+          trascino.current = { ancora: indice(e.clientY), mosso: false, id: e.pointerId }
+          return
+        }
+        e.preventDefault()
+        e.currentTarget.setPointerCapture(e.pointerId)
+        const i = indice(e.clientY)
+        trascino.current = { ancora: i, mosso: false, id: e.pointerId }
+        imposta({ campo, da: i, a: i + 1 })
+      }}
+      onPointerMove={(e) => {
+        const t = trascino.current
+        if (!t || t.id !== e.pointerId || e.pointerType === 'touch') return
+        const i = indice(e.clientY)
+        if (i !== t.ancora) t.mosso = true
+        if (t.mosso) imposta({ campo, da: Math.min(t.ancora, i), a: Math.max(t.ancora, i) + 1 })
+      }}
+      onPointerUp={(e) => {
+        const t = trascino.current
+        trascino.current = null
+        if (!t || t.id !== e.pointerId) return
+        if (e.currentTarget.hasPointerCapture(e.pointerId)) e.currentTarget.releasePointerCapture(e.pointerId)
+        // un clic o un tocco senza trascinare: un'ora da lì
+        if (!t.mosso) imposta({ campo, da: t.ancora, a: Math.min(t.ancora + 2, slot) })
+      }}
+      onPointerCancel={() => {
+        trascino.current = null
+      }}
+    >
+      {Array.from({ length: slot }, (_, i) => (
+        <div
+          key={i}
+          aria-hidden
+          className={`border-b ${i % 2 ? 'border-stone-200 dark:border-zinc-800' : 'border-stone-100 dark:border-zinc-800/60'} hover:bg-orange-50 dark:hover:bg-orange-950/40`}
+          style={{ height: altezza }}
+        />
+      ))}
+      {/* la selezione, sopra le prenotazioni ma senza bloccarle */}
+      {dentro && (
+        <div
+          className="pointer-events-none absolute inset-x-0 z-[15] rounded-md border-2 border-orange-500 bg-orange-300/40 dark:bg-orange-700/40"
+          style={{ top: dentro.da * altezza, height: (dentro.a - dentro.da) * altezza }}
+        >
+          <span className="absolute left-1 top-0.5 rounded bg-orange-500 px-1 text-[10px] font-bold text-white">
+            {hhmm(apre + dentro.da * 30)}–{hhmm(apre + dentro.a * 30)}
+          </span>
+        </div>
+      )}
+      <span className="sr-only">{nome}</span>
     </div>
   )
 }
@@ -135,7 +156,7 @@ export function PannelloSelezione({ campi, giorno, apre, appSpente }: { campi: C
         <div>
           <p className="text-xs font-semibold uppercase tracking-wide text-orange-600">Selezione</p>
           <p className="font-extrabold">{campo.nome}</p>
-          <p className="text-sm capitalize text-stone-600 dark:text-zinc-300">
+          <p className="text-sm text-stone-600 first-letter:uppercase dark:text-zinc-300">
             {giornoTesto} · {ora}–{hhmm(inizio + durata)} · {nomeDurata(durata)}
           </p>
         </div>
