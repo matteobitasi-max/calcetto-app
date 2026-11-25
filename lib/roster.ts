@@ -109,6 +109,8 @@ export type Lega = {
 } & { logo?: SanityImage; codiceInvito?: string; satispayLink?: string; satispayQr?: SanityImage; fotoSorprese: (SanityImage & { _key: string })[]; citta?: { nome: string; lat: number; lon: number }; playlistInterviste?: string }
 
 export type Player = {
+  /** Le stagioni (chiave) di cui ha già aperto il wrap: il pop-up non si ripropone. */
+  wrapVisti?: string[]
   _id: string
   /** Revisione del documento: per non sovrascrivere modifiche fatte nel frattempo. */
   _rev?: string
@@ -146,7 +148,7 @@ export type Player = {
   caratteristicheBase?: Partial<Record<Skill, number>>
 }
 
-export const playerFields = `_id, _rev, "legaId": lega._ref, nome, cognome, soprannome, numero, email, telefono, dataNascita, foto, ruolo, piede, badge, notifiche, isAdmin, puoInserireRisultati, attivo, indisponibile, revisioneIl, "rimosso": defined(rimossoIl), "collegato": defined(clerkUserId), caratteristiche, caratteristicheBase,
+export const playerFields = `_id, _rev, "legaId": lega._ref, nome, cognome, soprannome, numero, email, telefono, dataNascita, foto, ruolo, piede, badge, notifiche, isAdmin, puoInserireRisultati, attivo, indisponibile, revisioneIl, "rimosso": defined(rimossoIl), "collegato": defined(clerkUserId), caratteristiche, caratteristicheBase, wrapVisti,
   "pro": defined(clerkUserId) && count(*[_type == "abbonamento" && clerkUserId == ^.clerkUserId && attivo != false && (!defined(scadenza) || scadenza > now())]) > 0`
 
 

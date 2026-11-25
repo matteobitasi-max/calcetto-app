@@ -1345,6 +1345,17 @@ export async function riapriUltimaStagione(legaId: string) {
   revalidatePath('/', 'layout')
 }
 
+// Il wrap di fine stagione aperto: il pop-up non si ripropone più (per quella stagione, a quel giocatore).
+export async function segnaWrapVisto(chiave: string) {
+  if (!/^[\w-]{1,64}$/.test(chiave)) return
+  for (const m of await getMemberships()) {
+    if (!m.lega.stagioni?.some((s) => s._key === chiave)) continue
+    if (m.wrapVisti?.includes(chiave)) return
+    await sanity.patch(m._id).set({ wrapVisti: [...(m.wrapVisti ?? []), chiave].slice(-20) }).commit()
+    return
+  }
+}
+
 // Tipo di lega: tra amici (chi risponde per primo gioca) o squadra con allenatore (convocati scelti, indisponibili).
 export async function salvaTipoLega(legaId: string, tipo: 'amici' | 'squadra') {
   await requireIn(legaId, 'organizzatore')

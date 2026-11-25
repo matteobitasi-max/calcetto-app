@@ -187,3 +187,23 @@ body {
   --erba-chiara: #13233d;
   --erba-scura: #182a47;
 }
+
+/* Wrap di fine stagione: la barra della storia che si riempie e la schermata che entra */
+@keyframes wrap-barra {
+  from { width: 0; }
+  to { width: 100%; }
+}
+.wrap-barra {
+  width: 0;
+  animation: wrap-barra linear forwards;
+}
+@keyframes wrap-entra {
+  from { opacity: 0; transform: translateY(12px) scale(0.98); }
+  to { opacity: 1; transform: none; }
+}
+.wrap-entra {
+  animation: wrap-entra 0.45s ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  .wrap-entra { animation: none; }
+}

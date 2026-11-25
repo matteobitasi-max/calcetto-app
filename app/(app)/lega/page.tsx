@@ -161,6 +161,9 @@ async function Stagione({ legaId, stagioni }: { legaId: string; stagioni?: Stagi
                   {giorno(s.al)}
                 </span>
               </Link>
+              <Link href={`/wrap/${s._key}`} className="shrink-0 text-xs font-semibold text-violet-700 hover:underline dark:text-violet-400">
+                🎁 Wrap
+              </Link>
               {/* solo l'ultima si può riaprire (se è stata chiusa per sbaglio) */}
               {i === 0 && (
                 <form action={riapriUltimaStagione.bind(null, legaId)}>

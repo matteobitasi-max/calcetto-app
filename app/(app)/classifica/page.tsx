@@ -69,6 +69,16 @@ async function Viste({ searchParams }: { searchParams: PageProps<'/classifica'>[
           ))}
         </nav>
       )}
+      {/* una stagione terminata: il suo wrap */}
+      {chiuse.some((x) => x._key === chiave) && (
+        <Link
+          href={`/wrap/${chiave}`}
+          className="flex items-center justify-between rounded-2xl bg-gradient-to-r from-fuchsia-600 to-indigo-800 px-4 py-3 text-sm font-bold text-white shadow"
+        >
+          🎁 {t('Rivedi il wrap della stagione')}
+          <span aria-hidden>›</span>
+        </Link>
+      )}
       {statistiche ? <Statistiche club={club} periodo={periodo} /> : <Classifiche periodo={periodo} />}
     </div>
   )

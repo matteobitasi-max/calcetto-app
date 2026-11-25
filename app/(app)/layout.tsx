@@ -17,6 +17,8 @@ import { UsaApp } from '@/components/usa-app'
 import { RiprendiInvito } from '@/components/invito-app'
 import { KmAutomatici } from '@/components/km-automatici'
 import { getT } from '@/lib/lingua'
+import { wrapDaProporre } from '@/lib/wrap'
+import { WrapInvito } from '@/components/wrap-invito'
 
 
 export default async function AppLayout({ children }: LayoutProps<'/'>) {
@@ -49,6 +51,9 @@ export default async function AppLayout({ children }: LayoutProps<'/'>) {
       <UsaApp />
       <RiprendiInvito />
       <KmAutomatici />
+      <Suspense>
+        <WrapDaProporre />
+      </Suspense>
       {/* computer: menu fisso a sinistra e contenuto più largo; telefono: com'era */}
       <div className="mx-auto flex w-full max-w-6xl flex-1 lg:gap-6 lg:px-6">
         <aside className="hidden w-56 shrink-0 lg:block">
@@ -64,6 +69,12 @@ export default async function AppLayout({ children }: LayoutProps<'/'>) {
       </div>
     </div>
   )
+}
+
+// Fine stagione: il pop-up per aprire il wrap della stagione appena terminata (una volta per giocatore).
+async function WrapDaProporre() {
+  const w = await wrapDaProporre().catch(() => null)
+  return w ? <WrapInvito chiave={w.chiave} stagione={w.stagione} lega={w.lega} legaId={w.legaId} /> : null
 }
 
 // Il menu a sinistra del computer: gli strumenti di chi organizza solo agli organizzatori.
