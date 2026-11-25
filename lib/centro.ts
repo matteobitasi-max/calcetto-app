@@ -5,6 +5,8 @@ import { sanity } from './sanity'
 import { getUtente } from './player'
 import { addDays, isoToRomeLocal, romeLocalToISO } from './dates'
 import type { Campo as PostoMappa } from './campo'
+import { oreAperte, type Chiusura, type OrarioGiorno } from './orari-centro'
+export { orarioDel, oreAperte } from './orari-centro'
 
 // Il gestionale del centro sportivo: i campi del centro, le prenotazioni (planning), gli incassi e i numeri.
 // Il centro è di chi l'ha creato e di chi lui aggiunge (gestori, per account). Le prenotazioni sono documenti
@@ -24,9 +26,12 @@ export type Centro = {
   indirizzo?: string
   posto?: PostoMappa
   telefono?: string
-  /** Orario di apertura e chiusura (HH:MM), uguale tutti i giorni. */
+  /** Orario di apertura e chiusura (HH:MM) di base; quello di ogni giorno della settimana è in "orari". */
   apre: string
   chiude: string
+  orari?: OrarioGiorno[]
+  /** Festività e chiusure straordinarie (dal … al, compresi). */
+  chiusure: Chiusura[]
   campi: CampoCentro[]
   gestori: string[]
   /** Prenotazioni dall'app dei giocatori: confermate subito, da approvare (predefinito) o spente. */
@@ -72,7 +77,8 @@ export function blocchiTra(centroId: string, da: string, a: string) {
 export const OCCUPANO = '["confermata", "richiesta"]'
 
 const centroFields = `_id, nome, indirizzo, posto, telefono, "apre": coalesce(apre, "08:00"), "chiude": coalesce(chiude, "24:00"),
-  "campi": coalesce(campi, []), "gestori": coalesce(gestori, []), "prenotazioniApp": coalesce(prenotazioniApp, "richiesta")`
+  "campi": coalesce(campi, []), "gestori": coalesce(gestori, []), "prenotazioniApp": coalesce(prenotazioniApp, "richiesta"),
+  orari, "chiusure": coalesce(chiusure, [])`
 const prenotazioneFields = `_id, campo, inizio, fine, cliente, telefono, nota, prezzo, "stato": coalesce(stato, "confermata"), pagato, "serie": serie,
   "lega": lega->nome, "matchId": match._ref, "organizzatoreId": organizzatore._ref, email`
 
@@ -161,8 +167,9 @@ export function numeriMese(centro: Centro, mese: string, prenotazioni: Prenotazi
   const [y, m] = mese.split('-').map(Number)
   const giorni = new Date(Date.UTC(y, m, 0)).getUTCDate()
   const campi = campiAttivi(centro)
-  const apertoMin = Math.max(0, minuti(centro.chiude) - minuti(centro.apre))
-  const disponibili = (giorni * apertoMin * campi.length) / 60
+  // le ore di apertura del mese, giorno per giorno (giorni di chiusura e festività esclusi)
+  const oreMese = Array.from({ length: giorni }, (_, i) => oreAperte(centro, `${mese}-${String(i + 1).padStart(2, '0')}`)).reduce((s, x) => s + x, 0)
+  const disponibili = oreMese * campi.length
   const durata = (p: Prenotazione) => (Date.parse(p.fine) - Date.parse(p.inizio)) / 3_600_000
   const ore = prenotazioni.reduce((s, p) => s + durata(p), 0)
   const valore = prenotazioni.reduce((s, p) => s + (p.prezzo ?? 0), 0)
@@ -170,7 +177,7 @@ export function numeriMese(centro: Centro, mese: string, prenotazioni: Prenotazi
   const perCampo = campi.map((c) => {
     const sue = prenotazioni.filter((p) => p.campo === c._key)
     const oreCampo = sue.reduce((s, p) => s + durata(p), 0)
-    return { nome: c.nome, ore: oreCampo, occupazione: apertoMin ? oreCampo / ((giorni * apertoMin) / 60) : 0, incasso: sue.reduce((s, p) => s + (p.prezzo ?? 0), 0) }
+    return { nome: c.nome, ore: oreCampo, occupazione: oreMese ? oreCampo / oreMese : 0, incasso: sue.reduce((s, p) => s + (p.prezzo ?? 0), 0) }
   })
   // giorno della settimana (lunedì = 0) e fascia oraria di inizio, in ora italiana
   const perGiorno = Array.from({ length: 7 }, () => 0)

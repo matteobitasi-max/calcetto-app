@@ -9,6 +9,7 @@ import { getUtente } from '@/lib/player'
 import { leggiCampo } from '@/lib/campo'
 import { addMinuti, romeLocalToISO, isoToRomeLocal, addDays } from '@/lib/dates'
 import { avvisaOrganizzatore, collegaPerEmail } from '@/lib/centro-app'
+import { GIORNI_SETTIMANA, festivitaItaliane, orarioDel, type OrarioGiorno } from '@/lib/orari-centro'
 import { METODI, MODI_APP, OCCUPANO, TIPI_CAMPO, getMioCentro, minuti, prezzoPer, requireCentro, type CampoCentro, type Metodo, type ModoApp, type TipoCampo } from '@/lib/centro'
 import type { FormState } from './actions'
 import { COOKIE_MODO, type Modo } from '@/lib/modo'
@@ -67,44 +68,105 @@ export async function creaCentro(_prev: FormState, fd: FormData): Promise<FormSt
 export async function salvaCentro(_prev: FormState, fd: FormData): Promise<FormState> {
   const centro = await requireCentro()
   const nome = str(fd, 'nome').slice(0, 60)
-  const apre = str(fd, 'apre')
-  const chiude = str(fd, 'chiude')
   if (!nome) return { error: 'Scrivi il nome del centro.' }
-  if (!ORA.test(apre) || !ORA.test(chiude) || minuti(chiude) <= minuti(apre)) return { error: 'Controlla gli orari: la chiusura deve essere dopo l’apertura.' }
   const posto = leggiCampo(fd.get('campo'))
   const indirizzo = str(fd, 'luogo').slice(0, 120)
   const telefono = str(fd, 'telefono').slice(0, 30)
   await sanity
     .patch(centro._id)
-    .set({ nome, apre, chiude, ...(indirizzo && { indirizzo }), ...(posto && { posto }), ...(telefono && { telefono }) })
+    .set({ nome, ...(indirizzo && { indirizzo }), ...(posto && { posto }), ...(telefono && { telefono }) })
     .unset([...(indirizzo ? [] : ['indirizzo']), ...(posto ? [] : ['posto']), ...(telefono ? [] : ['telefono'])])
     .commit()
   revalidatePath('/centro', 'layout')
 }
 
-// Aggiunge (chiave vuota) o modifica un campo.
-export async function salvaCampo(chiave: string | null, _prev: FormState, fd: FormData): Promise<FormState> {
+// L'orario di ogni giorno della settimana (o chiuso).
+export async function salvaOrari(_prev: FormState, fd: FormData): Promise<FormState> {
   const centro = await requireCentro()
-  const nome = str(fd, 'nome').slice(0, 40)
-  const tipo = Number(str(fd, 'tipo')) as TipoCampo
-  const prezzoOra = Number(str(fd, 'prezzoOra').replace(',', '.'))
-  if (!nome) return { error: 'Scrivi il nome del campo.' }
-  if (!TIPI_CAMPO.includes(tipo)) return { error: 'Scegli il tipo di campo.' }
-  if (!Number.isFinite(prezzoOra) || prezzoOra < 0 || prezzoOra > 2000) return { error: 'Prezzo orario non valido.' }
-  const campo: CampoCentro = { _key: chiave ?? randomUUID(), nome, tipo, prezzoOra, coperto: fd.get('coperto') === '1' }
-  const campi = chiave ? centro.campi.map((c) => (c._key === chiave ? { ...c, ...campo } : c)) : [...centro.campi, campo]
-  if (campi.filter((c) => c.attivo !== false).length > 30) return { error: 'Massimo 30 campi.' }
-  await sanity.patch(centro._id).set({ campi }).commit()
+  let righe: OrarioGiorno[]
+  try {
+    righe = JSON.parse(str(fd, 'orari')) as OrarioGiorno[]
+  } catch {
+    return { error: 'Orari non validi.' }
+  }
+  if (!Array.isArray(righe) || righe.length !== 7) return { error: 'Orari non validi.' }
+  const orari: OrarioGiorno[] = []
+  for (const [i, r] of righe.entries()) {
+    if (!ORA.test(r.apre) || !ORA.test(r.chiude)) return { error: 'Orari non validi.' }
+    if (!r.chiuso && minuti(r.chiude) <= minuti(r.apre)) return { error: `${GIORNI_SETTIMANA[i]}: la chiusura deve essere dopo l’apertura.` }
+    orari.push({ apre: r.apre, chiude: r.chiude, ...(r.chiuso && { chiuso: true }) })
+  }
+  if (orari.every((o) => o.chiuso)) return { error: 'Il centro deve essere aperto almeno un giorno.' }
+  // l'orario di base (per i calcoli che non guardano il giorno) è quello più largo dei giorni aperti
+  const aperti = orari.filter((o) => !o.chiuso)
+  const apre = aperti.map((o) => o.apre).sort()[0]
+  const chiude = aperti.map((o) => o.chiude).sort().at(-1)!
+  await sanity.patch(centro._id).set({ orari, apre, chiude }).commit()
   revalidatePath('/centro', 'layout')
 }
 
-// Un campo tolto non si cancella (le sue prenotazioni passate restano nei conti): non compare più nel planning.
-export async function togliCampo(chiave: string) {
+// Festività o chiusura straordinaria (un giorno o un periodo).
+export async function aggiungiChiusura(_prev: FormState, fd: FormData): Promise<FormState> {
   const centro = await requireCentro()
+  const dal = str(fd, 'dal')
+  const al = str(fd, 'al') || dal
+  const nome = str(fd, 'nome').slice(0, 60) || 'Chiuso'
+  if (!GIORNO.test(dal) || !GIORNO.test(al) || al < dal) return { error: 'Controlla le date.' }
+  if (centro.chiusure.length >= 200) return { error: 'Troppe chiusure: togli quelle passate.' }
   await sanity
     .patch(centro._id)
-    .set({ campi: centro.campi.map((c) => (c._key === chiave ? { ...c, attivo: false } : c)) })
+    .set({ chiusure: [...centro.chiusure, { _key: randomUUID(), dal, al, nome }].sort((a, b) => a.dal.localeCompare(b.dal)) })
     .commit()
+  revalidatePath('/centro', 'layout')
+}
+
+export async function togliChiusura(chiave: string) {
+  const centro = await requireCentro()
+  await sanity.patch(centro._id).set({ chiusure: centro.chiusure.filter((c) => c._key !== chiave) }).commit()
+  revalidatePath('/centro', 'layout')
+}
+
+// Aggiunge le festività nazionali dell'anno che mancano.
+export async function aggiungiFestivita(anno: number) {
+  const centro = await requireCentro()
+  if (!Number.isInteger(anno) || anno < 2020 || anno > 2100) return
+  const nuove = festivitaItaliane(anno)
+    .filter((f) => !centro.chiusure.some((c) => c.dal === f.data))
+    .map((f) => ({ _key: randomUUID(), dal: f.data, al: f.data, nome: f.nome }))
+  if (!nuove.length) return
+  await sanity
+    .patch(centro._id)
+    .set({ chiusure: [...centro.chiusure, ...nuove].sort((a, b) => a.dal.localeCompare(b.dal)) })
+    .commit()
+  revalidatePath('/centro', 'layout')
+}
+
+// Tutti i campi in una volta: quelli esistenti si aggiornano, i nuovi si aggiungono, quelli tolti escono dal
+// planning (le loro prenotazioni passate restano nei conti).
+export async function salvaCampi(_prev: FormState, fd: FormData): Promise<FormState> {
+  const centro = await requireCentro()
+  let righe: { key?: string; nome: string; tipo: number; coperto: boolean; prezzoOra: string | number }[]
+  try {
+    righe = JSON.parse(str(fd, 'campi'))
+  } catch {
+    return { error: 'Campi non validi.' }
+  }
+  if (!Array.isArray(righe) || righe.length > 30) return { error: 'Massimo 30 campi.' }
+  const tenuti = new Set<string>()
+  const aggiornati: CampoCentro[] = []
+  for (const r of righe) {
+    const nome = String(r.nome ?? '').trim().slice(0, 40)
+    const tipo = Number(r.tipo) as TipoCampo
+    const prezzoOra = Number(String(r.prezzoOra).replace(',', '.'))
+    if (!nome) return { error: 'Ogni campo deve avere un nome.' }
+    if (!TIPI_CAMPO.includes(tipo)) return { error: `${nome}: tipo non valido.` }
+    if (!Number.isFinite(prezzoOra) || prezzoOra < 0 || prezzoOra > 2000) return { error: `${nome}: prezzo non valido.` }
+    const esistente = r.key ? centro.campi.find((c) => c._key === r.key) : undefined
+    if (esistente) tenuti.add(esistente._key)
+    aggiornati.push({ ...(esistente ?? {}), _key: esistente?._key ?? randomUUID(), nome, tipo, prezzoOra, coperto: !!r.coperto, attivo: true })
+  }
+  const tolti = centro.campi.filter((c) => !tenuti.has(c._key)).map((c) => ({ ...c, attivo: false }))
+  await sanity.patch(centro._id).set({ campi: [...aggiornati, ...tolti] }).commit()
   revalidatePath('/centro', 'layout')
 }
 
@@ -139,8 +201,11 @@ export async function salvaPrenotazione(id: string | null, _prev: FormState, fd:
   if (!cliente) return { error: 'Scrivi chi prenota.' }
   const prezzo = prezzoScritto ? Number(prezzoScritto) : prezzoPer(campo, durata)
   if (!Number.isFinite(prezzo) || prezzo < 0 || prezzo > 5000) return { error: 'Prezzo non valido.' }
-  if (minuti(ora) < minuti(centro.apre) || minuti(ora) + durata > minuti(centro.chiude)) {
-    return { error: `Il centro è aperto dalle ${centro.apre} alle ${centro.chiude}.` }
+  // il giorno scelto deve essere aperto, e l'orario dentro quello di quel giorno
+  const orario = orarioDel(centro, giorno)
+  if (!orario.aperto) return { error: `Quel giorno il centro è chiuso (${orario.motivo}). Per prenotare, togli la chiusura nelle impostazioni.` }
+  if (minuti(ora) < minuti(orario.apre) || minuti(ora) + durata > minuti(orario.chiude)) {
+    return { error: `Quel giorno il centro è aperto dalle ${orario.apre} alle ${orario.chiude}.` }
   }
 
   const dati = { campo: campo._key, cliente, prezzo, ...(telefono && { telefono }), ...(nota && { nota }), ...(email && { email }) }
@@ -171,7 +236,8 @@ export async function salvaPrenotazione(id: string | null, _prev: FormState, fd:
     const g = addDays(giorno, s * 7)
     const inizio = romeLocalToISO(`${g}T${ora}`)
     const fine = romeLocalToISO(addMinuti(`${g}T${ora}`, durata))
-    if (await occupato(centro._id, campo._key, inizio, fine)) {
+    // settimane in cui il centro è chiuso (festività) o il campo è occupato: si saltano
+    if (!orarioDel(centro, g).aperto || (await occupato(centro._id, campo._key, inizio, fine))) {
       saltate.push(g)
       continue
     }

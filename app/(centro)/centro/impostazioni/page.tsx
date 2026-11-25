@@ -1,6 +1,8 @@
 import { Suspense } from 'react'
-import { aggiungiGestore, salvaCampo, salvaCentro, salvaModoApp, togliCampo } from '@/app/centro-actions'
-import { MODI_APP, TIPI_CAMPO, campiAttivi, requireCentro, type CampoCentro } from '@/lib/centro'
+import { aggiungiChiusura, aggiungiFestivita, aggiungiGestore, salvaCentro, salvaModoApp, togliChiusura } from '@/app/centro-actions'
+import { EditorCampi, EditorOrari } from '@/components/editor-centro'
+import { settimanaCompleta } from '@/lib/orari-centro'
+import { MODI_APP, campiAttivi, oggiRoma, requireCentro } from '@/lib/centro'
 import { ricercaCampiAttiva } from '@/lib/google-maps'
 import { ActionForm } from '@/components/action-form'
 import { CampoInput } from '@/components/campo-input'
@@ -22,6 +24,10 @@ const riquadro = 'space-y-4 rounded-2xl border border-stone-200 bg-white p-4 dar
 async function Impostazioni() {
   const centro = await requireCentro()
   const campi = campiAttivi(centro)
+  const anno = Number(oggiRoma().slice(0, 4))
+  // le chiusure di oggi e future (le passate non servono più)
+  const prossime = centro.chiusure.filter((c) => c.al >= oggiRoma())
+  const data = (d: string) => new Intl.DateTimeFormat('it-IT', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }).format(new Date(`${d}T12:00:00Z`))
   return (
     <div className="mx-auto max-w-3xl space-y-5">
       <h1 className="text-xl font-extrabold">Impostazioni</h1>
@@ -34,34 +40,64 @@ async function Impostazioni() {
         <Field label="Indirizzo (dalla mappa)" group>
           <CampoInput defaultLuogo={centro.indirizzo} defaultCampo={centro.posto} ricerca={ricercaCampiAttiva()} placeholder="Cerca il centro sulla mappa…" maxLength={120} />
         </Field>
-        <div className="grid grid-cols-3 gap-3">
-          <Field label="Apre alle">
-            <input name="apre" type="time" step={1800} required defaultValue={centro.apre} className={inputClass} />
-          </Field>
-          <Field label="Chiude alle">
-            <input name="chiude" type="time" step={1800} required defaultValue={centro.chiude === '24:00' ? '23:59' : centro.chiude} className={inputClass} />
-          </Field>
-          <Field label="Telefono">
-            <input name="telefono" type="tel" maxLength={30} defaultValue={centro.telefono} className={inputClass} />
-          </Field>
-        </div>
+        <Field label="Telefono">
+          <input name="telefono" type="tel" maxLength={30} defaultValue={centro.telefono} className={inputClass} />
+        </Field>
         <PillSalva label="Salva il centro" />
       </ActionForm>
 
       <section className={riquadro}>
         <h2 className="font-bold">⚽ Campi e prezzi</h2>
-        <p className="text-sm text-stone-500">Il prezzo orario si usa per proporre il prezzo di ogni prenotazione (si può sempre cambiare).</p>
-        <div className="space-y-3">
-          {campi.map((c) => (
-            <ModuloCampo key={c._key} campo={c} />
+        <EditorCampi iniziali={campi.map((c) => ({ key: c._key, nome: c.nome, tipo: c.tipo, coperto: c.coperto, prezzoOra: c.prezzoOra }))} />
+      </section>
+
+      <section className={riquadro}>
+        <h2 className="font-bold">🕘 Orari di apertura</h2>
+        <p className="text-sm text-stone-500">Inizio e fine attività di ogni giorno, e i giorni di chiusura. Il planning e gli orari prenotabili dall’app seguono questi orari.</p>
+        <EditorOrari iniziali={settimanaCompleta(centro)} />
+      </section>
+
+      <section className={riquadro}>
+        <h2 className="font-bold">🎄 Festività e chiusure</h2>
+        <p className="text-sm text-stone-500">In questi giorni il centro è chiuso: niente prenotazioni (neanche dall’app) e il planning lo segnala.</p>
+        <div className="flex flex-wrap gap-2">
+          {[anno, anno + 1].map((a) => (
+            <form key={a} action={aggiungiFestivita.bind(null, a)}>
+              <SubmitButton className="rounded-full border border-stone-300 px-3 py-1.5 text-sm font-semibold hover:bg-stone-100 dark:border-zinc-700 dark:hover:bg-zinc-800">+ Festività italiane {a}</SubmitButton>
+            </form>
           ))}
         </div>
-        <details className="rounded-xl border border-dashed border-stone-300 p-3 dark:border-zinc-700">
-          <summary className="cursor-pointer text-sm font-semibold text-orange-700 dark:text-orange-400">+ Aggiungi un campo</summary>
-          <div className="pt-3">
-            <ModuloCampo />
-          </div>
-        </details>
+        <ActionForm action={aggiungiChiusura} className="grid items-end gap-2 sm:grid-cols-[1fr_9.5rem_9.5rem_auto]">
+          <Field label="Motivo">
+            <input name="nome" maxLength={60} placeholder="Es. Ferie estive, Torneo…" className={inputClass} />
+          </Field>
+          <Field label="Dal">
+            <input name="dal" type="date" required className={inputClass} />
+          </Field>
+          <Field label="Al (facoltativo)">
+            <input name="al" type="date" className={inputClass} />
+          </Field>
+          <SubmitButton className="rounded-xl bg-stone-900 px-4 py-2 text-sm font-semibold text-white dark:bg-white dark:text-zinc-900">Aggiungi</SubmitButton>
+        </ActionForm>
+        {prossime.length === 0 ? (
+          <p className="text-sm text-stone-500">Nessuna chiusura in programma.</p>
+        ) : (
+          <ul className="divide-y divide-stone-100 rounded-xl border border-stone-200 dark:divide-zinc-800 dark:border-zinc-800">
+            {prossime.map((c) => (
+              <li key={c._key} className="flex items-center justify-between gap-2 px-3 py-2 text-sm">
+                <span className="min-w-0">
+                  <span className="font-semibold">{c.nome}</span>
+                  <span className="text-stone-500"> · {c.dal === c.al ? data(c.dal) : `${data(c.dal)} – ${data(c.al)}`}</span>
+                </span>
+                <form action={togliChiusura.bind(null, c._key)}>
+                  <SubmitButton className="rounded px-2 text-stone-400 hover:text-red-600" aria-label={`Togli ${c.nome}`}>
+                    ✕
+                  </SubmitButton>
+                </form>
+              </li>
+            ))}
+          </ul>
+        )}
       </section>
 
       <section className={riquadro}>
@@ -99,46 +135,6 @@ async function Impostazioni() {
           <SubmitButton className="rounded-xl bg-stone-900 px-4 py-2 text-sm font-semibold text-white dark:bg-white dark:text-zinc-900">Aggiungi</SubmitButton>
         </ActionForm>
       </section>
-    </div>
-  )
-}
-
-function ModuloCampo({ campo }: { campo?: CampoCentro }) {
-  return (
-    <div className="rounded-xl bg-stone-50 p-3 dark:bg-zinc-950">
-      <ActionForm action={salvaCampo.bind(null, campo?._key ?? null)} className="grid items-end gap-3 sm:grid-cols-[1fr_8rem_7rem_7rem]">
-        <Field label="Nome">
-          <input name="nome" required maxLength={40} defaultValue={campo?.nome} placeholder="Es. Campo 3 (sintetico)" className={inputClass} />
-        </Field>
-        <Field label="Tipo">
-          <select name="tipo" defaultValue={String(campo?.tipo ?? 5)} className={inputClass}>
-            {TIPI_CAMPO.map((t) => (
-              <option key={t} value={t}>
-                Calcio a {t}
-              </option>
-            ))}
-          </select>
-        </Field>
-        <Field label="€ all’ora">
-          <input name="prezzoOra" inputMode="decimal" required defaultValue={campo ? String(campo.prezzoOra) : ''} className={inputClass} />
-        </Field>
-        <Field label="Dove">
-          <select name="coperto" defaultValue={campo?.coperto ? '1' : '0'} className={inputClass}>
-            <option value="0">🌤️ Fuori</option>
-            <option value="1">🏠 Dentro</option>
-          </select>
-        </Field>
-        <div className="sm:col-span-4">
-          <PillSalva label={campo ? `Salva ${campo.nome}` : 'Aggiungi il campo'} quando={campo ? 'modificato' : 'completo'} />
-        </div>
-      </ActionForm>
-      {campo && (
-        <form action={togliCampo.bind(null, campo._key)} className="mt-1 text-right">
-          <SubmitButton className="text-xs text-red-600 hover:underline" confirm={`Togliere ${campo.nome} dal planning? Le prenotazioni passate restano nei conti.`}>
-            Togli campo
-          </SubmitButton>
-        </form>
-      )}
     </div>
   )
 }

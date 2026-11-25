@@ -1,7 +1,7 @@
 import 'server-only'
 import { sanity } from './sanity'
 import { addMinuti, isoToRomeLocal, romeLocalToISO } from './dates'
-import { OCCUPANO, campiAttivi, chiaveGruppo, gruppi, minuti, hhmm, prezzoPer, type Centro, type Gruppo } from './centro'
+import { OCCUPANO, campiAttivi, chiaveGruppo, gruppi, minuti, hhmm, orarioDel, prezzoPer, type Centro, type Gruppo } from './centro'
 import { inviaAGiocatori, inviaAUtenti } from './push'
 
 // Il collegamento tra l'app dei giocatori e il gestionale del centro: il "ponte" è il posto sulla mappa
@@ -9,7 +9,8 @@ import { inviaAGiocatori, inviaAUtenti } from './push'
 // tipo (a 5, 7, 11; dentro o fuori), l'app trova un campo libero e il centro conferma (o conferma da solo).
 
 const centroFields = `_id, nome, indirizzo, posto, telefono, "apre": coalesce(apre, "08:00"), "chiude": coalesce(chiude, "24:00"),
-  "campi": coalesce(campi, []), "gestori": coalesce(gestori, []), "prenotazioniApp": coalesce(prenotazioniApp, "richiesta")`
+  "campi": coalesce(campi, []), "gestori": coalesce(gestori, []), "prenotazioniApp": coalesce(prenotazioniApp, "richiesta"),
+  orari, "chiusure": coalesce(chiusure, [])`
 
 export type CentroPubblico = { id: string; nome: string; modo: Centro['prenotazioniApp']; apre: string; chiude: string; gruppi: Gruppo[] }
 
@@ -43,11 +44,12 @@ async function campoLibero(centro: Centro, gruppo: string, inizio: string, fine:
 // Gli orari di inizio (ogni mezz'ora) in cui almeno un campo del gruppo è libero per tutta la durata.
 export async function orariLiberi(centro: Centro, gruppo: string, giorno: string, durata: number) {
   const campi = campiAttivi(centro).filter((c) => chiaveGruppo(c) === gruppo)
-  if (!campi.length) return []
+  const orario = orarioDel(centro, giorno)
+  if (!campi.length || !orario.aperto) return []
   const prese = await occupate(centro._id, romeLocalToISO(`${giorno}T00:00`), romeLocalToISO(addMinuti(`${giorno}T00:00`, 24 * 60)))
   const adesso = Date.now()
   const liberi: string[] = []
-  for (let m = minuti(centro.apre); m + durata <= minuti(centro.chiude); m += 30) {
+  for (let m = minuti(orario.apre); m + durata <= minuti(orario.chiude); m += 30) {
     const inizio = romeLocalToISO(`${giorno}T${hhmm(m)}`)
     const fine = romeLocalToISO(addMinuti(`${giorno}T${hhmm(m)}`, durata))
     if (Date.parse(inizio) < adesso) continue
@@ -64,8 +66,10 @@ export async function verificaPrenotazione(r: Richiesta): Promise<{ centro: Cent
   const centro = await getCentro(r.centroId)
   if (!centro || centro.prenotazioniApp === 'spente') return { errore: 'Questo centro non accetta prenotazioni dall’app: contattalo direttamente.' }
   const ora = isoToRomeLocal(r.inizio).slice(11)
-  if (minuti(ora) < minuti(centro.apre) || minuti(ora) + r.durata > minuti(centro.chiude)) {
-    return { errore: `Il centro è aperto dalle ${centro.apre} alle ${centro.chiude}.` }
+  const orario = orarioDel(centro, isoToRomeLocal(r.inizio).slice(0, 10))
+  if (!orario.aperto) return { errore: `Quel giorno il centro è chiuso (${orario.motivo}).` }
+  if (minuti(ora) < minuti(orario.apre) || minuti(ora) + r.durata > minuti(orario.chiude)) {
+    return { errore: `Quel giorno il centro è aperto dalle ${orario.apre} alle ${orario.chiude}.` }
   }
   const fine = new Date(Date.parse(r.inizio) + r.durata * 60_000).toISOString()
   if (!(await campoLibero(centro, r.gruppo, r.inizio, fine))) {

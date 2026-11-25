@@ -4,7 +4,7 @@ import { addDays, isoToRomeLocal } from '@/lib/dates'
 import { rispondiRichiesta, togliBlocco } from '@/app/centro-actions'
 import { ColonnaSlot, PannelloSelezione } from '@/components/planning-selezione'
 import { SubmitButton } from '@/components/submit-button'
-import { blocchiTra, campiAttivi, giornoISO, richiesteInAttesa, hhmm, minuti, oggiRoma, prenotazioniTra, requireCentro, type CampoCentro, type Prenotazione } from '@/lib/centro'
+import { blocchiTra, campiAttivi, giornoISO, oreAperte, orarioDel, richiesteInAttesa, hhmm, minuti, oggiRoma, prenotazioniTra, requireCentro, type CampoCentro, type Prenotazione } from '@/lib/centro'
 import { Loading } from '@/components/ui'
 
 // La pagina principale del gestionale: il planning di un giorno, con i campi in colonna e le ore in riga.
@@ -35,8 +35,10 @@ async function Planning({ searchParams }: { searchParams: Promise<Record<string,
   const a = giornoISO(addDays(inizio, giorniVista - 1)).a
   const prenotazioni = await prenotazioniTra(centro._id, da, a)
   const campi = campiAttivi(centro)
-  const apre = minuti(centro.apre)
-  const chiude = minuti(centro.chiude)
+  // gli orari del giorno mostrato (vista Giorno); chiuso per festività o giorno di chiusura
+  const orario = orarioDel(centro, giorno)
+  const apre = minuti(orario.apre)
+  const chiude = minuti(orario.chiude)
   const slot = Math.max(1, Math.ceil((chiude - apre) / 30))
   const data = (d: string, o: Intl.DateTimeFormatOptions) => new Intl.DateTimeFormat('it-IT', { ...o, timeZone: 'UTC' }).format(new Date(`${d}T12:00:00Z`))
   const titolo =
@@ -60,7 +62,7 @@ async function Planning({ searchParams }: { searchParams: Promise<Record<string,
   // i numeri contano le prenotazioni confermate (le richieste dall'app non ancora)
   const confermate = prenotazioni.filter((p) => p.stato === 'confermata')
   const ore = confermate.reduce((s, p) => s + (Date.parse(p.fine) - Date.parse(p.inizio)) / 3_600_000, 0)
-  const disponibili = ((chiude - apre) / 60) * campi.length * giorniVista
+  const disponibili = Array.from({ length: giorniVista }, (_, i) => oreAperte(centro, addDays(inizio, i))).reduce((x, o) => x + o, 0) * campi.length
   const valore = confermate.reduce((s, p) => s + (p.prezzo ?? 0), 0)
   const incassato = confermate.filter((p) => p.pagato).reduce((s, p) => s + (p.prezzo ?? 0), 0)
   const [richieste, blocchi] = await Promise.all([richiesteInAttesa(centro._id), vista === 'giorno' ? blocchiTra(centro._id, da, a) : Promise.resolve([])])
@@ -126,7 +128,16 @@ async function Planning({ searchParams }: { searchParams: Promise<Record<string,
       )}
       {typeof saltate === 'string' && Number(saltate) > 0 && (
         <p className="rounded-xl bg-amber-50 p-3 text-sm text-amber-900 dark:bg-amber-950 dark:text-amber-200">
-          ⚠️ {saltate} {Number(saltate) === 1 ? 'settimana è stata saltata' : 'settimane sono state saltate'}: il campo era già occupato a quell’ora.
+          ⚠️ {saltate} {Number(saltate) === 1 ? 'settimana è stata saltata' : 'settimane sono state saltate'}: il campo era già occupato a quell’ora o il centro era chiuso.
+        </p>
+      )}
+
+      {vista === 'giorno' && !orario.aperto && (
+        <p className="rounded-xl border-2 border-red-300 bg-red-50 p-3 text-sm font-semibold text-red-900 dark:border-red-800 dark:bg-red-950 dark:text-red-200">
+          🔒 Chiuso · {orario.motivo}.{' '}
+          <Link href="/centro/impostazioni" className="font-normal underline">
+            Orari e chiusure
+          </Link>
         </p>
       )}
 
@@ -182,9 +193,9 @@ async function Planning({ searchParams }: { searchParams: Promise<Record<string,
           </Link>
         </p>
       ) : vista === 'settimana' ? (
-        <Settimana lunedi={lunedi} oggi={oggi} campi={campi} prenotazioni={prenotazioni} link={(d) => link({ giorno: d, vista: 'giorno' })} />
+        <Settimana lunedi={lunedi} oggi={oggi} campi={campi} prenotazioni={prenotazioni} chiuso={(d) => orarioDel(centro, d)} link={(d) => link({ giorno: d, vista: 'giorno' })} />
       ) : vista === 'mese' ? (
-        <Mese primo={primo} giorni={giorniMese} oggi={oggi} prenotazioni={prenotazioni} capienza={((chiude - apre) / 60) * campi.length} link={(d) => link({ giorno: d, vista: 'giorno' })} />
+        <Mese primo={primo} giorni={giorniMese} oggi={oggi} prenotazioni={prenotazioni} capienza={(d) => oreAperte(centro, d) * campi.length} chiuso={(d) => orarioDel(centro, d)} link={(d) => link({ giorno: d, vista: 'giorno' })} />
       ) : (
         <div className="gap-4 lg:grid lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start">
         <div className="overflow-x-auto rounded-2xl border border-stone-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
@@ -310,12 +321,14 @@ function Settimana({
   oggi,
   campi,
   prenotazioni,
+  chiuso,
   link,
 }: {
   lunedi: string
   oggi: string
   campi: CampoCentro[]
   prenotazioni: Prenotazione[]
+  chiuso: (giorno: string) => { aperto: boolean; motivo?: string; apre: string; chiude: string }
   link: (giorno: string) => string
 }) {
   const giorni = Array.from({ length: 7 }, (_, i) => addDays(lunedi, i))
@@ -331,6 +344,9 @@ function Settimana({
                 <Link href={link(d)} className="text-sm font-bold capitalize hover:underline">
                   {etichetta(d)}
                 </Link>
+                <span className={`block text-[10px] font-medium ${chiuso(d).aperto ? 'text-stone-400' : 'text-red-600'}`}>
+                  {chiuso(d).aperto ? `${chiuso(d).apre}–${chiuso(d).chiude}` : `🔒 ${chiuso(d).motivo?.includes('giorno di chiusura') ? 'chiuso' : chiuso(d).motivo}`}
+                </span>
               </th>
             ))}
           </tr>
@@ -347,7 +363,12 @@ function Settimana({
               {giorni.map((d) => {
                 const sue = prenotazioni.filter((p) => p.campo === c._key && giornoDi(p.inizio) === d)
                 return (
-                  <td key={d} className={`h-16 border-b border-r border-stone-200 p-1 align-top last:border-r-0 dark:border-zinc-800 ${d === oggi ? 'bg-orange-50/50 dark:bg-orange-950/20' : ''}`}>
+                  <td
+                    key={d}
+                    className={`h-16 border-b border-r border-stone-200 p-1 align-top last:border-r-0 dark:border-zinc-800 ${
+                      !chiuso(d).aperto ? 'bg-[repeating-linear-gradient(135deg,rgba(220,38,38,0.08)_0_6px,transparent_6px_12px)]' : d === oggi ? 'bg-orange-50/50 dark:bg-orange-950/20' : ''
+                    }`}
+                  >
                     <div className="space-y-0.5">
                       {sue.map((p) => (
                         <Link
@@ -381,13 +402,15 @@ function Mese({
   oggi,
   prenotazioni,
   capienza,
+  chiuso,
   link,
 }: {
   primo: string
   giorni: number
   oggi: string
   prenotazioni: Prenotazione[]
-  capienza: number
+  capienza: (giorno: string) => number
+  chiuso: (giorno: string) => { aperto: boolean; motivo?: string }
   link: (giorno: string) => string
 }) {
   const vuoti = (new Date(`${primo}T12:00:00Z`).getUTCDay() + 6) % 7
@@ -413,15 +436,20 @@ function Mese({
           const d = addDays(primo, i)
           const sue = perGiorno.get(d) ?? []
           const ore = sue.reduce((s, p) => s + (Date.parse(p.fine) - Date.parse(p.inizio)) / 3_600_000, 0)
-          const pieno = capienza ? ore / capienza : 0
+          const cap = capienza(d)
+          const pieno = cap ? ore / cap : 0
+          const o = chiuso(d)
           const valore = sue.reduce((s, p) => s + (p.prezzo ?? 0), 0)
           return (
             <Link
               key={d}
               href={link(d)}
-              className={`flex min-h-20 flex-col rounded-lg border p-1.5 text-left hover:ring-2 hover:ring-orange-500 sm:min-h-24 ${sfondo(pieno)} ${d === oggi ? 'border-orange-600 ring-1 ring-orange-600' : 'border-stone-200 dark:border-zinc-800'}`}
+              className={`flex min-h-20 flex-col rounded-lg border p-1.5 text-left hover:ring-2 hover:ring-orange-500 sm:min-h-24 ${
+                o.aperto ? sfondo(pieno) : 'bg-[repeating-linear-gradient(135deg,rgba(220,38,38,0.1)_0_6px,transparent_6px_12px)] text-stone-500'
+              } ${d === oggi ? 'border-orange-600 ring-1 ring-orange-600' : 'border-stone-200 dark:border-zinc-800'}`}
             >
               <span className="text-sm font-bold">{i + 1}</span>
+              {!o.aperto && <span className="truncate text-[10px] font-semibold text-red-700 dark:text-red-400">🔒 {o.motivo?.includes('giorno di chiusura') ? 'Chiuso' : o.motivo}</span>}
               {sue.length > 0 && (
                 <span className="mt-auto space-y-0.5 text-[11px] leading-tight">
                   <span className="block font-semibold">{sue.length === 1 ? '1 pren.' : `${sue.length} pren.`}</span>
