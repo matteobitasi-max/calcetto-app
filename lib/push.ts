@@ -5,6 +5,7 @@ import { sanity } from './sanity'
 import { inviaFcm } from './fcm'
 import type { CategoriaNotifica } from './roster'
 import { creaT, isLingua, type Lingua, type T } from './i18n'
+import { conLega } from './link-lega'
 
 webpush.setVapidDetails(
   process.env.VAPID_SUBJECT ?? 'mailto:organizzatore@example.com',
@@ -96,15 +97,7 @@ const subFields = `{_id, tipo, endpoint, keys, token, lingua}`
 // Filtro sulle preferenze del giocatore (la categoria arriva solo dal codice, mai dall'utente).
 const vuole = (categoria?: CategoriaNotifica) => (categoria ? ` && coalesce(notifiche.${categoria}, true)` : '')
 
-// Il link di una notifica porta con sé la sua lega (?apri=): chi è in più leghe (es. la squadra del Club e
-// la lega con gli amici), toccandola, si ritrova nella lega giusta, con il suo tema e le sue funzioni (vedi proxy.ts).
-export const PARAM_APRI_LEGA = 'apri'
-export function conLega(url: string, legaId: string) {
-  if (!url.startsWith('/') || url.startsWith('//')) return url
-  const [percorso, hash] = url.split('#')
-  const sep = percorso.includes('?') ? '&' : '?'
-  return `${percorso}${sep}${PARAM_APRI_LEGA}=${encodeURIComponent(legaId)}${hash !== undefined ? `#${hash}` : ''}`
-}
+// Il link di una notifica porta con sé la sua lega: toccandola si apre la lega giusta (vedi lib/link-lega.ts).
 const nellaLega = (messaggio: Messaggio, legaId: string): Messaggio => {
   const metti = (p: PushPayload) => ({ ...p, url: conLega(p.url, legaId) })
   return typeof messaggio === 'function' ? (t: T) => metti(messaggio(t)) : metti(messaggio)

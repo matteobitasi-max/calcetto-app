@@ -17,7 +17,7 @@ const vecchioIndirizzo = (req: NextRequest) =>
   !!process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY?.startsWith('pk_live') &&
   req.headers.get('accept')?.includes('text/html')
 
-// I link delle notifiche portano la loro lega (?apri=<lega>, vedi conLega in lib/push.ts): diventa la lega attiva
+// I link delle notifiche portano la loro lega (?apri=<lega>, vedi lib/link-lega.ts): diventa la lega attiva
 // (lo stesso cookie del menu delle leghe) e si apre la pagina senza il parametro. Una lega di cui non si fa
 // parte non dà accesso a niente: getCurrentPlayer la ignora e resta sulla prima lega.
 function apriLega(req: NextRequest) {

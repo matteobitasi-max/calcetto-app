@@ -2,6 +2,8 @@ import { sanity } from '@/lib/sanity'
 import { utenteDelCodice } from '@/lib/calendario'
 import { assicuraRicorrenze } from '@/lib/series'
 import { creaT, isLingua, type T } from '@/lib/i18n'
+import { ALLENATORE } from '@/lib/roster'
+import { conLega } from '@/lib/link-lega'
 
 // Il calendario del telefono (iPhone, Google, Outlook) si abbona a questo link e lo ricontrolla da
 // solo: ci sono le partite di tutte le mie leghe, dagli ultimi due mesi in poi, e se una partita
@@ -24,6 +26,8 @@ type Partita = {
   nomeB?: string
   risultato?: { golA?: number; golB?: number }
   mia?: 'presente' | 'assente' | 'riserva'
+  legaId: string
+  presenti?: number
 }
 
 const RISPOSTA = { presente: '✅ In lista', riserva: '⏳ In attesa', assente: '❌ Assente' } as const
@@ -36,17 +40,20 @@ export async function GET(request: Request, { params }: RouteContext<'/api/calen
   const lingua = url.searchParams.get('lingua')
   const t = creaT(isLingua(lingua) ? lingua : 'it')
 
-  const schede = await sanity.fetch<{ _id: string; lega: string }[]>(
-    `*[_type == "player" && clerkUserId == $utente && attivo != false && defined(lega->_id)]{_id, "lega": lega._ref}`,
+  const schede = await sanity.fetch<{ _id: string; lega: string; ruolo?: string }[]>(
+    `*[_type == "player" && clerkUserId == $utente && attivo != false && defined(lega->_id)]{_id, "lega": lega._ref, ruolo}`,
     { utente },
   )
   const leghe = [...new Set(schede.map((s) => s.lega))]
+  // le leghe in cui sono l'allenatore: non mi convoco, quindi niente "Non hai risposto"
+  const alleno = new Set(schede.filter((s) => s.ruolo === ALLENATORE).map((s) => s.lega))
   await Promise.all(leghe.map((legaId) => assicuraRicorrenze({ legaId })))
   const partite = leghe.length
     ? await sanity.fetch<Partita[]>(
         `*[_type == "match" && lega._ref in $leghe && data >= $da] | order(data asc){
           _id, _updatedAt, tipo, data, luogo, durataMinuti, stato, note, aperturaConvocazioni, chiusuraConvocazioni, nomeA, nomeB, risultato,
-          "lega": lega->nome, "torneo": torneo->nome,
+          "lega": lega->nome, "legaId": lega._ref, "torneo": torneo->nome,
+          "presenti": count(convocazioni[risposta == "presente"]),
           "mia": convocazioni[giocatore._ref in $miei][0].risposta
         }`,
         { leghe, miei: schede.map((s) => s._id), da: new Date(Date.now() - 60 * 86_400_000).toISOString() },
@@ -65,7 +72,7 @@ export async function GET(request: Request, { params }: RouteContext<'/api/calen
     'X-WR-TIMEZONE:Europe/Rome',
     'REFRESH-INTERVAL;VALUE=DURATION:PT1H',
     'X-PUBLISHED-TTL:PT1H',
-    ...partite.flatMap((p) => evento(p, t, sito)),
+    ...partite.flatMap((p) => evento(p, t, sito, alleno.has(p.legaId))),
     'END:VCALENDAR',
   ]
   return new Response(righe.map(piega).join('\r\n') + '\r\n', {
@@ -77,7 +84,7 @@ export async function GET(request: Request, { params }: RouteContext<'/api/calen
   })
 }
 
-function evento(p: Partita, t: T, sito: string) {
+function evento(p: Partita, t: T, sito: string, allenatore: boolean) {
   const inizio = new Date(p.data)
   const fine = new Date(inizio.getTime() + (p.durataMinuti ?? 60) * 60_000)
   const annullata = p.stato === 'annullata'
@@ -90,11 +97,20 @@ function evento(p: Partita, t: T, sito: string) {
       ? `🏃 ${t('Allenamento')} · ${p.lega ?? 'The Cap'}`
       : `⚽ ${p.lega ?? 'The Cap'}${punteggio}`
 
+  // il link apre la partita già nella sua lega (?apri=, vedi proxy.ts)
+  const link = `${sito}${conLega(`/partite/${p._id}`, p.legaId)}`
+  const mia = allenatore
+    ? `🧢 ${capitalizza(t('allenatore'))} · ${t('{n} convocati', { n: p.presenti ?? 0 })}`
+    : p.mia
+      ? t(RISPOSTA[p.mia])
+      : !annullata && !giocata && !p.torneo
+        ? `❓ ${t('Non hai risposto')}`
+        : null
   const descrizione = [
-    p.mia ? t(RISPOSTA[p.mia]) : !annullata && !giocata && !p.torneo ? `❓ ${t('Non hai risposto')}` : null,
+    mia,
     convocazioni(p, t),
     p.note,
-    `${sito}/partite/${p._id}`,
+    link,
   ].filter(Boolean).join('\n')
 
   return [
@@ -108,7 +124,7 @@ function evento(p: Partita, t: T, sito: string) {
     `SUMMARY:${testo(annullata ? `❌ ${t('Annullata')} · ${titolo}` : titolo)}`,
     ...(p.luogo ? [`LOCATION:${testo(p.luogo)}`] : []),
     `DESCRIPTION:${testo(descrizione)}`,
-    `URL:${sito}/partite/${p._id}`,
+    `URL:${link}`,
     `STATUS:${annullata ? 'CANCELLED' : 'CONFIRMED'}`,
     // promemoria due ore prima (chi non lo vuole lo toglie dalle impostazioni del calendario)
     ...(annullata || giocata || p.mia === 'assente'
@@ -127,6 +143,8 @@ function convocazioni(p: Partita, t: T) {
   if (new Date(p.chiusuraConvocazioni) > ora) return t('Convocazioni aperte fino a {quando}', { quando: quando(p.chiusuraConvocazioni) })
   return null
 }
+
+const capitalizza = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
 
 const utc = (d: Date) => d.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '')
 
