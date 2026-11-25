@@ -4,6 +4,7 @@ import { Field, inputClass } from '@/components/ui'
 import { DURATE, campiAttivi, type Centro, type Prenotazione } from '@/lib/centro'
 import type { FormState } from '@/app/actions'
 import { isoToRomeLocal } from '@/lib/dates'
+import { nomeDurata } from '@/lib/durata'
 
 // Il modulo di una prenotazione: campo, giorno e ora, durata, chi prenota, prezzo (vuoto = quello del campo),
 // e per una nuova "ripeti ogni settimana" (squadre e gruppi fissi).
@@ -44,15 +45,18 @@ export function PrenotazioneForm({
             <input name="ora" type="time" step={1800} required defaultValue={inizio?.slice(11) ?? iniziale?.ora ?? '20:00'} className={inputClass} />
           </Field>
           <Field label="Durata">
-            <select name="durata" defaultValue={String((DURATE as readonly number[]).includes(durata) ? durata : 60)} className={inputClass}>
-              {DURATE.map((d) => (
+            <select name="durata" defaultValue={String(durata)} className={inputClass}>
+              {[...new Set([...DURATE, durata])].sort((a, b) => a - b).map((d) => (
                 <option key={d} value={d}>
-                  {d === 60 ? '1 ora' : d === 90 ? '1 ora e mezza' : '2 ore'}
+                  {nomeDurata(d)}
                 </option>
               ))}
             </select>
           </Field>
         </div>
+        <Field label="Email (facoltativa: se è su The Cap, si collega alla sua partita)">
+          <input name="email" type="email" maxLength={120} defaultValue={p?.email} placeholder="giocatore@email.it" className={inputClass} />
+        </Field>
         <Field label="Telefono (facoltativo)">
           <input name="telefono" type="tel" maxLength={30} defaultValue={p?.telefono} className={inputClass} />
         </Field>
@@ -79,3 +83,4 @@ export function PrenotazioneForm({
     </ActionForm>
   )
 }
+

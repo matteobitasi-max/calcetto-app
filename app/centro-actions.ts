@@ -8,8 +8,8 @@ import { sanity } from '@/lib/sanity'
 import { getUtente } from '@/lib/player'
 import { leggiCampo } from '@/lib/campo'
 import { addMinuti, romeLocalToISO, isoToRomeLocal, addDays } from '@/lib/dates'
-import { avvisaOrganizzatore } from '@/lib/centro-app'
-import { DURATE, METODI, MODI_APP, OCCUPANO, TIPI_CAMPO, getMioCentro, minuti, prezzoPer, requireCentro, type CampoCentro, type Metodo, type ModoApp, type TipoCampo } from '@/lib/centro'
+import { avvisaOrganizzatore, collegaPerEmail } from '@/lib/centro-app'
+import { METODI, MODI_APP, OCCUPANO, TIPI_CAMPO, getMioCentro, minuti, prezzoPer, requireCentro, type CampoCentro, type Metodo, type ModoApp, type TipoCampo } from '@/lib/centro'
 import type { FormState } from './actions'
 import { COOKIE_MODO, type Modo } from '@/lib/modo'
 
@@ -126,6 +126,7 @@ export async function salvaPrenotazione(id: string | null, _prev: FormState, fd:
   const giorno = str(fd, 'giorno')
   const ora = str(fd, 'ora')
   const durata = Number(str(fd, 'durata'))
+  const email = str(fd, 'email').toLowerCase().slice(0, 120)
   const cliente = str(fd, 'cliente').slice(0, 80)
   const telefono = str(fd, 'telefono').slice(0, 30)
   const nota = str(fd, 'nota').slice(0, 300)
@@ -133,7 +134,8 @@ export async function salvaPrenotazione(id: string | null, _prev: FormState, fd:
   const settimane = id ? 1 : Math.min(40, Math.max(1, Number(str(fd, 'settimane')) || 1))
   if (!campo) return { error: 'Scegli il campo.' }
   if (!GIORNO.test(giorno) || !ORA.test(ora)) return { error: 'Scegli giorno e ora.' }
-  if (!(DURATE as readonly number[]).includes(durata)) return { error: 'Durata non valida.' }
+  if (!Number.isInteger(durata) || durata < 30 || durata > 360 || durata % 30) return { error: 'Durata non valida (da mezz’ora a 6 ore).' }
+  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return { error: 'Email non valida.' }
   if (!cliente) return { error: 'Scrivi chi prenota.' }
   const prezzo = prezzoScritto ? Number(prezzoScritto) : prezzoPer(campo, durata)
   if (!Number.isFinite(prezzo) || prezzo < 0 || prezzo > 5000) return { error: 'Prezzo non valido.' }
@@ -141,7 +143,7 @@ export async function salvaPrenotazione(id: string | null, _prev: FormState, fd:
     return { error: `Il centro è aperto dalle ${centro.apre} alle ${centro.chiude}.` }
   }
 
-  const dati = { campo: campo._key, cliente, prezzo, ...(telefono && { telefono }), ...(nota && { nota }) }
+  const dati = { campo: campo._key, cliente, prezzo, ...(telefono && { telefono }), ...(nota && { nota }), ...(email && { email }) }
   if (id) {
     const inizio = romeLocalToISO(`${giorno}T${ora}`)
     const fine = romeLocalToISO(addMinuti(`${giorno}T${ora}`, durata))
@@ -153,17 +155,18 @@ export async function salvaPrenotazione(id: string | null, _prev: FormState, fd:
     await sanity
       .patch(id)
       .set({ ...dati, inizio, fine })
-      .unset([...(telefono ? [] : ['telefono']), ...(nota ? [] : ['nota'])])
+      .unset([...(telefono ? [] : ['telefono']), ...(nota ? [] : ['nota']), ...(email ? [] : ['email', 'utente'])])
       .commit()
+    const esito = email ? await collegaPerEmail(id, email, centro, inizio).catch(() => null) : null
     revalidatePath('/centro', 'layout')
-    redirect(`/centro?giorno=${giorno}`)
+    redirect(`/centro?giorno=${giorno}${esito ? `&collegata=${esito}` : ''}`)
   }
 
   // ripetuta: una prenotazione per settimana; quelle con il campo già occupato si saltano (e si dice quali)
   const serie = settimane > 1 ? randomUUID() : undefined
   const saltate: string[] = []
   const tx = sanity.transaction()
-  let create = 0
+  const create: { id: string; inizio: string }[] = []
   for (let s = 0; s < settimane; s++) {
     const g = addDays(giorno, s * 7)
     const inizio = romeLocalToISO(`${g}T${ora}`)
@@ -172,13 +175,22 @@ export async function salvaPrenotazione(id: string | null, _prev: FormState, fd:
       saltate.push(g)
       continue
     }
-    tx.create({ _type: 'prenotazione', centro: { _type: 'reference', _ref: centro._id }, ...dati, inizio, fine, stato: 'confermata', ...(serie && { serie }) })
-    create++
+    const nuovo = `prenotazione-${randomUUID()}`
+    tx.create({ _id: nuovo, _type: 'prenotazione', centro: { _type: 'reference', _ref: centro._id }, ...dati, inizio, fine, stato: 'confermata', ...(serie && { serie }) })
+    create.push({ id: nuovo, inizio })
   }
-  if (!create) return { error: 'Il campo è già occupato in quell’orario.' }
+  if (!create.length) return { error: 'Il campo è già occupato in quell’orario.' }
   await tx.commit()
+  // con l'email: si collega alla partita di quella persona su The Cap (se c'è), settimana per settimana
+  let esito: string | null = null
+  if (email) {
+    for (const c of create) {
+      const e = await collegaPerEmail(c.id, email, centro, c.inizio).catch(() => null)
+      if (e === 'collegata' || !esito) esito = e
+    }
+  }
   revalidatePath('/centro', 'layout')
-  redirect(`/centro?giorno=${giorno}${saltate.length ? `&saltate=${saltate.length}` : ''}`)
+  redirect(`/centro?giorno=${giorno}${saltate.length ? `&saltate=${saltate.length}` : ''}${esito ? `&collegata=${esito}` : ''}`)
 }
 
 async function miaPrenotazione(id: string) {
@@ -241,6 +253,43 @@ export async function segnaPagato(id: string, metodo: Metodo) {
 export async function togliPagamento(id: string) {
   await miaPrenotazione(id)
   await sanity.patch(id).unset(['pagato']).commit()
+  revalidatePath('/centro', 'layout')
+}
+
+// ---------- Orari esclusi dall'app ----------
+
+// Esclude degli orari dalle prenotazioni dall'app (anche per più settimane): dal gestionale restano prenotabili.
+export async function escludiDallApp(_prev: FormState, fd: FormData): Promise<FormState> {
+  const centro = await requireCentro()
+  const campo = centro.campi.find((c) => c._key === str(fd, 'campo') && c.attivo !== false)
+  const giorno = str(fd, 'giorno')
+  const ora = str(fd, 'ora')
+  const durata = Number(str(fd, 'durata'))
+  const nota = str(fd, 'nota').slice(0, 120)
+  const settimane = Math.min(40, Math.max(1, Number(str(fd, 'settimane')) || 1))
+  if (!campo || !GIORNO.test(giorno) || !ORA.test(ora)) return { error: 'Scegli campo, giorno e ora.' }
+  if (!Number.isInteger(durata) || durata < 30 || durata > 24 * 60 || durata % 30) return { error: 'Durata non valida.' }
+  const tx = sanity.transaction()
+  for (let s = 0; s < settimane; s++) {
+    const g = addDays(giorno, s * 7)
+    tx.create({
+      _type: 'bloccoApp',
+      centro: { _type: 'reference', _ref: centro._id },
+      campo: campo._key,
+      inizio: romeLocalToISO(`${g}T${ora}`),
+      fine: romeLocalToISO(addMinuti(`${g}T${ora}`, durata)),
+      ...(nota && { nota }),
+    })
+  }
+  await tx.commit()
+  revalidatePath('/centro', 'layout')
+  redirect(`/centro?giorno=${giorno}`)
+}
+
+export async function togliBlocco(id: string) {
+  const centro = await requireCentro()
+  const esiste = await sanity.fetch<number>(`count(*[_type == "bloccoApp" && _id == $id && centro._ref == $c])`, { id, c: centro._id })
+  if (esiste) await sanity.delete(id)
   revalidatePath('/centro', 'layout')
 }
 

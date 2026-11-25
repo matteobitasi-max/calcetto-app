@@ -8,7 +8,7 @@ import { sanity } from '@/lib/sanity'
 import { leggiCampo } from '@/lib/campo'
 import { periodoInCorso } from '@/lib/stagioni'
 import { statoClub } from '@/lib/club-stato'
-import { liberaPerPartita, prenotaPerPartita, spostaPrenotazione, verificaPrenotazione } from '@/lib/centro-app'
+import { collegaPrenotazione, liberaPerPartita, prenotaPerPartita, prenotazioneRegistrata, spostaPrenotazione, verificaPrenotazione } from '@/lib/centro-app'
 import { BADGE, CATEGORIE_NOTIFICHE, COOKIE_LEGA, eta, leggiRuolo, normalizzaTelefono, PIEDI, RUOLI, SKILLS, displayName, requirePlayer, getUtente, getMemberships, isTitolare, membroDi, soloGiocatore, requireAdmin, requireForDoc, requireIn, type Player, type Skill } from '@/lib/player'
 import { assegnaPosti, conSelezione, finestra, getMatch, getPartiteTorneo, getPlayers, orarioPartita, presenti, risultatoDa, type FonteKm, type Match, type Risposta, type Stato } from '@/lib/matches'
 import { idPlaylist, intervisteDellaPlaylist } from '@/lib/interviste'
@@ -388,7 +388,10 @@ export async function salvaPartita(matchId: string | null, _prev: FormState, for
     !matchId && formData.get('prenotaCentro') === 'on' && campo && str(formData, 'centroId') && str(formData, 'gruppoCentro')
       ? { centroId: str(formData, 'centroId'), gruppo: str(formData, 'gruppoCentro'), inizio: data, durata: durataCampo }
       : null
-  const verificata = prenota ? await verificaPrenotazione(prenota) : null
+  // il centro gli ha già registrato il campo (con la sua email) a quell'ora: si collega quella, niente doppioni
+  const utenteOra = !matchId && campo ? await getUtente() : null
+  const registrata = utenteOra && campo ? await prenotazioneRegistrata({ placeId: campo.placeId, utente: utenteOra.id, inizio: data }).catch(() => null) : null
+  const verificata = prenota && !registrata ? await verificaPrenotazione(prenota) : null
   if (verificata && 'errore' in verificata) return { error: verificata.errore }
 
   const fields = {
@@ -438,7 +441,8 @@ export async function salvaPartita(matchId: string | null, _prev: FormState, for
       convocazioni: [],
     })
     id = doc._id
-    if (verificata && prenota) {
+    if (registrata) await collegaPrenotazione(registrata, { matchId: id, legaId: admin.lega._id, organizzatoreId: admin._id })
+    else if (verificata && prenota) {
       const fatta = await prenotaPerPartita(verificata.centro, {
         ...prenota,
         matchId: id,

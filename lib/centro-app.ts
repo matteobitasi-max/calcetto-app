@@ -24,10 +24,11 @@ async function getCentro(id: string) {
   return sanity.fetch<Centro | null>(`*[_type == "centro" && _id == $id][0]{${centroFields}}`, { id })
 }
 
-// Le prenotazioni che occupano i campi del centro in un intervallo.
+// Quello che occupa i campi per chi prenota dall'app: le prenotazioni e gli orari esclusi dal centro.
 function occupate(centroId: string, da: string, a: string, tranne?: string) {
   return sanity.fetch<{ campo: string; inizio: string; fine: string }[]>(
-    `*[_type == "prenotazione" && centro._ref == $centro && coalesce(stato, "confermata") in ${OCCUPANO} && inizio < $a && fine > $da ${tranne ? '&& _id != $tranne' : ''}]{campo, inizio, fine}`,
+    `*[((_type == "prenotazione" && coalesce(stato, "confermata") in ${OCCUPANO}) || _type == "bloccoApp")
+      && centro._ref == $centro && inizio < $a && fine > $da ${tranne ? '&& _id != $tranne' : ''}]{campo, inizio, fine}`,
     { centro: centroId, da, a, ...(tranne && { tranne }) },
   )
 }
@@ -163,4 +164,95 @@ export async function avvisaOrganizzatore(p: { organizzatoreId?: string; matchId
     url: p.matchId ? `/partite/${p.matchId}` : '/',
     tag: `campo-${p.matchId ?? centro}`,
   })).catch(() => undefined)
+}
+
+// ---------- Collegamento per email ----------
+
+// L'account The Cap con questa email (verificata), se c'è.
+export async function utenteDaEmail(email: string) {
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return null
+  const { clerkClient } = await import('@clerk/nextjs/server')
+  const trovati = await (await clerkClient()).users.getUserList({ emailAddress: [email.toLowerCase()], limit: 1 }).catch(() => null)
+  return trovati?.data[0]?.id ?? null
+}
+
+const MARGINE = 45 * 60_000
+
+// La partita di questo utente (in una delle sue leghe) in quel centro e a quell'ora, non ancora collegata:
+// stesso posto sulla mappa (o stesso nome scritto), inizio entro 45 minuti dalla prenotazione.
+async function partitaDi(utente: string, centro: { _id: string; nome: string; posto?: { placeId: string } }, inizio: string) {
+  const schede = await sanity.fetch<{ _id: string; lega: string }[]>(
+    `*[_type == "player" && clerkUserId == $u && attivo != false && defined(lega._ref)]{_id, "lega": lega._ref}`,
+    { u: utente },
+  )
+  if (!schede.length) return null
+  const t = Date.parse(inizio)
+  const m = await sanity.fetch<{ _id: string; lega: string; legaNome: string } | null>(
+    `*[_type == "match" && lega._ref in $leghe && coalesce(stato, "aperta") != "annullata" && !defined(prenotazione)
+      && data >= $da && data <= $a && (campo.placeId == $posto || lower(luogo) == $nome)] | order(data asc)[0]{_id, "lega": lega._ref, "legaNome": lega->nome}`,
+    {
+      leghe: schede.map((s) => s.lega),
+      da: new Date(t - MARGINE).toISOString(),
+      a: new Date(t + MARGINE).toISOString(),
+      posto: centro.posto?.placeId ?? '-',
+      nome: centro.nome.trim().toLowerCase(),
+    },
+  )
+  if (!m) return null
+  return { ...m, organizzatoreId: schede.find((s) => s.lega === m.lega)!._id }
+}
+
+// Una prenotazione scritta dal centro con l'email di chi prenota: se quella persona ha la partita su The Cap
+// in quel centro a quell'ora, si collegano (la partita mostra il campo confermato, e da lì in poi si muovono
+// insieme). Se ha l'account ma non ancora la partita, la prenotazione aspetta: si collega quando la crea.
+export async function collegaPerEmail(prenotazioneId: string, email: string, centro: { _id: string; nome: string; posto?: { placeId: string } }, inizio: string) {
+  const utente = await utenteDaEmail(email)
+  if (!utente) return 'nessuno' as const
+  const m = await partitaDi(utente, centro, inizio)
+  if (!m) {
+    await sanity.patch(prenotazioneId).set({ utente }).commit()
+    return 'utente' as const
+  }
+  await sanity
+    .transaction()
+    .patch(prenotazioneId, (p) =>
+      p.set({
+        utente,
+        lega: { _type: 'reference', _ref: m.lega, _weak: true },
+        match: { _type: 'reference', _ref: m._id, _weak: true },
+        organizzatore: { _type: 'reference', _ref: m.organizzatoreId, _weak: true },
+      }),
+    )
+    .patch(m._id, (p) => p.set({ prenotazione: { _type: 'reference', _ref: prenotazioneId, _weak: true } }))
+    .commit()
+  await avvisaOrganizzatore({ organizzatoreId: m.organizzatoreId, matchId: m._id }, centro.nome, 'confermata', new Intl.DateTimeFormat('it-IT', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Rome' }).format(new Date(inizio)))
+  return 'collegata' as const
+}
+
+// Al contrario: chi crea una partita in un centro dove il centro gli ha già registrato una prenotazione
+// (con la sua email) a quell'ora, se la ritrova collegata invece di prenotarne un'altra.
+export async function prenotazioneRegistrata(r: { placeId: string; utente: string; inizio: string }) {
+  const centro = await centroDaPosto(r.placeId)
+  if (!centro) return null
+  const t = Date.parse(r.inizio)
+  const p = await sanity.fetch<string | null>(
+    `*[_type == "prenotazione" && centro._ref == $c && utente == $u && !defined(match) && coalesce(stato, "confermata") in ${OCCUPANO}
+      && inizio >= $da && inizio <= $a] | order(inizio asc)[0]._id`,
+    { c: centro._id, u: r.utente, da: new Date(t - MARGINE).toISOString(), a: new Date(t + MARGINE).toISOString() },
+  )
+  return p
+}
+
+export async function collegaPrenotazione(p: string, r: { matchId: string; legaId: string; organizzatoreId: string }) {
+  await sanity
+    .transaction()
+    .patch(p, (q) =>
+      q.set({
+        lega: { _type: 'reference', _ref: r.legaId, _weak: true },
+        match: { _type: 'reference', _ref: r.matchId, _weak: true },
+        organizzatore: { _type: 'reference', _ref: r.organizzatoreId, _weak: true },
+      }),
+    )
+    .patch(r.matchId, (q) => q.set({ prenotazione: { _type: 'reference', _ref: p, _weak: true } }))
+    .commit()
 }

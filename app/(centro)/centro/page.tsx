@@ -1,9 +1,10 @@
 import Link from 'next/link'
 import { Suspense } from 'react'
 import { addDays, isoToRomeLocal } from '@/lib/dates'
-import { rispondiRichiesta } from '@/app/centro-actions'
+import { rispondiRichiesta, togliBlocco } from '@/app/centro-actions'
+import { ColonnaSlot, PannelloSelezione } from '@/components/planning-selezione'
 import { SubmitButton } from '@/components/submit-button'
-import { campiAttivi, giornoISO, richiesteInAttesa, hhmm, minuti, oggiRoma, prenotazioniTra, requireCentro, type CampoCentro, type Prenotazione } from '@/lib/centro'
+import { blocchiTra, campiAttivi, giornoISO, richiesteInAttesa, hhmm, minuti, oggiRoma, prenotazioniTra, requireCentro, type CampoCentro, type Prenotazione } from '@/lib/centro'
 import { Loading } from '@/components/ui'
 
 // La pagina principale del gestionale: il planning di un giorno, con i campi in colonna e le ore in riga.
@@ -21,7 +22,7 @@ type Vista = 'giorno' | 'settimana' | 'mese'
 const euro = (n: number) => new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR', maximumFractionDigits: n % 1 ? 2 : 0 }).format(n)
 
 async function Planning({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
-  const [{ giorno: g, saltate, vista: v }, centro] = await Promise.all([searchParams, requireCentro()])
+  const [{ giorno: g, saltate, vista: v, collegata }, centro] = await Promise.all([searchParams, requireCentro()])
   const oggi = oggiRoma()
   const giorno = typeof g === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(g) ? g : oggi
   const vista: Vista = v === 'settimana' || v === 'mese' ? v : 'giorno'
@@ -62,7 +63,7 @@ async function Planning({ searchParams }: { searchParams: Promise<Record<string,
   const disponibili = ((chiude - apre) / 60) * campi.length * giorniVista
   const valore = confermate.reduce((s, p) => s + (p.prezzo ?? 0), 0)
   const incassato = confermate.filter((p) => p.pagato).reduce((s, p) => s + (p.prezzo ?? 0), 0)
-  const richieste = await richiesteInAttesa(centro._id)
+  const [richieste, blocchi] = await Promise.all([richiesteInAttesa(centro._id), vista === 'giorno' ? blocchiTra(centro._id, da, a) : Promise.resolve([])])
 
   // la linea di "adesso", solo oggi e negli orari di apertura
   const adesso = giorno === oggi ? minuti(isoToRomeLocal(new Date()).slice(11)) : null
@@ -108,6 +109,21 @@ async function Planning({ searchParams }: { searchParams: Promise<Record<string,
         </Link>
       </div>
 
+      {collegata === 'collegata' && (
+        <p className="rounded-xl bg-green-50 p-3 text-sm text-green-900 dark:bg-green-950 dark:text-green-200">
+          🔗 Collegata: chi ha prenotato ha la partita su The Cap a quell’ora, ora vede il campo confermato e la prenotazione segue la partita.
+        </p>
+      )}
+      {collegata === 'utente' && (
+        <p className="rounded-xl bg-sky-50 p-3 text-sm text-sky-900 dark:bg-sky-950 dark:text-sky-200">
+          🔗 Questa email è su The Cap ma non c’è ancora una sua partita qui a quell’ora: quando la crea, si collega da sola.
+        </p>
+      )}
+      {collegata === 'nessuno' && (
+        <p className="rounded-xl bg-stone-100 p-3 text-sm text-stone-700 dark:bg-zinc-800 dark:text-zinc-200">
+          Prenotazione salvata. Questa email non è ancora su The Cap: nessun collegamento.
+        </p>
+      )}
       {typeof saltate === 'string' && Number(saltate) > 0 && (
         <p className="rounded-xl bg-amber-50 p-3 text-sm text-amber-900 dark:bg-amber-950 dark:text-amber-200">
           ⚠️ {saltate} {Number(saltate) === 1 ? 'settimana è stata saltata' : 'settimane sono state saltate'}: il campo era già occupato a quell’ora.
@@ -170,6 +186,7 @@ async function Planning({ searchParams }: { searchParams: Promise<Record<string,
       ) : vista === 'mese' ? (
         <Mese primo={primo} giorni={giorniMese} oggi={oggi} prenotazioni={prenotazioni} capienza={((chiude - apre) / 60) * campi.length} link={(d) => link({ giorno: d, vista: 'giorno' })} />
       ) : (
+        <div className="gap-4 lg:grid lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start">
         <div className="overflow-x-auto rounded-2xl border border-stone-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
           <div className="flex min-w-max">
             {/* colonna delle ore */}
@@ -194,27 +211,44 @@ async function Planning({ searchParams }: { searchParams: Promise<Record<string,
                     </p>
                   </div>
                   <div className="relative" style={{ height: slot * ALTEZZA }}>
-                    {/* gli spazi da mezz'ora: toccandoli si prenota */}
-                    {Array.from({ length: slot }, (_, i) => (
-                      <Link
-                        key={i}
-                        href={`/centro/prenota?giorno=${giorno}&campo=${c._key}&ora=${hhmm(apre + i * 30)}`}
-                        className={`block border-b hover:bg-orange-50 dark:hover:bg-orange-950/40 ${i % 2 ? 'border-stone-200 dark:border-zinc-800' : 'border-stone-100 dark:border-zinc-800/60'}`}
-                        style={{ height: ALTEZZA }}
-                        aria-label={`Prenota ${c.nome} alle ${hhmm(apre + i * 30)}`}
-                      />
-                    ))}
+                    {/* le mezz'ore: trascinando si selezionano (pannello a destra) */}
+                    <ColonnaSlot campo={c._key} nome={c.nome} apre={apre} slot={slot} altezza={ALTEZZA} />
+                    {/* orari esclusi dall'app */}
+                    {blocchi
+                      .filter((b) => b.campo === c._key)
+                      .map((b) => (
+                        <div
+                          key={b._id}
+                          className="pointer-events-none absolute inset-x-0 z-[5] flex items-start justify-between gap-1 border-y border-stone-300 bg-[repeating-linear-gradient(135deg,rgba(120,113,108,0.18)_0_6px,transparent_6px_12px)] px-1.5 py-0.5 text-[10px] font-semibold text-stone-600 dark:border-zinc-700 dark:text-zinc-300"
+                          style={{ top: (posizione(b.inizio) / 30) * ALTEZZA, height: ((Date.parse(b.fine) - Date.parse(b.inizio)) / 1_800_000) * ALTEZZA }}
+                          title={b.nota ?? 'Non prenotabile dall’app'}
+                        >
+                          <span className="truncate">🚫 {b.nota || 'No app'}</span>
+                          <form action={togliBlocco.bind(null, b._id)} className="pointer-events-auto">
+                            <button type="submit" className="rounded px-1 hover:bg-white/80 dark:hover:bg-zinc-800" aria-label="Rendi di nuovo prenotabile dall’app" title="Rendi di nuovo prenotabile dall’app">
+                              ✕
+                            </button>
+                          </form>
+                        </div>
+                      ))}
                     {sue.map((p) => (
                       <Blocco key={p._id} p={p} top={(posizione(p.inizio) / 30) * ALTEZZA} altezza={((Date.parse(p.fine) - Date.parse(p.inizio)) / 1_800_000) * ALTEZZA} />
                     ))}
                     {adesso != null && adesso >= apre && adesso <= chiude && (
-                      <div className="pointer-events-none absolute inset-x-0 border-t-2 border-red-500" style={{ top: ((adesso - apre) / 30) * ALTEZZA }} />
+                      <div className="pointer-events-none absolute inset-x-0 z-20 border-t-2 border-red-500" style={{ top: ((adesso - apre) / 30) * ALTEZZA }} />
                     )}
                   </div>
                 </div>
               )
             })}
           </div>
+        </div>
+        <PannelloSelezione
+          campi={campi.map((c) => ({ key: c._key, nome: c.nome, prezzoOra: c.prezzoOra }))}
+          giorno={giorno}
+          apre={apre}
+          appSpente={centro.prenotazioniApp === 'spente'}
+        />
         </div>
       )}
 
@@ -230,7 +264,8 @@ async function Planning({ searchParams }: { searchParams: Promise<Record<string,
             <span className="mr-1 inline-block h-2.5 w-2.5 rounded-sm bg-green-500" />
             pagata
           </span>
-          <span>· {vista === 'giorno' ? 'tocca uno spazio libero per prenotare' : 'tocca un giorno per aprirlo'}</span>
+          <span>🚫 esclusa dall’app</span>
+          <span>· {vista === 'giorno' ? 'trascina sul planning per selezionare uno o più orari' : 'tocca un giorno per aprirlo'}</span>
         </p>
       )}
     </div>
@@ -243,7 +278,7 @@ function Blocco({ p, top, altezza }: { p: Prenotazione; top: number; altezza: nu
   return (
     <Link
       href={`/centro/prenotazione/${p._id}`}
-      className={`absolute inset-x-1 overflow-hidden rounded-lg border-l-4 px-2 py-1 text-xs shadow-sm ${
+      className={`absolute inset-x-1 z-10 overflow-hidden rounded-lg border-l-4 px-2 py-1 text-xs shadow-sm ${
         richiesta
           ? 'border-dashed border-sky-500 bg-sky-50 text-sky-950 dark:bg-sky-950 dark:text-sky-100'
           : pagata

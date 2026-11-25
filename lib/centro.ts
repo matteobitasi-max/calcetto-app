@@ -53,6 +53,19 @@ export type Prenotazione = {
   lega?: string
   matchId?: string
   organizzatoreId?: string
+  /** Email di chi prenota (scritta dal centro): se è su The Cap, la prenotazione si collega alla sua partita. */
+  email?: string
+}
+
+// Orari esclusi dalle prenotazioni dall'app (il centro li tiene per sé: manutenzione, scuola calcio, telefonate…).
+// Dal gestionale si possono comunque prenotare.
+export type BloccoApp = { _id: string; campo: string; inizio: string; fine: string; nota?: string }
+
+export function blocchiTra(centroId: string, da: string, a: string) {
+  return sanity.fetch<BloccoApp[]>(
+    `*[_type == "bloccoApp" && centro._ref == $centro && inizio < $a && fine > $da] | order(inizio asc){_id, campo, inizio, fine, nota}`,
+    { centro: centroId, da, a },
+  )
 }
 
 // Gli stati che tengono occupato il campo (le richieste lo tengono finché il centro non risponde).
@@ -61,7 +74,7 @@ export const OCCUPANO = '["confermata", "richiesta"]'
 const centroFields = `_id, nome, indirizzo, posto, telefono, "apre": coalesce(apre, "08:00"), "chiude": coalesce(chiude, "24:00"),
   "campi": coalesce(campi, []), "gestori": coalesce(gestori, []), "prenotazioniApp": coalesce(prenotazioniApp, "richiesta")`
 const prenotazioneFields = `_id, campo, inizio, fine, cliente, telefono, nota, prezzo, "stato": coalesce(stato, "confermata"), pagato, "serie": serie,
-  "lega": lega->nome, "matchId": match._ref, "organizzatoreId": organizzatore._ref`
+  "lega": lega->nome, "matchId": match._ref, "organizzatoreId": organizzatore._ref, email`
 
 // Il centro che gestisco (il primo, se ne gestissi più d'uno).
 export const getMioCentro = cache(async (): Promise<Centro | null> => {

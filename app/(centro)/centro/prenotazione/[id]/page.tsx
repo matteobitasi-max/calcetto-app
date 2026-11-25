@@ -57,6 +57,12 @@ async function Dettaglio({ params }: { params: Promise<{ id: string }> }) {
           <p className="shrink-0 text-2xl font-black tabular-nums">{euro(p.prezzo ?? 0)}</p>
         </div>
 
+        {p.email && (
+          <p className="mt-1 text-sm text-stone-500">
+            ✉️ {p.email}
+            {dallApp ? ' · 🔗 collegata alla sua partita su The Cap' : ''}
+          </p>
+        )}
         {dallApp && (
           <p className="mt-2 inline-block rounded-full bg-sky-100 px-2.5 py-0.5 text-xs font-semibold text-sky-900 dark:bg-sky-950 dark:text-sky-100">
             📱 Prenotata dall’app{p.lega ? ` · lega ${p.lega}` : ''}
