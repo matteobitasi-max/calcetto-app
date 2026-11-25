@@ -99,7 +99,7 @@ async function Calendario({ searchParams }: { searchParams: Promise<Record<strin
     <div className="space-y-4">
       {membri.length > 1 && (
         <FiltroLega
-          leghe={membri.map((x) => ({ id: x.lega._id, nome: x.lega.nome, logo: avatarUrl(x.lega.logo, 64), organizzatore: !!x.isAdmin }))}
+          leghe={membri.map((x) => ({ id: x.lega._id, nome: x.lega.nome, logo: avatarUrl(x.lega.logo, 64), organizzatore: !!x.isAdmin, club: !!x.lega.club && x.lega.tipo === 'squadra' }))}
           scelta={scelta}
           mese={meseCorrente}
         />

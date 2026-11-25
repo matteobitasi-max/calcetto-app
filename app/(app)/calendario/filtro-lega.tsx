@@ -3,9 +3,9 @@
 import { useT } from '@/components/lingua'
 import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState, useTransition } from 'react'
-import { Admin, Stemma } from '@/components/lega-menu'
+import { MarchioLega, Stemma } from '@/components/lega-menu'
 
-export type VoceFiltro = { id: string; nome: string; logo: string | null; organizzatore: boolean }
+export type VoceFiltro = { id: string; nome: string; logo: string | null; organizzatore: boolean; club?: boolean }
 
 // Menu in cima al calendario: tutte le mie leghe (predefinito) o una sola, con logo e pallino "A" se organizzo.
 export function FiltroLega({ leghe, scelta, mese }: { leghe: VoceFiltro[]; scelta: string; mese: string }) {
@@ -53,7 +53,7 @@ export function FiltroLega({ leghe, scelta, mese }: { leghe: VoceFiltro[]; scelt
           <>
             <Stemma lega={attuale} size={28} />
             <span className="min-w-0 flex-1 truncate">{attuale.nome}</span>
-            {attuale.organizzatore && <Admin />}
+            <MarchioLega club={attuale.club} organizzatore={attuale.organizzatore} />
           </>
         ) : (
           <>
@@ -77,7 +77,7 @@ export function FiltroLega({ leghe, scelta, mese }: { leghe: VoceFiltro[]; scelt
             <button key={l.id} type="button" role="option" aria-selected={l.id === scelta} className={voce(l.id === scelta)} onClick={() => scegli(l.id)}>
               <Stemma lega={l} size={24} />
               <span className="min-w-0 flex-1 truncate">{l.nome}</span>
-              {l.organizzatore && <Admin />}
+              <MarchioLega club={l.club} organizzatore={l.organizzatore} />
             </button>
           ))}
         </div>

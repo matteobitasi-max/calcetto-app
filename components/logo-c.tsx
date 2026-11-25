@@ -1,9 +1,12 @@
 // La "C" del logo dell'app: C bianca bordata di verde su campo a strisce (es. accanto a The Cap Pro).
 // Nelle leghe Club PRO i colori vengono dal tema (variabili --logo-*): la C diventa blu.
-// `blu`: sempre la C blu del Club, qualunque sia il tema (es. accanto alle leghe Club nel menu delle leghe).
-const BLU = { campo: '#2563eb', strisce: '#1d4ed8', bordo: '#1e3a8a', c: '#1e40af' }
-export function LogoC({ size = 22, blu = false }: { size?: number; blu?: boolean }) {
-  const colore = (nome: keyof typeof BLU, base: string) => (blu ? BLU[nome] : `var(--logo-${nome}, ${base})`)
+// `tinta`: colori fissi, qualunque sia il tema: blu per le leghe Club, verde per quelle tra amici (es. nel menu delle leghe).
+const TINTE = {
+  blu: { campo: '#2563eb', strisce: '#1d4ed8', bordo: '#1e3a8a', c: '#1e40af' },
+  verde: { campo: '#2a9d46', strisce: '#1f8a3c', bordo: '#14532d', c: '#166534' },
+}
+export function LogoC({ size = 22, tinta }: { size?: number; tinta?: keyof typeof TINTE }) {
+  const colore = (nome: keyof (typeof TINTE)['blu'], base: string) => (tinta ? TINTE[tinta][nome] : `var(--logo-${nome}, ${base})`)
   const c = 'M8.2 5.5h7.6l2.7 2.7v2.4h-4.2V9.3h-3.6v5.4h3.6v-1.3h4.2v2.4l-2.7 2.7H8.2l-2.7-2.7V8.2z'
   return (
     <svg viewBox="0 0 24 24" width={size} height={size} aria-hidden className="shrink-0 drop-shadow-sm">

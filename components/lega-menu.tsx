@@ -13,12 +13,18 @@ export const Admin = () => <PallinoAdmin title={useT()('Sei organizzatore')} />
 /** `organizzatore`: sono organizzatore di questa lega (mostra il pallino "A"). `club`: squadra del Club PRO (la C blu). */
 export type LegaVoce = { id: string; nome: string; logo: string | null; organizzatore?: boolean; club?: boolean }
 
-// La C blu di The Cap accanto al nome delle leghe Club PRO.
-const MarchioClub = () => (
-  <span title="The Cap Club PRO" className="inline-flex shrink-0">
-    <LogoC size={18} blu />
-  </span>
-)
+// Un solo logo accanto al nome della lega: la C blu per le leghe Club PRO, la C verde per quelle tra amici
+// in cui sono organizzatore. I colori sono fissi: non cambiano con il tema della lega attiva.
+export function MarchioLega({ club, organizzatore }: { club?: boolean; organizzatore?: boolean }) {
+  const t = useT()
+  if (!club && !organizzatore) return null
+  const titolo = club ? `The Cap Club PRO${organizzatore ? ` · ${t('Sei organizzatore')}` : ''}` : t('Sei organizzatore')
+  return (
+    <span title={titolo} className="inline-flex shrink-0">
+      <LogoC size={20} tinta={club ? 'blu' : 'verde'} />
+    </span>
+  )
+}
 
 export function Stemma({ lega, size = 28 }: { lega: Pick<LegaVoce, 'nome' | 'logo'>; size?: number }) {
   return lega.logo ? (
@@ -79,8 +85,7 @@ export function LegaMenu({
         aria-expanded={open}
       >
         <span className="truncate font-semibold">{pending ? t('Cambio lega…') : corrente.nome}</span>
-        {!pending && corrente.club && <MarchioClub />}
-        {!pending && corrente.organizzatore && <Admin />}
+        {!pending && <MarchioLega club={corrente.club} organizzatore={corrente.organizzatore} />}
         <span className="text-xs text-zinc-500" aria-hidden>
           ▾
         </span>
@@ -109,8 +114,7 @@ export function LegaMenu({
                 >
                   <Stemma lega={l} size={24} />
                   <span className="min-w-0 flex-1 truncate">{l.nome}</span>
-                  {l.club && <MarchioClub />}
-                  {l.organizzatore && <Admin />}
+                  <MarchioLega club={l.club} organizzatore={l.organizzatore} />
                 </button>
               ))}
               <hr className="my-2 border-zinc-200 dark:border-zinc-800" />
