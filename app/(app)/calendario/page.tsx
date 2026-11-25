@@ -143,10 +143,11 @@ async function Calendario({ searchParams }: { searchParams: Promise<Record<strin
             return (
               <Link key={key} href={url({ giorno: key })} scroll={false} className={`${base} ${colore}`} aria-current={key === giornoScelto ? 'date' : undefined}>
                 {giorno}
+                {/* P = partita, A = allenamento (una lettera per impegno, al massimo tre) */}
                 {partite && (
-                  <span className="text-[10px] font-normal leading-none">
-                    {partite.every(isAllenamento) ? '🏃' : '⚽'}
-                    {partite.length > 1 && `×${partite.length}`}
+                  <span className="text-[10px] font-semibold leading-none tracking-tight">
+                    {partite.slice(0, 3).map((p) => (isAllenamento(p) ? t('A') : t('P'))).join('')}
+                    {partite.length > 3 && '+'}
                   </span>
                 )}
               </Link>
@@ -159,6 +160,10 @@ async function Calendario({ searchParams }: { searchParams: Promise<Record<strin
           <span><span className="mr-1 inline-block h-2 w-2 rounded-full bg-green-600" />{t('convocazioni aperte')}</span>
           <span><span className="mr-1 inline-block h-2 w-2 rounded-full bg-blue-600" />{t('convocazioni chiuse')}</span>
           <span><span className="mr-1 inline-block h-2 w-2 rounded-full bg-zinc-400" />{t('giocata')}</span>
+          <span>
+            <b className="font-semibold text-zinc-700 dark:text-zinc-300">{t('P')}</b> {t('Partita').toLowerCase()} ·{' '}
+            <b className="font-semibold text-zinc-700 dark:text-zinc-300">{t('A')}</b> {t('Allenamento').toLowerCase()}
+          </span>
           <span>· {t('tocca un giorno per vederne le partite')}</span>
         </div>
       </Card>
@@ -243,10 +248,15 @@ function GiornoScelto({
       {partite.map((match) => (
         <Link key={match._id} href={`/partite/${match._id}`} className="flex items-center justify-between gap-2 px-4 py-3 text-sm hover:bg-zinc-50 dark:hover:bg-zinc-800">
           <span className="min-w-0">
-            <span className="block font-semibold">
-              {isAllenamento(match) ? `🏃 ${t('Allenamento')} · ` : '🏟️ '}
-              {segno.get(match.legaId)}
+            {/* in cima: che impegno è */}
+            <span
+              className={`mb-1 inline-block rounded px-1.5 py-0.5 text-[11px] font-bold uppercase tracking-wide ${
+                isAllenamento(match) ? 'bg-sky-100 text-sky-800 dark:bg-sky-950 dark:text-sky-300' : 'bg-green-100 text-green-800 dark:bg-green-950 dark:text-green-300'
+              }`}
+            >
+              {isAllenamento(match) ? `🏃 ${t('Allenamento')}` : `⚽ ${t('Partita')}`}
             </span>
+            <span className="block font-semibold">{segno.get(match.legaId)}</span>
             <span className="block truncate text-zinc-500">
               {t.ora(match.data)} · {match.luogo} · {presenti(match).length}/{match.postiDisponibili}
             </span>

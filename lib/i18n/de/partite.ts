@@ -378,4 +378,6 @@ export const partite: Record<string, string> = {
   "Disponibili": "Verfügbar",
   "Trascina i giocatori sul campo; dal campo qui per toglierli.": "Ziehe Spieler aufs Feld; zurück hierher, um sie herauszunehmen.",
   "Nelle altre leghe": "In deinen anderen Ligen",
+  "P": "S",
+  "A": "T",
 }
