@@ -1,5 +1,6 @@
 import 'server-only'
 import { getAllStats, getPagelleLega, getPlayers } from './matches'
+import { periodoInCorso, type Stagione } from './stagioni'
 import { SKILLS, displayName, indisponibileIl, isAllenatore, overall, type Player, type Skill } from './roster'
 import { isoToRomeLocal } from './dates'
 
@@ -21,8 +22,10 @@ export type RigaRosa = {
 export const COLONNE_ORDINE = ['numero', 'nome', 'ruolo', 'voto', 'partite', 'gol', 'mvp', 'pagella', ...(Object.keys(SKILLS) as Skill[])] as const
 export type Ordine = (typeof COLONNE_ORDINE)[number]
 
-export async function righeRosa(legaId: string, club: boolean, ordine: Ordine = 'voto'): Promise<RigaRosa[]> {
-  const [players, stats, pagelle] = await Promise.all([getPlayers(legaId), getAllStats(legaId), club ? getPagelleLega(legaId) : null])
+// Partite, gol, MVP e pagelle della stagione in corso (dall'ultima stagione terminata).
+export async function righeRosa(legaId: string, club: boolean, ordine: Ordine = 'voto', stagioni?: Stagione[]): Promise<RigaRosa[]> {
+  const periodo = periodoInCorso(stagioni)
+  const [players, stats, pagelle] = await Promise.all([getPlayers(legaId), getAllStats(legaId, periodo), club ? getPagelleLega(legaId, periodo) : null])
   const oggi = isoToRomeLocal(new Date().toISOString()).slice(0, 10)
   const righe = players
     .filter((p) => p.attivo !== false)

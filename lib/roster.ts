@@ -1,3 +1,4 @@
+import type { Stagione } from './stagioni'
 // Tipi e calcoli sui giocatori, senza dipendenze server: usabili ovunque.
 
 export const SKILLS = {
@@ -92,6 +93,8 @@ export type SanityImage = { asset?: { _ref: string }; hotspot?: unknown; crop?: 
 export type Lega = {
   _id: string
   nome: string
+  /** Le stagioni chiuse (Impostazioni lega › Termina stagione): periodo e nome. */
+  stagioni?: Stagione[]
   /** Club attivo (per ora lo accende il titolare): sblocca il tipo "Squadra". */
   club?: boolean
   /** Squadra con allenatore: convocati scelti dall'allenatore, indisponibili. Senza: lega tra amici. */

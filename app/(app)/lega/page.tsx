@@ -1,5 +1,8 @@
 import { Suspense } from 'react'
-import { aggiungiFotoSorpresa, rigeneraInvito, rimuoviFotoSorpresa, salvaInterviste, salvaLega, salvaPagamentiLega } from '@/app/actions'
+import { aggiungiFotoSorpresa, rigeneraInvito, rimuoviFotoSorpresa, riapriUltimaStagione, salvaInterviste, salvaLega, salvaPagamentiLega, terminaStagione } from '@/app/actions'
+import Link from 'next/link'
+import { sanity } from '@/lib/sanity'
+import { nomeProposto, periodoInCorso, stagioniOrdinate, type Stagione as StagioneLega } from '@/lib/stagioni'
 import { linkPlaylist } from '@/lib/interviste'
 import { FotoSorpreseEditor } from '@/components/foto-sorprese'
 import { isTitolare, requireAdmin } from '@/lib/player'
@@ -11,7 +14,7 @@ import { LegaNomeLogo } from '@/components/lega-nome-logo'
 import { PillSalva } from '@/components/pill-salva'
 import { SatispaySetup } from '@/components/satispay-setup'
 import { SubmitButton } from '@/components/submit-button'
-import { Card, Field, Loading, PageTitle, inputClass } from '@/components/ui'
+import { Card, Field, Loading, PageTitle, buttonClass, inputClass } from '@/components/ui'
 import { TipoLega } from '@/components/tipo-lega'
 import { getT } from '@/lib/lingua'
 
@@ -46,6 +49,10 @@ async function Impostazioni() {
       </Card>
 
       <TipoLega lega={lega} />
+
+      <Suspense>
+        <Stagione legaId={lega._id} stagioni={lega.stagioni} />
+      </Suspense>
 
       <Card className="space-y-3">
         <h2 className="font-semibold">📨 {t('Invita giocatori')}</h2>
@@ -106,5 +113,66 @@ async function Impostazioni() {
         </Card>
       )}
     </div>
+  )
+}
+
+// La stagione: si chiude con un nome (es. 2025/26) e ne inizia una nuova. Niente si cancella: classifica,
+// statistiche e rosa ripartono da zero e le stagioni chiuse restano nelle Statistiche.
+async function Stagione({ legaId, stagioni }: { legaId: string; stagioni?: StagioneLega[] }) {
+  const t = await getT()
+  const { dal } = periodoInCorso(stagioni)
+  // l'inizio della stagione in corso: la fine della precedente o la prima partita della lega
+  const inizio =
+    dal ?? (await sanity.fetch<string | null>(`*[_type == "match" && lega._ref == $legaId] | order(data asc)[0].data`, { legaId }).catch(() => null)) ?? undefined
+  const chiuse = stagioniOrdinate(stagioni)
+  const giorno = (iso: string) => t.data(iso, { day: 'numeric', month: 'short', year: 'numeric' })
+  return (
+    <Card className="space-y-3">
+      <div>
+        <h2 className="font-semibold">🏁 {t('Stagione')}</h2>
+        <p className="text-sm text-zinc-500">
+          {t('Quando la stagione finisce, terminala: viene salvata con il suo nome e classifica, statistiche e rosa ripartono da zero. Le partite non si cancellano e le stagioni passate restano nelle Statistiche.')}
+        </p>
+      </div>
+      <p className="text-sm">
+        <b>{t('Stagione in corso')}</b> · {inizio ? t('dal {data}', { data: giorno(inizio) }) : t('nessuna partita ancora')}
+      </p>
+      <ActionForm action={terminaStagione.bind(null, legaId)} className="flex flex-wrap items-end gap-2">
+        <Field label={t('Nome della stagione')}>
+          <input name="nome" required maxLength={30} defaultValue={nomeProposto(inizio, new Date().toISOString())} className={`${inputClass} w-40`} />
+        </Field>
+        <SubmitButton
+          className={buttonClass('danger')}
+          confirm={t('Terminare la stagione? Classifica, statistiche e rosa ripartono da zero; la stagione resta consultabile nelle Statistiche.')}
+        >
+          {t('Termina stagione')}
+        </SubmitButton>
+      </ActionForm>
+      {chiuse.length > 0 && (
+        <div className="space-y-1 border-t border-zinc-200 pt-3 dark:border-zinc-800">
+          <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">{t('Stagioni passate')}</p>
+          {chiuse.map((s, i) => (
+            <div key={s._key} className="flex items-center justify-between gap-2 text-sm">
+              <Link href={`/classifica?stagione=${s._key}`} className="min-w-0 truncate hover:underline">
+                <b>{s.nome}</b>
+                <span className="text-zinc-500">
+                  {' '}
+                  · {s.dal ? `${giorno(s.dal)} – ` : `${t('fino al')} `}
+                  {giorno(s.al)}
+                </span>
+              </Link>
+              {/* solo l'ultima si può riaprire (se è stata chiusa per sbaglio) */}
+              {i === 0 && (
+                <form action={riapriUltimaStagione.bind(null, legaId)}>
+                  <SubmitButton className="text-xs text-red-600 hover:underline" confirm={t('Riaprire la stagione {nome}? Le sue partite tornano nella stagione in corso.', { nome: s.nome })}>
+                    {t('Riapri')}
+                  </SubmitButton>
+                </form>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </Card>
   )
 }

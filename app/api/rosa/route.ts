@@ -8,7 +8,7 @@ export async function GET() {
   const me = await requirePlayer()
   if (!me.isAdmin) return new Response('Solo gli organizzatori', { status: 403 })
   const club = !!me.lega.club && me.lega.tipo === 'squadra'
-  const [righe, t] = await Promise.all([righeRosa(me.lega._id, club, 'nome'), getT()])
+  const [righe, t] = await Promise.all([righeRosa(me.lega._id, club, 'nome', me.lega.stagioni), getT()])
   const skills = Object.keys(SKILLS) as Skill[]
   const cella = (v: string | number | null | undefined) => {
     const s = v == null ? '' : typeof v === 'number' ? String(v).replace('.', ',') : v

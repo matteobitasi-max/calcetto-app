@@ -6,6 +6,7 @@ import { refresh, revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { sanity } from '@/lib/sanity'
 import { leggiCampo } from '@/lib/campo'
+import { periodoInCorso } from '@/lib/stagioni'
 import { BADGE, CATEGORIE_NOTIFICHE, COOKIE_LEGA, eta, leggiRuolo, normalizzaTelefono, PIEDI, RUOLI, SKILLS, displayName, requirePlayer, getUtente, getMemberships, isTitolare, membroDi, soloGiocatore, requireAdmin, requireForDoc, requireIn, type Player, type Skill } from '@/lib/player'
 import { assegnaPosti, conSelezione, finestra, getMatch, getPartiteTorneo, getPlayers, orarioPartita, presenti, risultatoDa, type FonteKm, type Match, type Risposta, type Stato } from '@/lib/matches'
 import { idPlaylist, intervisteDellaPlaylist } from '@/lib/interviste'
@@ -1305,6 +1306,42 @@ export async function aggiornaClub(legaId: string | null): Promise<FormState> {
     }
     await sanity.patch(legaId).set({ club: true, tipo: 'squadra', clubDi: utente.id }).commit()
   }
+  revalidatePath('/', 'layout')
+}
+
+// ---------- Stagioni ----------
+
+// Termina la stagione in corso: si salva il periodo (dalla fine della precedente a adesso) con il nome scelto,
+// es. "2025/26". Niente si cancella: classifica, statistiche e rosa ripartono da zero e la stagione chiusa
+// resta consultabile nelle Statistiche.
+export async function terminaStagione(legaId: string, _prev: FormState, formData: FormData): Promise<FormState> {
+  const admin = await requireIn(legaId, 'organizzatore')
+  const nome = str(formData, 'nome').slice(0, 30)
+  if (!nome) return { error: await tr('Dai un nome alla stagione (es. 2025/26).') }
+  const stagioni = admin.lega.stagioni ?? []
+  if (stagioni.some((s) => s.nome.toLowerCase() === nome.toLowerCase())) return { error: await tr('C’è già una stagione con questo nome.') }
+  const { dal } = periodoInCorso(stagioni)
+  const al = new Date().toISOString()
+  // una stagione senza nessuna partita non ha senso: si evita di chiuderne una vuota per sbaglio
+  const partite = await sanity.fetch<number>(
+    `count(*[_type == "match" && lega._ref == $lega && data < $al ${dal ? '&& data >= $dal' : ''} && coalesce(stato, "aperta") != "annullata"])`,
+    { lega: legaId, al, ...(dal && { dal }) },
+  )
+  if (partite === 0) return { error: await tr('In questa stagione non ci sono ancora partite.') }
+  await sanity
+    .patch(legaId)
+    .setIfMissing({ stagioni: [] })
+    .append('stagioni', [{ _key: randomUUID(), nome, ...(dal && { dal }), al }])
+    .commit()
+  revalidatePath('/', 'layout')
+}
+
+// Riapre l'ultima stagione chiusa (se è stata terminata per sbaglio): le sue partite tornano in quella in corso.
+export async function riapriUltimaStagione(legaId: string) {
+  const admin = await requireIn(legaId, 'organizzatore')
+  const ultima = [...(admin.lega.stagioni ?? [])].sort((a, b) => a.al.localeCompare(b.al)).at(-1)
+  if (!ultima) return
+  await sanity.patch(legaId).unset([`stagioni[_key == "${ultima._key}"]`]).commit()
   revalidatePath('/', 'layout')
 }
 

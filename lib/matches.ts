@@ -1,5 +1,6 @@
 import 'server-only'
 import type { Campo } from './campo'
+import type { Periodo } from './stagioni'
 import { sanity } from './sanity'
 import { playerFields, type Player } from './roster'
 import type { PartitaPunteggio } from './punteggio'
@@ -158,16 +159,20 @@ export type PlayerStats = { giocate: number; vinte: number; pari: number; perse:
 
 const vuote = (): PlayerStats => ({ giocate: 0, vinte: 0, pari: 0, perse: 0, gol: 0, gs: 0, mvp: 0 })
 
+// Solo le partite di un periodo (una stagione): filtro e parametri da aggiungere alla ricerca.
+const nelPeriodo = (p?: Periodo) => `${p?.dal ? ' && data >= $dal' : ''}${p?.al ? ' && data < $al' : ''}`
+const parametriPeriodo = (p?: Periodo) => ({ ...(p?.dal && { dal: p.dal }), ...(p?.al && { al: p.al }) })
+
 // Statistiche di tutti i giocatori dalle partite giocate:
 // gol = gol segnati, gs = gol subiti dalla sua squadra, mvp = volte MVP.
-export async function getAllStats(legaId: string): Promise<Map<string, PlayerStats>> {
+export async function getAllStats(legaId: string, periodo?: Periodo): Promise<Map<string, PlayerStats>> {
   const matches = await sanity.fetch<
     { a: string[]; b: string[]; golA?: number; golB?: number; marcatori: { id: string; gol: number }[]; mvp?: string }[]
-  >(`*[_type == "match" && lega._ref == $legaId && stato == "giocata" && defined(risultato.golA)]{
+  >(`*[_type == "match" && lega._ref == $legaId${nelPeriodo(periodo)} && stato == "giocata" && defined(risultato.golA)]{
     "a": coalesce(squadraA[]._ref, []), "b": coalesce(squadraB[]._ref, []),
     "golA": risultato.golA, "golB": risultato.golB,
     "marcatori": coalesce(marcatori[]{"id": giocatore._ref, gol}, []), "mvp": mvp._ref
-  }`, { legaId })
+  }`, { legaId, ...parametriPeriodo(periodo) })
 
   const stats = new Map<string, PlayerStats>()
   const get = (id: string) => stats.get(id) ?? stats.set(id, vuote()).get(id)!
@@ -267,14 +272,14 @@ export async function getStorico(id: string, limit = 10): Promise<PartitaGiocata
 }
 
 // Le partite giocate della lega, in ordine di data, per la classifica a punti.
-export function getPartitePunteggio(legaId: string) {
+export function getPartitePunteggio(legaId: string, periodo?: Periodo) {
   return sanity.fetch<PartitaPunteggio[]>(
-    `*[_type == "match" && lega._ref == $legaId && stato == "giocata" && defined(risultato.golA)] | order(data asc){
+    `*[_type == "match" && lega._ref == $legaId${nelPeriodo(periodo)} && stato == "giocata" && defined(risultato.golA)] | order(data asc){
       "a": coalesce(squadraA[]._ref, []), "b": coalesce(squadraB[]._ref, []),
       "golA": risultato.golA, "golB": risultato.golB,
       "marcatori": coalesce(marcatori[]{"id": giocatore._ref, gol}, []), "mvp": mvp._ref
     }`,
-    { legaId },
+    { legaId, ...parametriPeriodo(periodo) },
   )
 }
 
@@ -286,10 +291,10 @@ export function formatoInCorso(m: Match) {
 }
 
 // Pagelle di tutta la lega: media e numero di voti per giocatore.
-export async function getPagelleLega(legaId: string) {
+export async function getPagelleLega(legaId: string, periodo?: Periodo) {
   const voti = await sanity.fetch<{ id: string; voto: number }[]>(
-    `*[_type == "match" && lega._ref == $legaId && coalesce(stato, "aperta") != "annullata" && count(pagelle) > 0].pagelle[]{"id": giocatore._ref, voto}`,
-    { legaId },
+    `*[_type == "match" && lega._ref == $legaId${nelPeriodo(periodo)} && coalesce(stato, "aperta") != "annullata" && count(pagelle) > 0].pagelle[]{"id": giocatore._ref, voto}`,
+    { legaId, ...parametriPeriodo(periodo) },
   )
   const per = new Map<string, { somma: number; n: number }>()
   for (const v of voti) {
@@ -301,12 +306,12 @@ export async function getPagelleLega(legaId: string) {
 }
 
 // Presenze agli allenamenti già fatti (non annullati): quanti allenamenti in tutto e quanti per giocatore (in lista).
-export async function getPresenzeAllenamenti(legaId: string) {
+export async function getPresenzeAllenamenti(legaId: string, periodo?: Periodo) {
   const allenamenti = await sanity.fetch<{ presenti: string[] | null }[]>(
-    `*[_type == "match" && lega._ref == $legaId && tipo == "allenamento" && coalesce(stato, "aperta") != "annullata" && data < $ora]{
+    `*[_type == "match" && lega._ref == $legaId${nelPeriodo(periodo)} && tipo == "allenamento" && coalesce(stato, "aperta") != "annullata" && data < $ora]{
       "presenti": convocazioni[risposta == "presente"].giocatore._ref
     }`,
-    { legaId, ora: new Date().toISOString() },
+    { legaId, ora: new Date().toISOString(), ...parametriPeriodo(periodo) },
   )
   const per = new Map<string, number>()
   for (const a of allenamenti) for (const id of a.presenti ?? []) per.set(id, (per.get(id) ?? 0) + 1)
@@ -327,10 +332,10 @@ export async function getPagelleGiocatore(legaId: string, giocatoreId: string) {
 
 // Km totali di ogni giocatore nelle partite della lega. Contano tutte quelle non annullate, anche senza
 // risultato inserito: i km ci sono solo a partita finita e non dipendono dal risultato.
-export async function getKmTotali(legaId: string) {
+export async function getKmTotali(legaId: string, periodo?: Periodo) {
   const partite = await sanity.fetch<{ d: { id: string; km: number }[] }[]>(
-    `*[_type == "match" && lega._ref == $legaId && coalesce(stato, "aperta") != "annullata" && count(distanze) > 0]{"d": distanze[]{"id": giocatore._ref, km}}`,
-    { legaId },
+    `*[_type == "match" && lega._ref == $legaId${nelPeriodo(periodo)} && coalesce(stato, "aperta") != "annullata" && count(distanze) > 0]{"d": distanze[]{"id": giocatore._ref, km}}`,
+    { legaId, ...parametriPeriodo(periodo) },
   )
   const totali = new Map<string, { km: number; partite: number }>()
   for (const { d } of partite) {
@@ -343,14 +348,14 @@ export async function getKmTotali(legaId: string) {
 }
 
 // La partita in cui qualcuno ha corso di più nella lega (record), e i km totali di tutta la lega.
-export async function getKmRecord(legaId: string) {
+export async function getKmRecord(legaId: string, periodo?: Periodo) {
   return sanity.fetch<{ record: { id: string; km: number; data: string } | null; totale: number }>(
     `{
-      "record": *[_type == "match" && lega._ref == $legaId && coalesce(stato, "aperta") != "annullata" && count(distanze) > 0]{data, "d": distanze[]{"id": giocatore._ref, km}}
+      "record": *[_type == "match" && lega._ref == $legaId${nelPeriodo(periodo)} && coalesce(stato, "aperta") != "annullata" && count(distanze) > 0]{data, "d": distanze[]{"id": giocatore._ref, km}}
         {"migliore": d | order(km desc)[0], data} | order(migliore.km desc)[0]{"id": migliore.id, "km": migliore.km, data},
-      "totale": math::sum(*[_type == "match" && lega._ref == $legaId && coalesce(stato, "aperta") != "annullata"].distanze[].km)
+      "totale": math::sum(*[_type == "match" && lega._ref == $legaId${nelPeriodo(periodo)} && coalesce(stato, "aperta") != "annullata"].distanze[].km)
     }`,
-    { legaId },
+    { legaId, ...parametriPeriodo(periodo) },
   )
 }
 

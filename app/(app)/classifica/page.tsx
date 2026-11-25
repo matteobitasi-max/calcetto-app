@@ -10,6 +10,7 @@ import { KmBloccati, KmPercorsi } from '@/components/km-classifica'
 import { PUNTI, classifica, type RigaClassifica } from '@/lib/punteggio'
 import { Avatar, Card, Loading, PageTitle, PlayerBadge, coloreVoto } from '@/components/ui'
 import { getT } from '@/lib/lingua'
+import { periodoScelto, stagioniOrdinate, type Periodo } from '@/lib/stagioni'
 import type { T } from '@/lib/i18n'
 
 // Statistiche: due viste con la pillola in alto. Di base "Statistiche" nelle leghe Club Allenatore,
@@ -27,32 +28,62 @@ export default async function StatistichePage({ searchParams }: PageProps<'/clas
 }
 
 async function Viste({ searchParams }: { searchParams: PageProps<'/classifica'>['searchParams'] }) {
-  const [{ vista }, me, t] = await Promise.all([searchParams, requirePlayer(), getT()])
+  const [{ vista, stagione }, me, t] = await Promise.all([searchParams, requirePlayer(), getT()])
   const club = !!me.lega.club && me.lega.tipo === 'squadra'
   const statistiche = vista === 'statistiche' || (vista !== 'classifica' && club)
+  // la stagione da guardare: quella in corso (predefinita), una chiusa o tutte insieme
+  const { chiave, periodo } = periodoScelto(stagione, me.lega.stagioni)
+  const chiuse = stagioniOrdinate(me.lega.stagioni)
+  const href = (v: string, s: string) => `/classifica?vista=${v}${s === 'corso' ? '' : `&stagione=${s}`}`
+  const v = statistiche ? 'statistiche' : 'classifica'
   return (
     <div className="space-y-4">
       <PillScelta
         voci={[
-          { href: '/classifica?vista=classifica', label: `🏅 ${t('Classifica')}`, attiva: !statistiche },
-          { href: '/classifica?vista=statistiche', label: `📊 ${t('Statistiche')}`, attiva: statistiche },
+          { href: href('classifica', chiave), label: `🏅 ${t('Classifica')}`, attiva: !statistiche },
+          { href: href('statistiche', chiave), label: `📊 ${t('Statistiche')}`, attiva: statistiche },
         ]}
       />
-      {statistiche ? <Statistiche club={club} /> : <Classifiche />}
+      {/* con almeno una stagione chiusa: si sceglie quale guardare */}
+      {chiuse.length > 0 && (
+        <nav className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 text-sm" aria-label={t('Stagione')}>
+          {[
+            { k: 'corso', label: t('Stagione in corso') },
+            ...chiuse.map((s) => ({ k: s._key, label: s.nome })),
+            { k: 'tutte', label: t('Sempre') },
+          ].map((x) => (
+            <Link
+              key={x.k}
+              href={href(v, x.k)}
+              replace
+              scroll={false}
+              aria-current={x.k === chiave ? 'page' : undefined}
+              className={`shrink-0 rounded-full border px-3 py-1 font-medium ${
+                x.k === chiave
+                  ? 'border-zinc-900 bg-zinc-900 text-white dark:border-white dark:bg-white dark:text-zinc-900'
+                  : 'border-zinc-300 text-zinc-600 hover:border-zinc-500 dark:border-zinc-700 dark:text-zinc-300'
+              }`}
+            >
+              {x.label}
+            </Link>
+          ))}
+        </nav>
+      )}
+      {statistiche ? <Statistiche club={club} periodo={periodo} /> : <Classifiche periodo={periodo} />}
     </div>
   )
 }
 
 type Riga = { player: Player; s: PlayerStats }
 
-async function Classifiche() {
+async function Classifiche({ periodo }: { periodo: Periodo }) {
   const [me, t] = await Promise.all([requirePlayer(), getT()])
   const [players, stats, partite, km, record, pro] = await Promise.all([
     getPlayers(me.lega._id),
-    getAllStats(me.lega._id),
-    getPartitePunteggio(me.lega._id),
-    getKmTotali(me.lega._id),
-    getKmRecord(me.lega._id),
+    getAllStats(me.lega._id, periodo),
+    getPartitePunteggio(me.lega._id, periodo),
+    getKmTotali(me.lega._id, periodo),
+    getKmRecord(me.lega._id, periodo),
     legaPro(me.lega._id),
   ])
   const righe: Riga[] = players.flatMap((player) => {
@@ -218,15 +249,15 @@ function Generale({ righe, giocatori, mioId, t }: { righe: RigaClassifica[]; gio
 
 // Vista "Statistiche": rendimento di ogni giocatore e, con il Club Allenatore, pagelle, presenze agli
 // allenamenti, indisponibili e dati da Veo. Senza Club le parti del Club si vedono, bloccate.
-async function Statistiche({ club }: { club: boolean }) {
+async function Statistiche({ club, periodo }: { club: boolean; periodo: Periodo }) {
   const [me, t] = await Promise.all([requirePlayer(), getT()])
   if (!club) return <StatisticheBloccate legaId={me.isAdmin ? me.lega._id : undefined} t={t} />
   const [players, stats, km, pagelle, allenamenti] = await Promise.all([
     getPlayers(me.lega._id),
-    getAllStats(me.lega._id),
-    getKmTotali(me.lega._id),
-    club ? getPagelleLega(me.lega._id) : new Map<string, { media: number; n: number }>(),
-    club ? getPresenzeAllenamenti(me.lega._id) : { totale: 0, per: new Map<string, number>() },
+    getAllStats(me.lega._id, periodo),
+    getKmTotali(me.lega._id, periodo),
+    club ? getPagelleLega(me.lega._id, periodo) : new Map<string, { media: number; n: number }>(),
+    club ? getPresenzeAllenamenti(me.lega._id, periodo) : { totale: 0, per: new Map<string, number>() },
   ])
   const attivi = players.filter((p) => p.attivo !== false)
   const numero = (n: number) => t.numero(Math.round(n * 10) / 10)

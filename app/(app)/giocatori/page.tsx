@@ -24,7 +24,7 @@ async function Rosa({ searchParams }: { searchParams: PageProps<'/giocatori'>['s
   // computer: la rosa in tabella, ordinata dalla colonna scelta (di base il voto)
   const club = !!me.lega.club && me.lega.tipo === 'squadra'
   const ordine = (COLONNE_ORDINE as readonly string[]).includes(String(ordina)) ? (ordina as Ordine) : 'voto'
-  const righeTabella = await righeRosa(me.lega._id, club, ordine)
+  const righeTabella = await righeRosa(me.lega._id, club, ordine, me.lega.stagioni)
   const [players, prossime, pro, mioPro] = await Promise.all([
     getPlayers(me.lega._id),
     me.isAdmin ? getUpcomingMatches(me.lega._id) : [],
