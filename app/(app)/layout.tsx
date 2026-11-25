@@ -90,6 +90,7 @@ async function LegaEUtente() {
     nome: m.lega.nome,
     logo: avatarUrl(m.lega.logo, 64),
     organizzatore: !!m.isAdmin && !m.ospite,
+    club: !!m.lega.club && m.lega.tipo === 'squadra',
   })
   return (
     <>
