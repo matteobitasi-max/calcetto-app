@@ -1,4 +1,7 @@
 import Link from 'next/link'
+import { cookies } from 'next/headers'
+import { redirect } from 'next/navigation'
+import { COOKIE_MODO } from '@/lib/modo'
 import { VaiA } from '@/components/vai-a'
 import { Suspense, type ReactNode } from 'react'
 import { IntervisteLega } from '@/components/interviste-lega'
@@ -36,7 +39,9 @@ export default function Home() {
 const breve = { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' } as const
 
 async function Partite() {
-  const [player, mie, utente, t] = await Promise.all([getCurrentPlayer(), getMemberships(), getUtente(), getT()])
+  const [player, mie, utente, t, modo] = await Promise.all([getCurrentPlayer(), getMemberships(), getUtente(), getT(), cookies().then((c) => c.get(COOKIE_MODO)?.value)])
+  // scelto "Centro sportivo" prima dell'accesso (o dal menu): si apre il gestionale
+  if (modo === 'centro') redirect('/centro')
   // primo accesso (anche chi entra già in una lega, es. aggiunto con la sua email): prima il profilo
   if (utente?.daCompletare) return <VaiA href={'/completa-profilo?dopo=/'} />
   // Nessuna lega: si sceglie se crearne una o entrare con un invito.

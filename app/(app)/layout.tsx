@@ -18,6 +18,7 @@ import { RiprendiInvito } from '@/components/invito-app'
 import { KmAutomatici } from '@/components/km-automatici'
 import { getT } from '@/lib/lingua'
 import { wrapDaProporre } from '@/lib/wrap'
+import { getMioCentro } from '@/lib/centro'
 import { WrapInvito } from '@/components/wrap-invito'
 
 
@@ -85,7 +86,7 @@ async function MenuLateraleLega() {
 
 // La lega attiva (con il menu per cambiarla) e la mia foto, che apre il mio profilo.
 async function LegaEUtente() {
-  const [me, leghe, titolare, t] = await Promise.all([getCurrentPlayer(), getMemberships(), isTitolare(), getT()])
+  const [me, leghe, titolare, t, centro] = await Promise.all([getCurrentPlayer(), getMemberships(), isTitolare(), getT(), getMioCentro().catch(() => null)])
   // Chi non è (ancora) in nessuna lega ha comunque bisogno del menu Clerk per uscire.
   if (!me) {
     return (
@@ -121,6 +122,7 @@ async function LegaEUtente() {
           organizzatore={!!me.isAdmin}
           titolare={titolare}
           ospite={!!me.ospite}
+          centro={centro?.nome}
         />
       </div>
       <Link

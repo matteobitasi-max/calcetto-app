@@ -1,6 +1,7 @@
 import Image from 'next/image'
 import { Suspense } from 'react'
 import { AccessoNativo } from '@/components/accesso-nativo'
+import { SceltaProfilo } from '@/components/scelta-profilo'
 import { getT } from '@/lib/lingua'
 import { MenuLingua } from '@/components/menu-lingua'
 
@@ -18,7 +19,9 @@ export default async function SignUpPage() {
         <p className="text-zinc-500">{t('Crea la tua Squadra')}</p>
       </div>
       <Suspense>
-        <AccessoNativo registrati />
+        <SceltaProfilo>
+          <AccessoNativo registrati />
+        </SceltaProfilo>
       </Suspense>
     </main>
   )

@@ -1,12 +1,12 @@
-import { getCurrentPlayer } from '@/lib/player'
+import { getCurrentPlayer, getUtente } from '@/lib/player'
 import { cercaCampi, dettagliCampo } from '@/lib/google-maps'
 import { getLingua } from '@/lib/lingua'
 
 // Ricerca del campo per i moduli (partita, partita ricorrente): ?q=testo per i suggerimenti, ?id=posto per
-// il posto scelto. Solo per chi ha fatto l'accesso (proxy.ts) ed è in una lega.
+// il posto scelto. Solo per chi ha fatto l'accesso (proxy.ts): giocatori e gestori dei centri sportivi.
 export async function GET(request: Request) {
+  if (!(await getUtente())) return Response.json({ error: 'Non autorizzato' }, { status: 401 })
   const me = await getCurrentPlayer()
-  if (!me) return Response.json({ error: 'Non autorizzato' }, { status: 401 })
   const url = new URL(request.url)
   const sessione = (url.searchParams.get('s') ?? '').slice(0, 64)
   if (!/^[\w-]{8,64}$/.test(sessione)) return Response.json({ error: 'Sessione mancante' }, { status: 400 })
@@ -20,7 +20,7 @@ export async function GET(request: Request) {
     }
     const q = (url.searchParams.get('q') ?? '').trim().slice(0, 100)
     if (q.length < 3) return Response.json({ suggerimenti: [] })
-    return Response.json({ suggerimenti: await cercaCampi(q, sessione, me.lega.citta, lingua) })
+    return Response.json({ suggerimenti: await cercaCampi(q, sessione, me?.lega.citta, lingua) })
   } catch {
     return Response.json({ error: 'Ricerca non disponibile' }, { status: 502 })
   }

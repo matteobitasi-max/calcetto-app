@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { useEffect, useRef, useState, useTransition } from 'react'
 import { scegliLega } from '@/app/actions'
+import { scegliModo } from '@/app/centro-actions'
 import { LogoC } from './logo-c'
 import { PallinoAdmin } from './pallino-admin'
 import { useT } from './lingua'
@@ -48,12 +49,15 @@ export function LegaMenu({
   organizzatore,
   titolare = false,
   ospite = false,
+  centro,
 }: {
   corrente: LegaVoce
   altre: LegaVoce[]
   organizzatore: boolean
   titolare?: boolean
   ospite?: boolean
+  /** Il centro sportivo che gestisco: dal menu si passa al gestionale. */
+  centro?: string
 }) {
   const t = useT()
   const [open, setOpen] = useState(false)
@@ -129,6 +133,14 @@ export function LegaMenu({
             <Link href="/leghe" role="menuitem" className={voce} onClick={() => setOpen(false)}>
               👑 {t('Tutte le leghe')}
             </Link>
+          )}
+          {centro && (
+            <form action={scegliModo.bind(null, 'centro')}>
+              <button type="submit" role="menuitem" className={`${voce} font-semibold`}>
+                🏟️ <span className="min-w-0 flex-1 truncate">{centro}</span>
+                <span className="text-xs font-normal text-orange-600">{t('gestionale')}</span>
+              </button>
+            </form>
           )}
           <Link href="/benvenuto" role="menuitem" className={voce} onClick={() => setOpen(false)}>
             ➕ {t('Crea o entra in una lega')}
