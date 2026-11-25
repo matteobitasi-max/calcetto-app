@@ -130,3 +130,10 @@ export async function inviaAGiocatori(playerIds: string[], payload: Messaggio, c
   const leghe = [...new Set(schede.map((s) => s.legaId).filter((x): x is string => !!x))]
   return invia(subs, leghe.length === 1 ? nellaLega(payload, leghe[0]) : payload)
 }
+
+// Ad alcuni account (per ID Clerk): es. i gestori di un centro sportivo, che non sono giocatori di una lega.
+export async function inviaAUtenti(utenti: string[], payload: Messaggio) {
+  if (utenti.length === 0) return { inviate: 0, totali: 0 }
+  const subs = await sanity.fetch<Iscrizione[]>(`*[_type == "pushSubscription" && clerkUserId in $utenti]${subFields}`, { utenti })
+  return invia(subs, payload)
+}

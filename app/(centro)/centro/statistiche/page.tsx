@@ -30,9 +30,11 @@ async function Statistiche({ searchParams }: { searchParams: Promise<Record<stri
   const prima = spostaMese(mese, -1)
   const periodo = (x: string) => [romeLocalToISO(`${x}-01T00:00`), romeLocalToISO(`${spostaMese(x, 1)}-01T00:00`)] as const
   const [tutte, tuttePrima] = await Promise.all([prenotazioniTra(centro._id, ...periodo(mese), true), prenotazioniTra(centro._id, ...periodo(prima), true)])
-  const valide = (l: typeof tutte) => l.filter((p) => p.stato !== 'annullata')
-  const n = numeriMese(centro, mese, valide(tutte), tutte.length - valide(tutte).length)
-  const np = numeriMese(centro, prima, valide(tuttePrima), tuttePrima.length - valide(tuttePrima).length)
+  // contano le prenotazioni confermate; le annullate a parte (rifiutate e richieste in attesa no)
+  const valide = (l: typeof tutte) => l.filter((p) => p.stato === 'confermata')
+  const annullate = (l: typeof tutte) => l.filter((p) => p.stato === 'annullata').length
+  const n = numeriMese(centro, mese, valide(tutte), annullate(tutte))
+  const np = numeriMese(centro, prima, valide(tuttePrima), annullate(tuttePrima))
   const titolo = new Intl.DateTimeFormat('it-IT', { month: 'long', year: 'numeric', timeZone: 'UTC' }).format(new Date(`${mese}-15T12:00:00Z`))
 
   const variazione = (ora: number, prima: number) => {

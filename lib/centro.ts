@@ -29,7 +29,12 @@ export type Centro = {
   chiude: string
   campi: CampoCentro[]
   gestori: string[]
+  /** Prenotazioni dall'app dei giocatori: confermate subito, da approvare (predefinito) o spente. */
+  prenotazioniApp: ModoApp
 }
+
+export type ModoApp = 'auto' | 'richiesta' | 'spente'
+export const MODI_APP: ModoApp[] = ['richiesta', 'auto', 'spente']
 
 export type Prenotazione = {
   _id: string
@@ -40,14 +45,23 @@ export type Prenotazione = {
   telefono?: string
   nota?: string
   prezzo: number
-  stato: 'confermata' | 'annullata'
+  /** "richiesta": arrivata dall'app, il centro deve confermarla (intanto il campo è tenuto). */
+  stato: 'confermata' | 'richiesta' | 'annullata' | 'rifiutata'
   pagato?: { metodo: Metodo; il: string }
   serie?: string
+  /** Prenotata dall'app: la lega, la partita e l'organizzatore (la sua scheda nella lega). */
+  lega?: string
+  matchId?: string
+  organizzatoreId?: string
 }
 
+// Gli stati che tengono occupato il campo (le richieste lo tengono finché il centro non risponde).
+export const OCCUPANO = '["confermata", "richiesta"]'
+
 const centroFields = `_id, nome, indirizzo, posto, telefono, "apre": coalesce(apre, "08:00"), "chiude": coalesce(chiude, "24:00"),
-  "campi": coalesce(campi, []), "gestori": coalesce(gestori, [])`
-const prenotazioneFields = `_id, campo, inizio, fine, cliente, telefono, nota, prezzo, "stato": coalesce(stato, "confermata"), pagato, "serie": serie`
+  "campi": coalesce(campi, []), "gestori": coalesce(gestori, []), "prenotazioniApp": coalesce(prenotazioniApp, "richiesta")`
+const prenotazioneFields = `_id, campo, inizio, fine, cliente, telefono, nota, prezzo, "stato": coalesce(stato, "confermata"), pagato, "serie": serie,
+  "lega": lega->nome, "matchId": match._ref, "organizzatoreId": organizzatore._ref`
 
 // Il centro che gestisco (il primo, se ne gestissi più d'uno).
 export const getMioCentro = cache(async (): Promise<Centro | null> => {
@@ -79,7 +93,7 @@ export const oggiRoma = () => isoToRomeLocal(new Date()).slice(0, 10)
 
 export function prenotazioniTra(centroId: string, da: string, a: string, conAnnullate = false) {
   return sanity.fetch<Prenotazione[]>(
-    `*[_type == "prenotazione" && centro._ref == $centro && inizio < $a && fine > $da ${conAnnullate ? '' : '&& coalesce(stato, "confermata") != "annullata"'}] | order(inizio asc){${prenotazioneFields}}`,
+    `*[_type == "prenotazione" && centro._ref == $centro && inizio < $a && fine > $da ${conAnnullate ? '' : `&& coalesce(stato, "confermata") in ${OCCUPANO}`}] | order(inizio asc){${prenotazioneFields}}`,
     { centro: centroId, da, a },
   )
 }
@@ -91,7 +105,7 @@ export function getPrenotazione(centroId: string, id: string) {
 // Le prenotazioni già giocate e non ancora pagate (le più vecchie prima).
 export function daIncassare(centroId: string) {
   return sanity.fetch<Prenotazione[]>(
-    `*[_type == "prenotazione" && centro._ref == $centro && coalesce(stato, "confermata") != "annullata" && !defined(pagato) && inizio < $ora] | order(inizio asc){${prenotazioneFields}}`,
+    `*[_type == "prenotazione" && centro._ref == $centro && coalesce(stato, "confermata") == "confermata" && !defined(pagato) && inizio < $ora] | order(inizio asc){${prenotazioneFields}}`,
     { centro: centroId, ora: new Date().toISOString() },
   )
 }
@@ -102,6 +116,28 @@ export function incassati(centroId: string, da: string, a: string) {
     `*[_type == "prenotazione" && centro._ref == $centro && defined(pagato) && pagato.il >= $da && pagato.il < $a] | order(pagato.il desc){${prenotazioneFields}}`,
     { centro: centroId, da, a },
   )
+}
+
+// Le richieste arrivate dall'app e non ancora confermate (le prossime per prime).
+export function richiesteInAttesa(centroId: string) {
+  return sanity.fetch<Prenotazione[]>(
+    `*[_type == "prenotazione" && centro._ref == $centro && stato == "richiesta" && fine > $ora] | order(inizio asc){${prenotazioneFields}}`,
+    { centro: centroId, ora: new Date().toISOString() },
+  )
+}
+
+// I gruppi di campi uguali (tipo e dentro/fuori): è quello che sceglie chi prenota dall'app.
+export type Gruppo = { chiave: string; tipo: TipoCampo; coperto: boolean; prezzoOra: number; campi: number }
+export const chiaveGruppo = (c: Pick<CampoCentro, 'tipo' | 'coperto'>) => `${c.tipo}-${c.coperto ? 1 : 0}`
+export function gruppi(centro: Centro): Gruppo[] {
+  const m = new Map<string, Gruppo>()
+  for (const c of campiAttivi(centro)) {
+    const k = chiaveGruppo(c)
+    const g = m.get(k)
+    if (g) m.set(k, { ...g, campi: g.campi + 1, prezzoOra: Math.min(g.prezzoOra, c.prezzoOra) })
+    else m.set(k, { chiave: k, tipo: c.tipo, coperto: !!c.coperto, prezzoOra: c.prezzoOra, campi: 1 })
+  }
+  return [...m.values()].sort((a, b) => a.tipo - b.tipo || Number(a.coperto) - Number(b.coperto))
 }
 
 // Prezzo proposto: il prezzo orario del campo per la durata.

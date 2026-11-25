@@ -6,6 +6,7 @@ import { Card, Field, inputClass } from '@/components/ui'
 import { adessoArrotondato, isoToRomeLocal, minutiTra } from '@/lib/dates'
 import { campiUsati, type Match } from '@/lib/matches'
 import { CampoInput } from '@/components/campo-input'
+import { PrenotaCentro } from '@/components/prenota-centro'
 import { ricercaCampiAttiva } from '@/lib/google-maps'
 import { getCurrentPlayer } from '@/lib/player'
 import { MAX_ALLENAMENTO } from '@/lib/limiti'
@@ -57,6 +58,8 @@ export async function MatchForm({
         <Field label={t('Campo / luogo')} group>
           <CampoInput defaultLuogo={match?.luogo} defaultCampo={match?.campo} usati={usati} ricerca={ricercaCampiAttiva()} />
         </Field>
+        {/* nuova partita in un centro su The Cap: si prenota il campo da qui */}
+        {!match && <PrenotaCentro />}
         {allenamento ? (
           <Field label={t('Posti')}>
             <p className="mb-1 text-xs text-zinc-500">{t('Raggiunto questo numero, chi si convoca va in lista d’attesa.')}</p>

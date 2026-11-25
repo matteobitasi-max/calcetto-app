@@ -1,7 +1,9 @@
 import Link from 'next/link'
 import { Suspense } from 'react'
 import { addDays, isoToRomeLocal } from '@/lib/dates'
-import { campiAttivi, giornoISO, hhmm, minuti, oggiRoma, prenotazioniTra, requireCentro, type CampoCentro, type Prenotazione } from '@/lib/centro'
+import { rispondiRichiesta } from '@/app/centro-actions'
+import { SubmitButton } from '@/components/submit-button'
+import { campiAttivi, giornoISO, richiesteInAttesa, hhmm, minuti, oggiRoma, prenotazioniTra, requireCentro, type CampoCentro, type Prenotazione } from '@/lib/centro'
 import { Loading } from '@/components/ui'
 
 // La pagina principale del gestionale: il planning di un giorno, con i campi in colonna e le ore in riga.
@@ -54,10 +56,13 @@ async function Planning({ searchParams }: { searchParams: Promise<Record<string,
     return `/centro?giorno=${x.giorno ?? giorno}${vv === 'giorno' ? '' : `&vista=${vv}`}`
   }
 
-  const ore = prenotazioni.reduce((s, p) => s + (Date.parse(p.fine) - Date.parse(p.inizio)) / 3_600_000, 0)
+  // i numeri contano le prenotazioni confermate (le richieste dall'app non ancora)
+  const confermate = prenotazioni.filter((p) => p.stato === 'confermata')
+  const ore = confermate.reduce((s, p) => s + (Date.parse(p.fine) - Date.parse(p.inizio)) / 3_600_000, 0)
   const disponibili = ((chiude - apre) / 60) * campi.length * giorniVista
-  const valore = prenotazioni.reduce((s, p) => s + (p.prezzo ?? 0), 0)
-  const incassato = prenotazioni.filter((p) => p.pagato).reduce((s, p) => s + (p.prezzo ?? 0), 0)
+  const valore = confermate.reduce((s, p) => s + (p.prezzo ?? 0), 0)
+  const incassato = confermate.filter((p) => p.pagato).reduce((s, p) => s + (p.prezzo ?? 0), 0)
+  const richieste = await richiesteInAttesa(centro._id)
 
   // la linea di "adesso", solo oggi e negli orari di apertura
   const adesso = giorno === oggi ? minuti(isoToRomeLocal(new Date()).slice(11)) : null
@@ -109,10 +114,39 @@ async function Planning({ searchParams }: { searchParams: Promise<Record<string,
         </p>
       )}
 
+      {/* le richieste arrivate dall'app, da confermare o rifiutare */}
+      {richieste.length > 0 && (
+        <section className="space-y-2 rounded-2xl border-2 border-sky-500 bg-sky-50 p-3 dark:bg-sky-950/40">
+          <h2 className="font-bold text-sky-900 dark:text-sky-100">📥 {richieste.length === 1 ? '1 richiesta dall’app da confermare' : `${richieste.length} richieste dall’app da confermare`}</h2>
+          <ul className="space-y-1.5">
+            {richieste.map((r) => (
+              <li key={r._id} className="flex flex-wrap items-center gap-2 rounded-xl bg-white px-3 py-2 text-sm dark:bg-zinc-900">
+                <Link href={`/centro/prenotazione/${r._id}`} className="min-w-0 flex-1 hover:underline">
+                  <span className="font-semibold">{r.cliente}</span>
+                  <span className="text-stone-500">
+                    {' · '}
+                    {new Intl.DateTimeFormat('it-IT', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Rome' }).format(new Date(r.inizio))} ·{' '}
+                    {centro.campi.find((c) => c._key === r.campo)?.nome}
+                  </span>
+                </Link>
+                <form action={rispondiRichiesta.bind(null, r._id, true)}>
+                  <SubmitButton className="rounded-lg bg-green-600 px-3 py-1 text-xs font-bold text-white hover:bg-green-700">Conferma</SubmitButton>
+                </form>
+                <form action={rispondiRichiesta.bind(null, r._id, false)}>
+                  <SubmitButton className="rounded-lg border border-red-300 px-3 py-1 text-xs font-bold text-red-700 hover:bg-red-50 dark:text-red-300" confirm="Rifiutare la richiesta? L’organizzatore riceve un avviso e il campo torna libero.">
+                    Rifiuta
+                  </SubmitButton>
+                </form>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
       {/* i numeri del giorno */}
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
         {[
-          ['Prenotazioni', String(prenotazioni.length)],
+          ['Prenotazioni', String(confermate.length)],
           ['Campi occupati', `${disponibili ? Math.round((ore / disponibili) * 100) : 0}%`],
           [vista === 'giorno' ? 'Valore del giorno' : vista === 'settimana' ? 'Valore della settimana' : 'Valore del mese', euro(valore)],
           ['Già incassato', euro(incassato)],
@@ -205,15 +239,22 @@ async function Planning({ searchParams }: { searchParams: Promise<Record<string,
 
 function Blocco({ p, top, altezza }: { p: Prenotazione; top: number; altezza: number }) {
   const pagata = !!p.pagato
+  const richiesta = p.stato === 'richiesta'
   return (
     <Link
       href={`/centro/prenotazione/${p._id}`}
       className={`absolute inset-x-1 overflow-hidden rounded-lg border-l-4 px-2 py-1 text-xs shadow-sm ${
-        pagata ? 'border-green-600 bg-green-100 text-green-950 dark:bg-green-950 dark:text-green-100' : 'border-amber-500 bg-amber-100 text-amber-950 dark:bg-amber-950 dark:text-amber-100'
+        richiesta
+          ? 'border-dashed border-sky-500 bg-sky-50 text-sky-950 dark:bg-sky-950 dark:text-sky-100'
+          : pagata
+            ? 'border-green-600 bg-green-100 text-green-950 dark:bg-green-950 dark:text-green-100'
+            : 'border-amber-500 bg-amber-100 text-amber-950 dark:bg-amber-950 dark:text-amber-100'
       }`}
       style={{ top: top + 1, height: Math.max(altezza - 2, 20) }}
     >
       <p className="truncate font-bold">
+        {richiesta && '📥 '}
+        {p.matchId && !richiesta && '📱 '}
         {p.serie && '🔁 '}
         {p.cliente}
       </p>
@@ -277,7 +318,7 @@ function Settimana({
                         <Link
                           key={p._id}
                           href={`/centro/prenotazione/${p._id}`}
-                          className={`block truncate rounded px-1 py-0.5 font-medium ${p.pagato ? 'bg-green-100 text-green-950 dark:bg-green-950 dark:text-green-100' : 'bg-amber-100 text-amber-950 dark:bg-amber-950 dark:text-amber-100'}`}
+                          className={`block truncate rounded px-1 py-0.5 font-medium ${p.stato === 'richiesta' ? 'border border-dashed border-sky-500 bg-sky-50 text-sky-950 dark:bg-sky-950 dark:text-sky-100' : p.pagato ? 'bg-green-100 text-green-950 dark:bg-green-950 dark:text-green-100' : 'bg-amber-100 text-amber-950 dark:bg-amber-950 dark:text-amber-100'}`}
                         >
                           <span className="tabular-nums">{oraDi(p.inizio)}</span> {p.cliente}
                         </Link>

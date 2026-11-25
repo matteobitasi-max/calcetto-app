@@ -8,6 +8,7 @@ import { sanity } from '@/lib/sanity'
 import { leggiCampo } from '@/lib/campo'
 import { periodoInCorso } from '@/lib/stagioni'
 import { statoClub } from '@/lib/club-stato'
+import { liberaPerPartita, prenotaPerPartita, spostaPrenotazione, verificaPrenotazione } from '@/lib/centro-app'
 import { BADGE, CATEGORIE_NOTIFICHE, COOKIE_LEGA, eta, leggiRuolo, normalizzaTelefono, PIEDI, RUOLI, SKILLS, displayName, requirePlayer, getUtente, getMemberships, isTitolare, membroDi, soloGiocatore, requireAdmin, requireForDoc, requireIn, type Player, type Skill } from '@/lib/player'
 import { assegnaPosti, conSelezione, finestra, getMatch, getPartiteTorneo, getPlayers, orarioPartita, presenti, risultatoDa, type FonteKm, type Match, type Risposta, type Stato } from '@/lib/matches'
 import { idPlaylist, intervisteDellaPlaylist } from '@/lib/interviste'
@@ -380,6 +381,16 @@ export async function salvaPartita(matchId: string | null, _prev: FormState, for
     redirect(`/partite/${occurrenceId(serie._id, giorno)}`)
   }
 
+  // Prenotazione del campo in un centro su The Cap (solo partite nuove, non ricorrenti): prima si controlla
+  // che ci sia un campo libero, così la partita non nasce senza campo.
+  const durataCampo = Math.ceil(durata / 30) * 30
+  const prenota =
+    !matchId && formData.get('prenotaCentro') === 'on' && campo && str(formData, 'centroId') && str(formData, 'gruppoCentro')
+      ? { centroId: str(formData, 'centroId'), gruppo: str(formData, 'gruppoCentro'), inizio: data, durata: durataCampo }
+      : null
+  const verificata = prenota ? await verificaPrenotazione(prenota) : null
+  if (verificata && 'errore' in verificata) return { error: verificata.errore }
+
   const fields = {
     data,
     durataMinuti: durata,
@@ -397,6 +408,12 @@ export async function salvaPartita(matchId: string | null, _prev: FormState, for
       `*[_type == "match" && _id == $id][0]{convocazioni}`,
       { id },
     )
+    // il campo prenotato su The Cap segue la partita (nuovo orario o durata), se il centro ha posto
+    const prenotazione = await sanity.fetch<string | null>(`*[_type == "match" && _id == $id][0].prenotazione._ref`, { id })
+    if (prenotazione) {
+      const errore = await spostaPrenotazione(prenotazione, data, durataCampo)
+      if (errore) return { error: errore }
+    }
     await sanity
       .patch(id)
       .set({
@@ -421,6 +438,18 @@ export async function salvaPartita(matchId: string | null, _prev: FormState, for
       convocazioni: [],
     })
     id = doc._id
+    if (verificata && prenota) {
+      const fatta = await prenotaPerPartita(verificata.centro, {
+        ...prenota,
+        matchId: id,
+        legaId: admin.lega._id,
+        legaNome: admin.lega.nome,
+        organizzatoreId: admin._id,
+        organizzatore: displayName(admin),
+        telefono: admin.telefono,
+      })
+      if (fatta) await sanity.patch(id).set({ prenotazione: { _type: 'reference', _ref: fatta.id, _weak: true } }).commit()
+    }
   }
   // svuota la memoria delle pagine dell'app: riaprendo una pagina (es. Modifica) si vedono i dati nuovi
   revalidatePath('/', 'layout')
@@ -561,6 +590,8 @@ export async function cambiaStato(matchId: string, stato: Stato) {
     `*[_type == "match" && _id == $id][0]{stato, postiAutomatici, data, chiusuraConvocazioni, aperturaConvocazioni, convocazioni}`,
     { id: matchId },
   )
+  // partita annullata: il campo prenotato su The Cap torna libero
+  if (stato === 'annullata') await liberaPerPartita(matchId).catch(() => undefined)
   const patch = sanity.patch(matchId).set({ stato })
 
   if (stato === 'aperta' && doc?.stato === 'chiusa') {

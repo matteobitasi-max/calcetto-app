@@ -106,6 +106,25 @@ async function MatchDetail({ params }: { params: Promise<{ id: string }> }) {
           {match.quota != null && ` · ${t('{quota} € a testa', { quota: match.quota })}`}
         </p>
         {match.campo?.indirizzo && <p className="-mt-1 text-xs text-zinc-500">{match.campo.indirizzo}</p>}
+        {/* il campo prenotato su The Cap (gestionale del centro) */}
+        {match.prenotazione && (
+          <p
+            className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+              match.prenotazione.stato === 'confermata'
+                ? 'bg-green-100 text-green-800 dark:bg-green-950 dark:text-green-300'
+                : match.prenotazione.stato === 'richiesta'
+                  ? 'bg-sky-100 text-sky-800 dark:bg-sky-950 dark:text-sky-300'
+                  : 'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300'
+            }`}
+          >
+            {match.prenotazione.stato === 'confermata'
+              ? `✅ ${t('Campo prenotato su The Cap')}`
+              : match.prenotazione.stato === 'richiesta'
+                ? `⏳ ${t('Prenotazione del campo in attesa di conferma')}`
+                : `❌ ${t('Il centro non ha confermato il campo')}`}
+            {match.prenotazione.centro && ` · ${match.prenotazione.centro}`}
+          </p>
+        )}
 
         {match.note && <p className="whitespace-pre-line text-sm">{match.note}</p>}
         <FinestraInfo match={match} />

@@ -1,6 +1,6 @@
 import { Suspense } from 'react'
-import { aggiungiGestore, salvaCampo, salvaCentro, togliCampo } from '@/app/centro-actions'
-import { TIPI_CAMPO, campiAttivi, requireCentro, type CampoCentro } from '@/lib/centro'
+import { aggiungiGestore, salvaCampo, salvaCentro, salvaModoApp, togliCampo } from '@/app/centro-actions'
+import { MODI_APP, TIPI_CAMPO, campiAttivi, requireCentro, type CampoCentro } from '@/lib/centro'
 import { ricercaCampiAttiva } from '@/lib/google-maps'
 import { ActionForm } from '@/components/action-form'
 import { CampoInput } from '@/components/campo-input'
@@ -62,6 +62,31 @@ async function Impostazioni() {
             <ModuloCampo />
           </div>
         </details>
+      </section>
+
+      <section className={riquadro}>
+        <h2 className="font-bold">📱 Prenotazioni dall’app</h2>
+        <p className="text-sm text-stone-500">
+          Chi crea una partita su The Cap e sceglie il vostro centro sulla mappa può prenotare il campo da lì: vede solo gli orari liberi e voi trovate la prenotazione nel calendario.
+          {!centro.posto && ' Per farvi trovare, scegliete il centro sulla mappa qui sopra.'}
+        </p>
+        <div className="grid gap-2 sm:grid-cols-3">
+          {MODI_APP.map((m) => (
+            <form key={m} action={salvaModoApp.bind(null, m)}>
+              <SubmitButton
+                className={`w-full rounded-xl border-2 p-3 text-left text-sm ${centro.prenotazioniApp === m ? 'border-orange-500 bg-orange-50 dark:bg-orange-950/40' : 'border-stone-200 hover:border-stone-400 dark:border-zinc-700'}`}
+              >
+                <span className="block font-bold">
+                  {centro.prenotazioniApp === m ? '● ' : ''}
+                  {m === 'richiesta' ? 'Da confermare' : m === 'auto' ? 'Conferma automatica' : 'Spente'}
+                </span>
+                <span className="block text-xs text-stone-500">
+                  {m === 'richiesta' ? 'Arriva una richiesta, la confermate voi (il campo intanto è tenuto)' : m === 'auto' ? 'Se il campo è libero, è subito prenotato' : 'Dall’app non si prenota: si chiama il centro'}
+                </span>
+              </SubmitButton>
+            </form>
+          ))}
+        </div>
       </section>
 
       <section className={riquadro}>

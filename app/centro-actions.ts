@@ -8,7 +8,8 @@ import { sanity } from '@/lib/sanity'
 import { getUtente } from '@/lib/player'
 import { leggiCampo } from '@/lib/campo'
 import { addMinuti, romeLocalToISO, isoToRomeLocal, addDays } from '@/lib/dates'
-import { DURATE, METODI, TIPI_CAMPO, getMioCentro, minuti, prezzoPer, requireCentro, type CampoCentro, type Metodo, type TipoCampo } from '@/lib/centro'
+import { avvisaOrganizzatore } from '@/lib/centro-app'
+import { DURATE, METODI, MODI_APP, OCCUPANO, TIPI_CAMPO, getMioCentro, minuti, prezzoPer, requireCentro, type CampoCentro, type Metodo, type ModoApp, type TipoCampo } from '@/lib/centro'
 import type { FormState } from './actions'
 import { COOKIE_MODO, type Modo } from '@/lib/modo'
 
@@ -112,7 +113,7 @@ export async function togliCampo(chiave: string) {
 // Si accavalla con un'altra prenotazione dello stesso campo?
 async function occupato(centroId: string, campo: string, inizio: string, fine: string, tranne?: string) {
   return sanity.fetch<{ cliente: string; inizio: string } | null>(
-    `*[_type == "prenotazione" && centro._ref == $centro && campo == $campo && coalesce(stato, "confermata") != "annullata"
+    `*[_type == "prenotazione" && centro._ref == $centro && campo == $campo && coalesce(stato, "confermata") in ${OCCUPANO}
       && inizio < $fine && fine > $inizio ${tranne ? '&& _id != $tranne' : ''}][0]{cliente, inizio}`,
     { centro: centroId, campo, inizio, fine, ...(tranne && { tranne }) },
   )
@@ -146,8 +147,9 @@ export async function salvaPrenotazione(id: string | null, _prev: FormState, fd:
     const fine = romeLocalToISO(addMinuti(`${giorno}T${ora}`, durata))
     const conflitto = await occupato(centro._id, campo._key, inizio, fine, id)
     if (conflitto) return { error: `Il campo è già prenotato da ${conflitto.cliente} alle ${isoToRomeLocal(conflitto.inizio).slice(11)}.` }
-    const esiste = await sanity.fetch<number>(`count(*[_type == "prenotazione" && _id == $id && centro._ref == $centro])`, { id, centro: centro._id })
+    const esiste = await sanity.fetch<{ app: boolean } | null>(`*[_type == "prenotazione" && _id == $id && centro._ref == $centro][0]{"app": defined(match)}`, { id, centro: centro._id })
     if (!esiste) return { error: 'Prenotazione non trovata.' }
+    if (esiste.app) return { error: 'È una prenotazione dall’app: per cambiarla, l’organizzatore sposta la partita (oppure annullala).' }
     await sanity
       .patch(id)
       .set({ ...dati, inizio, fine })
@@ -181,8 +183,8 @@ export async function salvaPrenotazione(id: string | null, _prev: FormState, fd:
 
 async function miaPrenotazione(id: string) {
   const centro = await requireCentro()
-  const p = await sanity.fetch<{ _id: string; inizio: string; serie?: string } | null>(
-    `*[_type == "prenotazione" && _id == $id && centro._ref == $centro][0]{_id, inizio, serie}`,
+  const p = await sanity.fetch<{ _id: string; inizio: string; serie?: string; stato?: string; matchId?: string; organizzatoreId?: string } | null>(
+    `*[_type == "prenotazione" && _id == $id && centro._ref == $centro][0]{_id, inizio, serie, stato, "matchId": match._ref, "organizzatoreId": organizzatore._ref}`,
     { id, centro: centro._id },
   )
   if (!p) throw new Error('Prenotazione non trovata')
@@ -203,8 +205,30 @@ export async function annullaPrenotazione(id: string, tutteLeSuccessive = false)
   const tx = sanity.transaction()
   for (const x of ids) tx.patch(x, (q) => q.set({ stato: 'annullata' }))
   await tx.commit()
+  // prenotata dall'app: l'organizzatore della partita lo sa
+  if (p.organizzatoreId) await avvisaOrganizzatore(p, centro.nome, 'annullata', quandoBreve(p.inizio))
   revalidatePath('/centro', 'layout')
   redirect(`/centro?giorno=${isoToRomeLocal(p.inizio).slice(0, 10)}`)
+}
+
+const quandoBreve = (iso: string) =>
+  new Intl.DateTimeFormat('it-IT', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Rome' }).format(new Date(iso))
+
+// Una richiesta arrivata dall'app: il centro la conferma o la rifiuta (il campo torna libero).
+export async function rispondiRichiesta(id: string, conferma: boolean) {
+  const { centro, p } = await miaPrenotazione(id)
+  if (p.stato !== 'richiesta') return
+  await sanity.patch(id).set({ stato: conferma ? 'confermata' : 'rifiutata' }).commit()
+  await avvisaOrganizzatore(p, centro.nome, conferma ? 'confermata' : 'rifiutata', quandoBreve(p.inizio))
+  revalidatePath('/centro', 'layout')
+}
+
+// Prenotazioni dall'app dei giocatori: confermate subito, da approvare o spente.
+export async function salvaModoApp(modo: ModoApp) {
+  const centro = await requireCentro()
+  if (!MODI_APP.includes(modo)) throw new Error('Scelta non valida')
+  await sanity.patch(centro._id).set({ prenotazioniApp: modo }).commit()
+  revalidatePath('/centro', 'layout')
 }
 
 export async function segnaPagato(id: string, metodo: Metodo) {

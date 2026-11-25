@@ -26,6 +26,8 @@ export type Match = {
   legaNome?: string
   /** Il posto scelto dalla mappa (indirizzo e coordinate), se c'è. */
   campo?: Campo
+  /** Il campo prenotato su The Cap (gestionale del centro): stato della prenotazione. */
+  prenotazione?: { _id: string; stato: 'confermata' | 'richiesta' | 'annullata' | 'rifiutata'; centro?: string } | null
   /** Allenamento: convocazioni come una partita, ma niente squadre, risultato né classifica. */
   tipo?: 'allenamento'
   /** La lega è una "Squadra" (Club) in cui convoca l'allenatore: le partite hanno i convocati scelti da lui. */
@@ -103,7 +105,8 @@ export const allenamentoFinito = (m: Pick<Match, 'tipo' | 'data' | 'durataMinuti
 export type Pagamento = { giocatoreId: string; stato: 'dichiarato' | 'confermato'; metodo?: 'satispay' | 'contanti'; il?: string }
 
 const matchFields = `
-  _id, _rev, "legaId": lega._ref, "legaNome": lega->nome, tipo, campo, "squadra": lega->club == true && lega->tipo == "squadra" && lega->autoconvocazione != true, "pagelleAttive": lega->club == true && lega->tipo == "squadra" && lega->pagelle != false, "club": lega->club == true && lega->tipo == "squadra", "formato": lega->formato, "moduloLega": lega->modulo, "formazione": formazione{modulo, "posti": posti[]{posto, "id": giocatore._ref}}, "pagelle": coalesce(pagelle[]{"giocatoreId": giocatore._ref, voto, nota}, []), "convocati": convocati[]._ref, data, luogo, postiDisponibili, postiAutomatici, quota, note, aperturaConvocazioni, chiusuraConvocazioni, durataFinestraMinuti, "serieId": serie._ref, notificaInviataIl,
+  _id, _rev, "legaId": lega._ref, "legaNome": lega->nome, tipo, campo,
+  "prenotazione": prenotazione->{_id, "stato": coalesce(stato, "confermata"), "centro": centro->nome}, "squadra": lega->club == true && lega->tipo == "squadra" && lega->autoconvocazione != true, "pagelleAttive": lega->club == true && lega->tipo == "squadra" && lega->pagelle != false, "club": lega->club == true && lega->tipo == "squadra", "formato": lega->formato, "moduloLega": lega->modulo, "formazione": formazione{modulo, "posti": posti[]{posto, "id": giocatore._ref}}, "pagelle": coalesce(pagelle[]{"giocatoreId": giocatore._ref, voto, nota}, []), "convocati": convocati[]._ref, data, luogo, postiDisponibili, postiAutomatici, quota, note, aperturaConvocazioni, chiusuraConvocazioni, durataFinestraMinuti, "serieId": serie._ref, notificaInviataIl,
   "stato": coalesce(stato, "aperta"),
   "convocazioni": coalesce(convocazioni[]{_key, risposta, rispostoIl, aggiunto, "giocatore": giocatore->{${playerFields}}}, []),
   "squadraA": coalesce(squadraA[]->{${playerFields}}, []),

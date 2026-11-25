@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { Suspense } from 'react'
 import { METODI, NOME_METODO, getPrenotazione, requireCentro } from '@/lib/centro'
-import { annullaPrenotazione, salvaPrenotazione, segnaPagato, togliPagamento } from '@/app/centro-actions'
+import { annullaPrenotazione, rispondiRichiesta, salvaPrenotazione, segnaPagato, togliPagamento } from '@/app/centro-actions'
 import { PrenotazioneForm } from '@/components/prenotazione-form'
 import { SubmitButton } from '@/components/submit-button'
 import { Loading } from '@/components/ui'
@@ -25,7 +25,9 @@ async function Dettaglio({ params }: { params: Promise<{ id: string }> }) {
   const campo = centro.campi.find((c) => c._key === p.campo)
   const giorno = isoToRomeLocal(p.inizio).slice(0, 10)
   const quando = new Intl.DateTimeFormat('it-IT', { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Rome' }).format(new Date(p.inizio))
-  const annullata = p.stato === 'annullata'
+  const annullata = p.stato === 'annullata' || p.stato === 'rifiutata'
+  const richiesta = p.stato === 'richiesta'
+  const dallApp = !!p.matchId
 
   return (
     <div className="mx-auto max-w-2xl space-y-4">
@@ -55,8 +57,27 @@ async function Dettaglio({ params }: { params: Promise<{ id: string }> }) {
           <p className="shrink-0 text-2xl font-black tabular-nums">{euro(p.prezzo ?? 0)}</p>
         </div>
 
+        {dallApp && (
+          <p className="mt-2 inline-block rounded-full bg-sky-100 px-2.5 py-0.5 text-xs font-semibold text-sky-900 dark:bg-sky-950 dark:text-sky-100">
+            📱 Prenotata dall’app{p.lega ? ` · lega ${p.lega}` : ''}
+          </p>
+        )}
         {annullata ? (
-          <p className="mt-3 rounded-xl bg-red-50 p-3 text-sm font-semibold text-red-800 dark:bg-red-950 dark:text-red-200">❌ Annullata</p>
+          <p className="mt-3 rounded-xl bg-red-50 p-3 text-sm font-semibold text-red-800 dark:bg-red-950 dark:text-red-200">{p.stato === 'rifiutata' ? '❌ Rifiutata' : '❌ Annullata'}</p>
+        ) : richiesta ? (
+          <div className="mt-3 space-y-2 rounded-xl bg-sky-50 p-3 dark:bg-sky-950/40">
+            <p className="text-sm font-semibold text-sky-900 dark:text-sky-100">📥 Richiesta dall’app: il campo è tenuto finché non rispondi.</p>
+            <div className="flex gap-2">
+              <form action={rispondiRichiesta.bind(null, p._id, true)}>
+                <SubmitButton className="rounded-xl bg-green-600 px-4 py-2 text-sm font-bold text-white hover:bg-green-700">✅ Conferma</SubmitButton>
+              </form>
+              <form action={rispondiRichiesta.bind(null, p._id, false)}>
+                <SubmitButton className="rounded-xl border border-red-300 px-4 py-2 text-sm font-bold text-red-700 hover:bg-red-50 dark:text-red-300" confirm="Rifiutare la richiesta? L’organizzatore riceve un avviso e il campo torna libero.">
+                  Rifiuta
+                </SubmitButton>
+              </form>
+            </div>
+          </div>
         ) : p.pagato ? (
           <div className="mt-3 flex items-center justify-between gap-2 rounded-xl bg-green-50 p-3 text-sm dark:bg-green-950">
             <span className="font-semibold text-green-900 dark:text-green-200">
@@ -87,8 +108,16 @@ async function Dettaglio({ params }: { params: Promise<{ id: string }> }) {
 
       {!annullata && (
         <>
-          <h2 className="pt-2 font-bold">Modifica o sposta</h2>
-          <PrenotazioneForm centro={centro} action={salvaPrenotazione.bind(null, p._id)} p={p} />
+          {dallApp ? (
+            <p className="rounded-xl bg-white p-3 text-sm text-stone-600 dark:bg-zinc-900 dark:text-zinc-300">
+              È collegata a una partita dell’app: se l’organizzatore sposta la partita, la prenotazione si sposta da sola. Se annulli, l’organizzatore riceve un avviso.
+            </p>
+          ) : (
+            <>
+              <h2 className="pt-2 font-bold">Modifica o sposta</h2>
+              <PrenotazioneForm centro={centro} action={salvaPrenotazione.bind(null, p._id)} p={p} />
+            </>
+          )}
           <div className="flex flex-wrap gap-4">
             <form action={annullaPrenotazione.bind(null, p._id, false)}>
               <SubmitButton className="text-sm font-semibold text-red-600 hover:underline" confirm="Annullare questa prenotazione? Il campo torna libero.">
