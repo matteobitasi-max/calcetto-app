@@ -419,4 +419,10 @@ export const partite: Record<string, string> = {
   "Accesso per giocatori e allenatori": "Connexion pour joueurs et entraîneurs",
   "cambia": "changer",
   "gestionale": "gestion",
+  "Scegli il giorno della partita per vedere i campi liberi.": "Choisis le jour du match pour voir les terrains libres.",
+  "Tocca un orario: scegli il campo e l’ora della partita.": "Touche un horaire : tu choisis le terrain et l’heure du match.",
+  "{euro} € la partita": "{euro} € le match",
+  "Nessun orario libero questo giorno.": "Aucun horaire libre ce jour-là.",
+  "Prenoti: {campo} alle {ora}": "Tu réserves : {campo} à {ora}",
+  "Alle {ora} non c’è un campo libero: tocca uno degli orari liberi": "Aucun terrain libre à {ora} : touche un des horaires libres",
 }

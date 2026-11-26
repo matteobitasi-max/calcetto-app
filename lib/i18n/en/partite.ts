@@ -419,4 +419,10 @@ export const partite: Record<string, string> = {
   "Accesso per giocatori e allenatori": "Sign-in for players and coaches",
   "cambia": "change",
   "gestionale": "manager",
+  "Scegli il giorno della partita per vedere i campi liberi.": "Choose the match day to see the free pitches.",
+  "Tocca un orario: scegli il campo e l’ora della partita.": "Tap a time: it picks the pitch and the match time.",
+  "{euro} € la partita": "€{euro} per match",
+  "Nessun orario libero questo giorno.": "No free times this day.",
+  "Prenoti: {campo} alle {ora}": "You’re booking: {campo} at {ora}",
+  "Alle {ora} non c’è un campo libero: tocca uno degli orari liberi": "No pitch is free at {ora}: tap one of the free times",
 }

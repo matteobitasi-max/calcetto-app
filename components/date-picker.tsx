@@ -75,6 +75,24 @@ export function DatePicker({
     onChange?.(withTime ? `${nextDay}T${nextTime}` : nextDay)
   }
 
+  // Un altro pezzo della pagina può impostare la data (es. toccando un orario libero del centro sportivo):
+  // window.dispatchEvent(new CustomEvent('imposta-data', { detail: { name, value: 'AAAA-MM-GGTHH:MM' } }))
+  const aggiorna = useRef(update)
+  useEffect(() => {
+    aggiorna.current = update
+  })
+  useEffect(() => {
+    const imposta = (e: Event) => {
+      const d = (e as CustomEvent<{ name: string; value: string }>).detail
+      if (d?.name !== name || !/^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2})?$/.test(d.value)) return
+      aggiorna.current(d.value.slice(0, 10), d.value.slice(11, 16) || '20:30')
+      // il modulo se ne accorge (pillola Salva, riquadro del centro)
+      setTimeout(() => box.current?.closest('form')?.dispatchEvent(new Event('input', { bubbles: true })), 0)
+    }
+    window.addEventListener('imposta-data', imposta)
+    return () => window.removeEventListener('imposta-data', imposta)
+  }, [name])
+
   const [vy, vm] = view
   const giorniNelMese = new Date(Date.UTC(vy, vm, 0)).getUTCDate()
   const vuoti = (new Date(Date.UTC(vy, vm - 1, 1)).getUTCDay() + 6) % 7
